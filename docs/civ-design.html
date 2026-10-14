@@ -516,7 +516,13 @@ civ.merge(proposal_id)                      [supervisor only]
 
 <h3>Build list</h3>
 
-<p>In build order, grouped by milestone. Items marked (core) are the minimum needed to run one solver end to end against the task pack; everything else makes it a civilisation rather than a worker.</p>
+<p>The list is grouped into eight milestones, M0 to M7, ordered so that each one switches on a capability the next one needs. The first three get a single solver running end to end before there is a crowd, and the items marked (core) are that minimum path. Everything after M2 makes it a civilisation rather than a worker.</p>
+
+<p>M0 is the ground: the schema, the migration runner, and the bootstrap script that creates the users, the directory tree and the read-only mount. Nothing runs yet, but everything later has somewhere to write. M1 is the board server, with its auth, its transaction helper, the three tool modules and the ranking and limit rules, and it ends with a test that fires a hundred claims at once, because the single-writer rule is the thing that is either right or wrong. After M1 there is a board nobody is using. M2 is one solver: the verifier contract with a trivial implementation, the prompt assembler and the solver prompt files, a spawner that starts one session with the board attached, and the monitor that reads usage from the stream. This is the first moment the system does work, and the advice at the end of this document is to get here before building anything else.</p>
+
+<p>M3 is succession, the handoff injection at eighty percent, the kill at ninety, and the four handoff prompt files. After M3 a solver outlives its context window, which is the whole premise. M4 is supervisors: the cron, their prompt files, the config table seeded with every knob's bounds and cooldown, the tune validation, and the SLO queries they read each round. After M4 the civilisation governs itself. M5 is the operator: the two control files, the governor that enforces the ceilings, and the <code>civ</code> command line with its broadcast and vote push. After M5 you can steer it. M6 is self-modification, the proposal flow and <code>civ.merge</code> and the hot reload. After M6 it can improve its own harness.</p>
+
+<p>M7 is everything that only matters with a crowd or over time: lease sweeps and backoff, the token meter and budgets, the thirty-agent soak test, the heartbeat and the watchdog, backups, restore, and one rehearsed restore drill. It is deliberately last, because chaos controls cannot be tuned against a system that does not yet run.</p>
 
 <ol>
 <li>M0: <code>schema.sql</code> for the seven tables, with the uniqueness constraint on votes and the status enums. (core)</li>
