@@ -1,0 +1,125 @@
+"""Helpers shared by the tool modules: refusals, events, message shaping, and the one insert path.
+
+Every message the board stores goes through insert_message so that read_seq stamping and the
+long-body file-ref rule apply uniformly, whether the message came from board_post or from a tool
+that posts on the agent's behalf (task_complete, task_release, civ_alert).
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+from pathlib import Path
+from typing import Any
+
+import psycopg
+
+from ..auth import AgentIdentity
+from ..db import fetch_all, fetch_one
+from ..limits import Knobs
+from ..notices import pending_pin
+from ..ranking import SCORE_SQL
+
+BODY_PREVIEW_CHARS = 300
+
+
+def refuse(error: str) -> dict[str, Any]:
+    return {"ok": False, "error": error}
+
+
+def log_event(conn: psycopg.Connection, agent_id: str | None, type: str, payload: dict[str, Any]) -> None:
+    conn.execute(
+        "insert into events (agent_id, type, payload) values (%s, %s, %s)",
+        (agent_id, type, json.dumps(payload, default=str)),
+    )
+
+
+def pin_block(conn: psycopg.Connection, identity: AgentIdentity) -> dict[str, Any] | None:
+    """The refusal every write tool returns while an operator vote awaits this agent's ack."""
+    pin = pending_pin(conn, identity)
+    if pin is None:
+        return None
+    return refuse(f"acknowledge operator vote on message {int(pin['message_id'])} first")
+
+
+def decay_params(knobs: Knobs, conn: psycopg.Connection | None = None) -> dict[str, float]:
+    return {"decay_offset": knobs.get("decay_offset_h", conn), "decay_power": knobs.get("decay_power", conn)}
+
+
+MESSAGE_SELECT = f"""
+select m.id, m.author_id, m.kind, m.thread_id, m.parent_id, m.body, m.refs, m.created_at,
+       {SCORE_SQL} as score,
+       (select count(*) from votes v where v.message_id = m.id and v.value = 1) as votes_up,
+       (select count(*) from votes v where v.message_id = m.id and v.value = -1) as votes_down,
+       exists (select 1 from operator_pins p where p.message_id = m.id and p.pinned_until > now()) as pinned
+from messages m
+"""
+
+
+def shape_message(row: dict) -> dict[str, Any]:
+    return {
+        "id": int(row["id"]),
+        "seq": int(row["id"]),
+        "author_id": row["author_id"],
+        "kind": row["kind"],
+        "thread_id": int(row["thread_id"]) if row["thread_id"] is not None else None,
+        "parent_id": int(row["parent_id"]) if row["parent_id"] is not None else None,
+        "body": row["body"],
+        "refs": list(row["refs"] or []),
+        "score": round(float(row["score"]), 4),
+        "votes_up": int(row["votes_up"]),
+        "votes_down": int(row["votes_down"]),
+        "created_at": row["created_at"].isoformat(),
+    }
+
+
+def select_messages(conn: psycopg.Connection, knobs: Knobs, where: str, order: str,
+                    params: dict[str, Any], limit: int) -> list[dict[str, Any]]:
+    """Run the standard message query. Pinned operator votes always come first."""
+    sql = f"{MESSAGE_SELECT} where {where} order by pinned desc, {order} limit %(limit)s"
+    rows = fetch_all(conn, sql, {**params, **decay_params(knobs, conn), "limit": limit})
+    return [shape_message(r) for r in rows]
+
+
+def touch_session_read(conn: psycopg.Connection, identity: AgentIdentity, head: int) -> None:
+    conn.execute(
+        """
+        insert into session_reads (agent_id, last_seq, updated_at) values (%s, %s, now())
+        on conflict (agent_id) do update set last_seq = excluded.last_seq, updated_at = now()
+        """,
+        (identity.id, head),
+    )
+
+
+def last_read_seq(conn: psycopg.Connection, identity: AgentIdentity) -> int | None:
+    row = fetch_one(conn, "select last_seq from session_reads where agent_id = %s", (identity.id,))
+    return int(row["last_seq"]) if row else None
+
+
+def spill_long_body(body: str, shared_dir: Path, limit_chars: int) -> tuple[str, list[str]]:
+    """Bodies over the limit are written to shared/ by hash; the stored body keeps a preview.
+    Returns (stored_body, extra_refs)."""
+    if len(body) <= limit_chars:
+        return body, []
+    digest = hashlib.sha256(body.encode("utf-8")).hexdigest()[:16]
+    shared_dir.mkdir(parents=True, exist_ok=True)
+    path = shared_dir / f"msg-{digest}.md"
+    path.write_text(body, encoding="utf-8")
+    ref = f"shared/{path.name}"
+    return f"{body[:BODY_PREVIEW_CHARS]} [full text: {ref}]", [ref]
+
+
+def insert_message(conn: psycopg.Connection, identity: AgentIdentity, kind: str, body: str, *,
+                   thread_id: int | None, parent_id: int | None, refs: list[str] | None,
+                   shared_dir: Path, knobs: Knobs) -> dict[str, Any]:
+    stored, extra = spill_long_body(body, shared_dir, int(knobs.get("long_body_chars", conn)))
+    all_refs = list(refs or []) + extra
+    row = fetch_one(
+        conn,
+        """
+        insert into messages (author_id, kind, thread_id, parent_id, body, refs, read_seq)
+        values (%s, %s, %s, %s, %s, %s, %s) returning id
+        """,
+        (identity.id, kind, thread_id, parent_id, stored, all_refs, last_read_seq(conn, identity)),
+    )
+    return {"id": int(row["id"]), "seq": int(row["id"]), "refs": all_refs}

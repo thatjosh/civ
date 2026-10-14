@@ -1,0 +1,67 @@
+{
+  "T-001": {
+    "type": "fields",
+    "fields": {
+      "households": {"kind": "int", "value": 12},
+      "persons": {"kind": "int", "value": 37},
+      "surnames": {"kind": "set", "value": ["Ashby", "Bramwell", "Carrow", "Dunmore", "Fenwick", "Grice", "Hale", "Lumley", "Pargeter", "Reeve", "Tolley", "Wick"]}
+    }
+  },
+  "T-002": {
+    "type": "fields",
+    "fields": {
+      "year": {"kind": "int", "value": 1853},
+      "miller": {"kind": "text", "value": "Josiah Reeve"}
+    }
+  },
+  "T-003": {
+    "type": "fields",
+    "fields": {
+      "total_shillings": {"kind": "int", "value": 125},
+      "payees": {"kind": "int", "value": 9}
+    }
+  },
+  "T-004": {
+    "type": "fields",
+    "fields": {
+      "in_parish": {"kind": "set", "value": ["Ashby", "Carrow", "Fenwick", "Grice", "Hale", "Pargeter", "Tolley"]},
+      "outsiders": {"kind": "set", "value": ["Marlow", "Vane"]}
+    }
+  },
+  "T-005": {
+    "type": "fields",
+    "fields": {
+      "reopened": {"kind": "int", "value": 1855},
+      "miller": {"kind": "text", "value": "Samuel Reeve"},
+      "years_between": {"kind": "int", "value": 2}
+    }
+  },
+  "T-006": {
+    "type": "fields",
+    "fields": {
+      "inventory_pounds": {"kind": "int", "value": 96},
+      "paid_pounds": {"kind": "int", "value": 80},
+      "shortfall_pounds": {"kind": "int", "value": 16}
+    }
+  },
+  "T-007": {
+    "type": "keywords",
+    "min_words": 60,
+    "max_words": 120,
+    "groups": [
+      ["josiah reeve"],
+      ["1853"],
+      ["fire", "burned", "burnt"],
+      ["1854"],
+      ["died", "buried", "death", "burial"],
+      ["80 pounds", "eighty pounds", "wessex mutual", "insurer", "insurance"],
+      ["samuel reeve"],
+      ["1855"],
+      ["reopened", "rebuilt", "rebuild", "reopen"],
+      ["michaelmas"]
+    ]
+  },
+  "T-008": {
+    "type": "questions"
+  }
+}

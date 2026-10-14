@@ -1,0 +1,81 @@
+"""Assemble system prompts from the markdown files under harness/prompts.
+
+The prompt files live in the harness so that agents can propose changes to
+them. This module only decides the order and fills the placeholders. The
+identity block goes last because everything before it is identical for every
+solver, which keeps the cacheable prefix stable across the population.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from pathlib import Path
+
+# The solver prompt is these files in this order, then broadcasts, then the
+# handoff, then identity. Order matters for caching, so it is a constant, not
+# a directory listing.
+SOLVER_FILES = (
+    "roles/solver.md",
+    "board_etiquette.md",
+    "voting_guidelines.md",
+    "task_claim_guidelines.md",
+)
+BROADCAST_PREAMBLE = "broadcast_preamble.md"
+SUCCESSOR_PREAMBLE = "successor_preamble.md"
+IDENTITY = "identity.md"
+
+SEPARATOR = "\n\n"
+
+
+@dataclass
+class PromptContext:
+    """Everything that varies per agent when a prompt is assembled."""
+
+    agent_id: str
+    role: str
+    generation: int
+    lineage_id: str
+    harness_version: str = "dev"
+    broadcasts: list[str] = field(default_factory=list)
+    handoff: str | None = None
+
+
+class PromptAssembler:
+    """Builds a system prompt from the prompt files in a fixed order."""
+
+    def __init__(self, prompts_dir: Path | str) -> None:
+        self._dir = Path(prompts_dir)
+
+    def _read(self, relative: str) -> str:
+        path = self._dir / relative
+        # Failing loudly beats sending an agent out with half a prompt.
+        if not path.exists():
+            raise FileNotFoundError(f"prompt file missing: {path}")
+        return path.read_text(encoding="utf-8").strip()
+
+    def solver_prompt(self, ctx: PromptContext) -> str:
+        parts = [self._read(name) for name in SOLVER_FILES]
+
+        # Broadcasts are only included when there are some, because the
+        # preamble on its own would be a heading over nothing.
+        if ctx.broadcasts:
+            lines = [self._read(BROADCAST_PREAMBLE)]
+            lines.extend(f"- {text.strip()}" for text in ctx.broadcasts)
+            parts.append("\n".join(lines))
+
+        # A successor gets the preamble and the handoff together, so the
+        # framing and the content it frames are adjacent.
+        if ctx.handoff:
+            parts.append(self._read(SUCCESSOR_PREAMBLE) + SEPARATOR + ctx.handoff.strip())
+
+        parts.append(self.identity_block(ctx))
+        return SEPARATOR.join(parts) + "\n"
+
+    def identity_block(self, ctx: PromptContext) -> str:
+        return self._read(IDENTITY).format(
+            agent_id=ctx.agent_id,
+            role=ctx.role,
+            generation=ctx.generation,
+            lineage_id=ctx.lineage_id,
+            harness_version=ctx.harness_version,
+        )

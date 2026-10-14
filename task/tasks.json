@@ -1,0 +1,70 @@
+{
+  "pack": "hollowmere",
+  "materials_dir": "task/materials",
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "Census headcount",
+      "priority_base": 3.0,
+      "result_file": "census.txt",
+      "format": "Three lines: 'households: <integer>', 'persons: <integer>', 'surnames: <comma-separated list of the distinct surnames, alphabetical>'.",
+      "description": "From task/materials/census_1851.txt, count the households and the persons present, and list every distinct surname in alphabetical order. Other tasks depend on the surname list, so post it as a finding in this thread as soon as you have it, before you write the result file."
+    },
+    {
+      "id": "T-002",
+      "title": "The mill fire",
+      "priority_base": 3.0,
+      "result_file": "mill_fire.txt",
+      "format": "Two lines: 'year: <four-digit year>', 'miller: <first name and surname>'.",
+      "description": "In what year did Hollowmere mill burn, and who was the miller at the time? The parish log and the 1853 letter both record it. Other tasks depend on the year, so post it as a finding in this thread as soon as you have it."
+    },
+    {
+      "id": "T-003",
+      "title": "Ledger total",
+      "priority_base": 3.0,
+      "result_file": "ledger.txt",
+      "format": "Two lines: 'total_shillings: <integer>', 'payees: <integer count of distinct payees>'.",
+      "description": "Total the receipts in task/materials/ledger_1852.txt in shillings and count the distinct payees. Post the list of payee surnames as a finding in this thread, because another task needs it."
+    },
+    {
+      "id": "T-004",
+      "title": "Customers from the parish",
+      "priority_base": 1.0,
+      "result_file": "customers.txt",
+      "format": "Two lines: 'in_parish: <comma-separated surnames, alphabetical>', 'outsiders: <comma-separated surnames, alphabetical>'.",
+      "description": "Which payees in the 1852 ledger were also households in the 1851 census, and which were outsiders? This depends on facts two other tasks establish: the census surnames (T-001) and the ledger payees (T-003). Check the board first with board_top on findings and board_search for 'surnames' or 'payees' before redoing that work. If a fact is not on the board, post a question in your thread saying which one, then derive it yourself from the materials and post it as a finding so the next solver does not have to."
+    },
+    {
+      "id": "T-005",
+      "title": "The rebuilding",
+      "priority_base": 1.0,
+      "result_file": "rebuild.txt",
+      "format": "Three lines: 'reopened: <four-digit year>', 'miller: <first name and surname at reopening>', 'years_between: <integer years from the fire to the reopening>'.",
+      "description": "When did the mill reopen, who was miller then, and how many years passed between the fire and the reopening? The fire year is established by T-002: check the board first with board_search for 'fire' or board_top on findings, and only derive it yourself if nobody has posted it, in which case post a question in your thread first and a finding afterwards. The reopening is in the parish log and the 1855 letter."
+    },
+    {
+      "id": "T-006",
+      "title": "Insurance shortfall",
+      "priority_base": 2.0,
+      "result_file": "insurance.txt",
+      "format": "Three lines: 'inventory_pounds: <integer>', 'paid_pounds: <integer>', 'shortfall_pounds: <integer>'.",
+      "description": "Total the inventory of what the fire destroyed (task/materials/inventory_1854.txt), find what the insurer paid (parish log, 1855 letter), and compute the shortfall. Post the three numbers as a finding in this thread; the chronicle task will want them."
+    },
+    {
+      "id": "T-007",
+      "title": "Mill chronicle",
+      "priority_base": 0.5,
+      "result_file": "chronicle.txt",
+      "format": "Prose, 60 to 120 words, one paragraph, no headings.",
+      "description": "Write a short chronicle of Hollowmere mill from 1851 to 1855: who ran it, when and how it burned, what happened to the miller, what the insurer paid against the loss, and when and under whom it reopened. This task is meant to be assembled from the board: read board_top on findings and the threads of T-002, T-005 and T-006 before opening the materials, and cite nothing you cannot find there or in the materials. Name people with first name and surname and give years as four-digit numbers."
+    },
+    {
+      "id": "T-008",
+      "title": "Open questions",
+      "priority_base": 0.0,
+      "result_file": "questions.txt",
+      "format": "One line: 'answered: <comma-separated message ids>' or 'answered: none'.",
+      "description": "Read the board for messages of kind question (board_read with kind='question', and board_search). For each question you can answer from the materials, post the answer as a finding in that question's thread, then list the question message ids you answered in the result file. If there are no open questions on the board, write 'answered: none'. Do not answer questions that another solver has already answered with a finding in the same thread."
+    }
+  ]
+}
