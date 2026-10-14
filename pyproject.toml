@@ -1,0 +1,23 @@
+[project]
+name = "civ"
+version = "0.0.1"
+description = "A self-governing civilisation of Claude agents"
+requires-python = ">=3.12"
+dependencies = [
+  "claude-agent-sdk>=0.2.167",
+  "mcp[cli]>=2.3.0",
+  "psycopg[binary,pool]>=3.3",
+  "uvicorn>=0.30",
+  "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.24"]
+
+[tool.pytest.ini_options]
+testpaths = ["harness/tests", "task"]
+asyncio_mode = "auto"
+addopts = "-q"
+
+[tool.setuptools]
+packages = ["harness", "harness.board_mcp", "harness.board_mcp.tools", "harness.orchestrator", "task", "task.verifier"]
