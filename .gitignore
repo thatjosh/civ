@@ -1,0 +1,6 @@
+# runtime state, never committed (see design doc, section 3)
+agents/
+shared/
+# local
+.DS_Store
+.env

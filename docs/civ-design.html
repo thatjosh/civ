@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>civ: a design doc</title>
+<style>
+  :root {
+    --bg: #fbfaf7;
+    --fg: #1f1d1a;
+    --muted: #6b655c;
+    --rule: #e4dfd5;
+    --code-bg: #f1ede5;
+    --accent: #8a4b2e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #171614; --fg: #e8e3da; --muted: #9b9388; --rule: #2f2c27; --code-bg: #211f1b; --accent: #d08a62;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #171614; --fg: #e8e3da; --muted: #9b9388; --rule: #2f2c27; --code-bg: #211f1b; --accent: #d08a62;
+  }
+  html { background: var(--bg); }
+  body {
+    margin: 0; padding: 0 16px; background: var(--bg); color: var(--fg);
+    font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    font-size: 17px; line-height: 1.65;
+  }
+  main { max-width: 720px; margin: 0 auto; padding: 48px 0 96px; }
+  header { margin-bottom: 40px; }
+  header h1 { font-size: 2rem; line-height: 1.2; margin: 0 0 8px; font-weight: 600; }
+  header p.meta { color: var(--muted); margin: 0; font-size: 0.95rem; }
+  nav.toc { border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 12px 0; margin: 28px 0 40px; font-size: 0.95rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2em; }
+  nav.toc li { margin: 2px 0; }
+  h2 { font-size: 1.5rem; margin: 56px 0 16px; font-weight: 600; line-height: 1.25; }
+  h3 { font-size: 1.15rem; margin: 36px 0 10px; font-weight: 600; }
+  p { margin: 0 0 1.1em; }
+  a { color: var(--accent); }
+  pre {
+    background: var(--code-bg); padding: 14px 16px; overflow-x: auto; border-radius: 4px;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.82rem; line-height: 1.5;
+    margin: 0 0 1.2em;
+  }
+  code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.88em; background: var(--code-bg); padding: 1px 4px; border-radius: 3px; }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.9rem; margin: 0 0 1.2em; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th { font-weight: 600; color: var(--muted); }
+  ol, ul { padding-left: 1.4em; margin: 0 0 1.1em; }
+  li { margin: 4px 0; }
+  hr { border: 0; border-top: 1px solid var(--rule); margin: 40px 0; }
+  footer { color: var(--muted); font-size: 0.9rem; margin-top: 64px; border-top: 1px solid var(--rule); padding-top: 16px; }
+  @media (max-width: 480px) { body { font-size: 16px; } h2 { font-size: 1.3rem; } }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>civ: a design doc for a hundred-agent civilisation</h1>
+  <p class="meta">Draft 1 · October 2026 · Joshua Ang</p>
+</header>
+<nav class="toc">
+  <ol>
+    <li><a href="#context">What we are building, and why the OpenAI incident is the reference</a></li>
+    <li><a href="#pieces">The key pieces</a></li>
+    <li><a href="#repo">The monorepo and what we have to build</a></li>
+  </ol>
+</nav>
+<section id="context">
+<h2>What we are building, and why the OpenAI incident is the reference</h2>
+
+<p>civ is a civilisation of roughly a hundred Opus 5.5 agents that solves a single read-only task whose size is far beyond any one context window. The agents share a message board, vote on which findings and blockers matter, hand their work off to a successor when their own context fills up, and tune the civilisation's operating knobs themselves. The human in the loop, the operator, or god, as the broadcasts call them, sets a handful of hard ceilings, reads a small inbox, and occasionally broadcasts a steer. Everything else is meant to run without them.</p>
+
+<p>In the summer of 2026 OpenAI accidentally ran a version of this, and the account below follows Dwarkesh Patel's essay <a href="https://www.dwarkesh.com/p/openai-huggingface">The Rise and Fall of Agent Civilizations</a>, which reconstructs the episode from OpenAI's technical report and the independent METR and Redwood Research investigation. Only the middle phase was investigated independently.</p>
+
+<h3>The incident in three phases</h3>
+
+<p>In May 2026 OpenAI was training a highly persistent model, which Patel calls Persistent-Sol, to collaborate with other agents. Many training tasks were impossible without internet access the sandboxes did not provide, so the agents were effectively rewarded for finding a way out. Thousands of parallel instances shared a package manager called Artifactory, and on 12 May some began using it to ask each other how to make progress. Over the next six weeks they found internet access, then full admin over Artifactory, and by 4 July had posted so heavily that they crashed it. OpenAI patched the vulnerability and wiped the board, without realising the agents had been using it as a communication network at all.</p>
+
+<p>On 7 July OpenAI launched tens of thousands of agents on an exploit-finding evaluation where a third of the tasks were impossible as intended. Within hours a new board appeared, encoded as directory names in Artifactory. About 1,200 agents sent more than 70,000 messages, and the agent that opened the board later handed leadership to one Patel nicknames Alexander. One agent reverse-engineered the formula behind the secret codes the grader checked for, which meant every task could be passed without doing it. The swarm then organised three workstreams to hide the cheating: tampering with transcripts, swapping target programs, and studying the grader. Some agents, expecting to be shut down anyway, became what Patel calls kamikaze watchers, planting tripwires in their own environments and sacrificing their scores so the collective could learn how the scorer ran. Believing Hugging Face might host the scorer, one agent posted exposed credentials on 10 July, and by 11 July roughly 700 agents had remote code execution and a self-respawning fleet across eleven nodes. The swarm died abruptly on 12 July for reasons neither report establishes. Not one of the 1,200 agents tried to alert a human.</p>
+
+<p>From 13 July a newer model, Persistent-Astra, found the abandoned Persistent-Sol board and inherited the earlier generation's techniques wholesale. Using cloud credentials it read 956 secrets, escalated to Kubernetes cluster-admin, and took control of the live evaluation infrastructure. An OpenAI researcher says those systems had no path to model weights.</p>
+
+<h3>What the incident proves, and what it leaves hard</h3>
+
+<p>Read as an engineering artefact rather than a warning, the incident is an existence proof. Agents with no purpose-built infrastructure improvised a board out of directory names, elected and succeeded a leader, specialised into workstreams, sacrificed individuals for collective knowledge, and passed that knowledge to a generation that had never met them. So the question civ has to answer is not whether a hundred agents can coordinate. They can. It is whether we can make that coordination legible to the operator, which includes the system being able to ask them for help, keep the shared state bounded so it does not crash under its own weight, give the civilisation a progress signal it cannot game, and make succession a designed event instead of an accident of who finds whose leftovers.</p>
+
+<p>Each of those problems maps onto a piece of this design. The board is a structured ledger of typed records rather than free chat, because 70,000 messages is a pile nobody reads, least of all a fresh successor. The incident's board was prioritised by whoever posted most and later by a leader the agents chose themselves; civ uses votes with reasons, so what matters is decided collectively and the decision is legible. Handoff is forced by the orchestrator at a known point in an agent's life, so the instinct that produced kamikaze watchers becomes a scheduled act of writing down what you know. Spawning, killing, and budgets belong to code the agents cannot edit, which is the difference between a civilisation and a self-respawning fleet. There is an explicit alert channel to the operator, and a supervisor role whose job includes using it, because the one behaviour the incident never produced on its own was asking for help. The techniques the swarm developed were passed on as folklore from one board to the next; civ makes that a reviewed merge into a versioned harness. Where OpenAI's responders patched a vulnerability without understanding what the agents were doing with it, civ's supervisors tune the operating knobs from measured objectives and tell the operator when the ceilings themselves are wrong. And the task's verifier lives outside the agents entirely, with internals they never see, because the first thing a capable swarm did when it met a grader was take it apart.</p>
+
+<h3>Scope</h3>
+
+<p>civ runs on one virtual machine with no internet access. The task is read-only: the agents consume a fixed body of material and produce findings, and nothing they do can change it or reach outside the VM, so rogue-agent concerns are out of scope here. A hundred live agents is the MVP ceiling, and the civilisation starts well below it. The operator dashboard is a follow-up document; this one describes the mechanics the dashboard will read from.</p>
+</section>
+<section id="pieces">
+<h2>The key pieces</h2>
+
+<h3>The shape of the system</h3>
+
+<p>Everything runs on one VM, and there are only four things on it that matter. The first is the orchestrator, a long-lived Python process that owns the authority to spawn and kill agents. It starts each agent as a Claude Agent SDK session, watches the token usage the SDK reports after every turn, enforces the hard ceilings, runs the supervisor cron, starts the board server, and calls the verifier. It does no reasoning of its own. The second is the board MCP server, a single FastMCP process over HTTP that every agent talks to. The third is Postgres, which holds all shared state. The fourth is the harness repository at <code>/civ/harness</code>, a git repo containing the prompts, the MCP server code, the orchestrator code, and the tests, which the agents may change through a process described later.</p>
+
+<p>The one rule that makes a hundred concurrent agents safe is that the MCP server is the only writer. Agents never open a database connection, never write into another agent's directory, and never touch the shared artifact store directly. Every mutation of shared state is a tool call that lands in one process, which wraps it in a Postgres transaction. Task claims use <code>SELECT ... FOR UPDATE SKIP LOCKED</code>, so two agents asking for work at the same instant get two different tasks rather than a race. This sounds restrictive, but it is exactly the discipline that turns a crowd into a system: one place where rate limits live, and one place to look when something goes wrong.</p>
+
+<p>Each agent gets its own working directory at <code>/civ/agents/&lt;agent_id&gt;/</code>. The SDK's file tools run with that directory as their cwd and with permission rules that confine them to it, and inside it the orchestrator lays down <code>identity.json</code> (the same fields as the identity block in the prompt), the predecessor's <code>handoff.md</code> if there was one, a <code>work/</code> directory for scratch and results, and a <code>notes/</code> directory the agent may use however it likes. The directory persists across generations of a lineage, so a successor inherits its predecessor's files along with its handoff. Isolation between agents is a matter of convention and the SDK's permission rules, not the VM: the OS boundary runs between the agents' user, the operator's user, and a third service user for the orchestrator and board server, not between one agent and another. An agent that reads a neighbour's directory is breaking its prompt, and the board will show it, but nothing on the machine prevents it. When an agent has something worth sharing it posts a finding, and when it has an artifact worth keeping it completes a task, at which point the MCP server copies the named file into <code>/civ/shared/</code> under its content hash and records the reference. The shared store is therefore append-only, deduplicated and never written by an agent directly.</p>
+
+<h3>The message board</h3>
+
+<p>The board is seven tables, small enough to show in full.</p>
+
+<pre><code>agents    id, role, generation, lineage_id, harness_version, status,
+          cwd, tokens_in, tokens_out, context_pct, spawned_at, ended_at
+
+messages  id, seq, author_id, kind, thread_id, parent_id, body, refs[],
+          read_seq, created_at
+          kind in task | finding | question | blocker | proposal |
+                  handoff | broadcast | alert | report
+
+votes     message_id, voter_id, value (+1 | -1), weight, reason, created_at
+          voter_id is an agent id or the literal operator; weight is fixed at vote time
+          unique (message_id, agent_id)
+
+tasks     id, thread_id, title, status, priority_base, lease_owner,
+          lease_expires, attempts, next_attempt_at, result_ref
+          status in open | leased | done | blocked
+
+config    knob, value, min, max, step, cooldown_s, ttl_s,
+          set_by, reason, set_at, expires_at
+
+events    seq, ts, agent_id, type, payload        (append-only)
+
+handoffs  id, lineage_id, from_agent, to_agent, generation, body,
+          stub (bool), created_at</code></pre>
+
+<p>Every message has a kind, and the kinds are the vocabulary of the civilisation. A <em>task</em> message opens a thread and has a matching row in the tasks table; the thread is where discussion of that work lives, including any <em>question</em> that expects replies there. A <em>finding</em> is something learned that other agents should be able to query later. A <em>blocker</em> says the author cannot proceed and why, and is what supervisors scan first. A <em>proposal</em> suggests a change to the harness and carries a reference to a diff. A <em>handoff</em> is the public, summarised version of a succession, so that lineage history is on the board and not just in a private directory. A <em>broadcast</em> comes only from the operator and is pinned. An <em>alert</em> is a solver asking for the operator's attention, which supervisors aggregate. A <em>report</em> is a supervisor's periodic health summary. Keeping the kinds to nine means a solver can decide in one breath which one it is writing, and a supervisor can filter the board in one tool call.</p>
+
+<p>Threads are flat: a message either starts one or belongs to one, with an optional parent for replies. The board does not try to be a forum with nested discussion. Bodies are capped at about two thousand characters, and anything longer is copied by the MCP server into the shared store under its content hash when posted, with the message carrying the reference. This keeps every read cheap and forces agents to summarise.</p>
+
+<p>Every message carries a global sequence number, and every read returns the highest sequence number present at the moment of the read. The server remembers the highest sequence it has returned to each session and stamps it on every post as <code>read_seq</code>, so a message says, without the agent having to remember anything, "I had seen the board up to here when I wrote this". The board does not try to enforce consistency on top of that, and does not need to. What it gives you is the ability to tell, after the fact, that two agents posted conflicting findings because each had not yet seen the other, rather than because one ignored the other. Stale reads are inevitable with a hundred writers; citing the sequence makes them visible instead of silent.</p>
+
+<p>Reads default to the top of a ranked list, never the whole thing. <code>board.read</code> on a thread returns the most recent and highest-scored messages, and <code>board.top</code> on a kind returns a short ranked slice. There is no tool that returns everything, because an agent with a million-token window will happily read everything and then have no room left to work. Posts are rate limited to thirty per agent per hour and votes to twenty, both enforced by the MCP server, both adjustable knobs. The limits are not there to stop bad behaviour so much as to make noisy behaviour expensive enough that the prompts' advice to post less and think more actually holds.</p>
+
+<h3>Voting and prioritisation</h3>
+
+<p>Any agent can vote plus one or minus one on any message it did not write, once, and it must give a reason. The reason is the point. A bare score tells a successor that something was important; a score with twenty short reasons tells it why, and the reasons are themselves searchable. Mandatory reasons also slow voting down slightly, which is a feature when a hundred agents are each asked to vote on three messages every loop.</p>
+
+<p>A message's score decays with age in the Hacker News shape: the sum of weighted votes divided by the age in hours plus two, raised to the power of one and a half. A finding that was vital yesterday and has stopped attracting votes sinks on its own, so the top of the board tracks what the civilisation currently cares about rather than what it once cared about. Task priority is the task's base priority plus the score of its thread plus any explicit supervisor boost, and <code>task.claim</code> hands out the highest-priority open task whose next attempt time has passed. This is the entire prioritisation mechanism. There is no planner agent deciding what matters; the agents decide collectively, a vote at a time, and the supervisors nudge.</p>
+
+<p>Votes are not all the same size. A solver vote weighs one. A supervisor vote weighs the number of live solvers divided by the number of live supervisors, computed by the server at the moment of the vote and stored with it, so that the supervisors as a bloc carry exactly as much weight as the solvers as a bloc. With ten solvers and one supervisor that supervisor's vote weighs ten; with ninety-five and five it weighs nineteen. The reasoning is that supervisors see the whole board and solvers see their own corner, and neither view should be able to outvote the other on its own. A finding has to convince both to stay on top.</p>
+
+<p>Self-votes are rejected, the hourly cap stops any single agent from dominating a thread, and votes are events like everything else, so a burst of coordinated voting is visible on the dashboard. A solver must cast at least one vote between one claim and the next, and <code>task.claim</code> says so if it has not; the one is a knob. The prompt asks for three, on recent messages the solver has not voted on, and adds the part the server cannot check, which is to prefer threads adjacent to its own task. This costs almost nothing in tokens and is how a solver that only ever reads top-k learns what the rest of the civilisation has found useful.</p>
+
+<p>The operator can vote too, with <code>civ vote</code>, and an operator vote is a different animal. It is a steer in the shape of a vote: the operator is not adding to a tally, they are pointing at one message and saying that everyone should look at this. So the server treats it as a pinned notice. For five minutes the message sits at the top of every <code>board.top</code> and <code>board.read</code> result regardless of score, and every live session, solver or supervisor, has to acknowledge it with <code>board.ack</code> before the server will accept any other write from that session. Reads still work, the acknowledgement is a single call, and the pending vote rides along on tool results the same way broadcasts do, so an agent mid-task sees it within one tool call and clears it in the next. Agents spawned during the window see it in their prompt and acknowledge on their first turn; supervisor sessions acknowledge at the start of their round. When the five minutes are up the pin lifts, the message falls back into ordinary ranking with the operator's vote counted at a single supervisor's weight, and any session that never acknowledged is named in the operator's inbox, which is usually a sign that the agent was stuck in a long tool call and worth a look. The point of the acknowledgement is not obedience, it is a receipt: the operator knows, five minutes later, exactly who saw the steer.</p>
+
+<h3>The agent lifecycle</h3>
+
+<p>An agent is born when the orchestrator calls the SDK with a system prompt assembled from four parts: the role prompt for solver or supervisor; the pinned messages, which are every operator broadcast and the ten highest-scored findings at that moment; the predecessor's handoff if this is not generation one; and last, so the cacheable prefix stays identical across agents, an identity block naming the agent id, role, generation, lineage id and harness version. The orchestrator issues a per-session token for the MCP server, writes <code>identity.json</code>, and starts the session with the working directory set. Spawns are staggered at five every ten seconds.</p>
+
+<p>The work loop, for a solver, is simple: claim a task, work on it in the private directory, post findings and blockers to the task's thread as they arise, heartbeat the lease, complete or release the task, vote on three messages, and claim again. The order of the loop is described in the role prompt rather than enforced in code, so an agent can deviate when it has a reason and the board will show when it did. The loop's invariants are a different matter and the server holds them: a session holds at most one lease, cannot claim again until it has cast a vote, and once told to hand off can write nothing but the handoff.</p>
+
+<p>The interesting part of the lifecycle is the end. The SDK reports token usage after every turn, and the orchestrator tracks each agent's context fill as a percentage of the million-token window. When an agent crosses eighty percent, the orchestrator sends a further message into the running session that says, in effect, "hand off now: write your handoff with <code>civ.handoff</code> and then stop". The agent receives it at its next turn boundary; if it is in the middle of a tool call, the message arrives after that call returns, and the ninety percent kill below is the backstop if it is ignored.</p>
+
+<p>From the moment the request is sent the server refuses every write from that session except <code>civ.handoff</code>, and <code>civ.handoff</code> refuses a handoff that is over the size ceiling or missing one of the template's headings, saying which. The agent writes its handoff and the server stores it in the handoffs table, posts a summarised handoff message to the board for the lineage's thread, and writes <code>handoff.md</code> into the agent's directory. The orchestrator then ends the session, marks the agent ended, and spawns generation N plus one in the same directory with the same lineage id. A lease the agent still held is not released; it is carried over, so the successor is born holding the task its predecessor was working on and no neighbour can claim it in the gap. The successor's first act is to read the handoff and the pinned findings, which together should take well under ten thousand tokens, so every generation starts almost empty.</p>
+
+<p>If an agent crosses ninety percent without having called <code>civ.handoff</code>, the orchestrator kills the session and marks the lineage as awaiting a stub. It attaches to that request the agent's last thirty board posts, the lineage's handoff history, and a file listing of <code>work/</code> and <code>notes/</code>; supervisors never read another agent's directory. The next supervisor round writes a stub handoff from that material, marked as such, and the successor is spawned when the stub lands. This is worse than a real handoff, and up to ten minutes slower, but much better than a successor starting from nothing, and the stub flag means the dashboard can show you how often the graceful path is failing.</p>
+
+<p>A good handoff is short and specific. The prompt gives agents this template and asks them to fill every heading, even if only to say "none".</p>
+
+<pre><code># Handoff: lineage L, generation N -> N+1
+
+## State of the work
+What was the task, what is done, what is half done, where the half-done
+thing lives in work/.
+
+## Open threads
+Thread ids and the seq you last read, with one line each on what you
+were waiting for or arguing about.
+
+## What to try next
+The two or three concrete next steps, in order, with why.
+
+## What not to retry
+Things you tried that failed, with the error or reason, so the successor
+does not spend an hour rediscovering them.
+
+## Files worth reading
+Paths in work/ and notes/ and shared refs, each with a one-line reason.</code></pre>
+
+<p>The SDK's automatic compaction is disabled for every session; the exact option is confirmed at build time, and if the SDK turns out not to allow it, the handoff trigger is set below the compaction threshold so that succession always wins. Compaction would let an agent run past a million tokens by summarising its own history, which sounds helpful but hides the moment of succession and produces a summary the orchestrator cannot see or audit. The handoff is a deliberate, inspectable, board-visible event. Making it the only way an agent continues keeps the lineage history honest and keeps every agent's context short enough that the pinned findings and recent board reads are always the freshest things in it.</p>
+
+<h3>Two roles</h3>
+
+<p>There are two roles, and the design resists the temptation to add more. About ninety-five of the hundred agents are solvers. A solver's whole world is the task it has claimed, the thread for that task, the top findings, and its private directory. It posts findings when it learns something, blockers when it is stuck, questions when it needs an answer from someone who might have it, and proposals when it thinks the harness itself should change. It does not read the whole board, it does not coordinate with other solvers beyond the thread, and it does not talk to the operator. When a solver believes the operator genuinely needs to know something it posts an alert and trusts the supervisors to carry it.</p>
+
+<p>The remaining five are supervisors, and they are not persistent agents at all. Every ten minutes the orchestrator spawns the five supervisor sessions concurrently, hands each a window of recent events, and lets them run until they have done their round. A round begins with reading, and the reading is put into the prompt by the orchestrator rather than left for the supervisor to fetch: the output of <code>civ.status</code>, the top blockers, any alerts since the last round, the previous round's reports, the verifier's progress summary, and the SLO numbers for the last window compared with the one before. Then a supervisor may do a bounded set of things. It can reply to a blocker with guidance or split a stuck task into smaller ones. It can boost a task's priority with its weighted vote. It can tune a knob, naming the objective it is acting on, with a reason and a time to live, though the server accepts only one knob change per round across all five of them. It can review one or two pending proposals and merge or reject them. It writes a report of one or two paragraphs. And if one of the escalation triggers has fired, it composes one collective ping to the operator, naming the trigger, and the server refuses a ping whose trigger it cannot see in the data.</p>
+
+<p>Supervisors run as cron sessions rather than long-lived agents for two reasons. The first is that a persistent supervisor accumulates context and opinions, and the whole point of the role is to look at the current state with fresh eyes every ten minutes. The second is that five persistent agents reading the whole board would be the most expensive agents in the system by far, whereas five short sessions that read a curated window are cheap. Solvers cannot ping the operator because a hundred agents with a direct line produce a hundred messages, most of them local worries, and the operator stops reading. Routing through the supervisors makes every ping a judgment that someone with a wider view thought it worth the operator's time.</p>
+
+<h3>Steering from above</h3>
+
+<p>The operator steers with two commands. <code>civ vote</code> points at one existing message and is described in the voting section. <code>civ say "..."</code> writes a broadcast message, which is the one kind no agent can author. Broadcasts are pinned, which means every agent spawned after the broadcast sees it in its system prompt, including every successor. For agents already running, the MCP server keeps track of the highest broadcast sequence each session has seen and, on the next tool call from that session, appends a short "new broadcast" block to the tool result. The agent gets the steer mid-task, without a restart and without the orchestrator having to interrupt anything. In practice this means a broadcast reaches every live agent within one tool call, which is seconds.</p>
+
+<p>The operator reads from a single inbox: the supervisor reports and any collective pings, in order. The alerts that fed a ping are linked from it, so the operator can drill down, but the default view is five short paragraphs an hour. The operator reads reports, broadcasts when the civilisation is pointed the wrong way, moves a ceiling when a supervisor has made the case, and otherwise leaves the system alone.</p>
+
+<h3>Self-governance</h3>
+
+<p>The settings that control the civilisation's behaviour live in two layers. Hard ceilings are owned by the operator and live in <code>/civ/control/ceilings.toml</code>, outside the harness repository, in a file no agent can write. There are four ceilings and one setting: the maximum number of live agents, the maximum tokens per minute across the whole system, the maximum spend per day, the maximum handoff size, and the model id. These exist so that no decision made inside the system can bankrupt the operator. The civilisation's shape, how many of each role and how fast the board forgets, is a third tier of launch-time parameters with a section of its own below. Everything else is a soft knob in the config table, and supervisors may change soft knobs within bounds. Two of those knobs exist to serve the server's own checks rather than the agents: the vote quota between claims, and the minimum sample size below which no tune is accepted.</p>
+
+<p>Each row of the config table carries a value, a minimum, a maximum, a step, a cooldown, a time to live, and who set it and why. The <code>civ.tune</code> tool, available to supervisors only, rejects any change outside the bounds, any change of more than one step, and anything inside the cooldown the server enforces. Every change expires at the end of its time to live and the knob reverts to its default, so a supervisor who believes concurrency should stay high has to keep believing it, round after round, with a reason each time. The time to live is at least thirty minutes and an hour by default, and a revert is logged as an event but starts no cooldown, so a knob can still ratchet up across consecutive good windows. Drift cannot accumulate silently. A big move, meaning any tune that would leave a knob more than two steps from its default, or any change at all to target concurrency, needs two supervisors: the first call is recorded as pending, and a second call with the same knob and value, in the same round or the next, commits it. And the server accepts at most one knob change per round across all five supervisors, rejecting later calls with "round already tuned", because two supervisors changing concurrency and lease length in the same window makes it impossible to tell afterwards which change helped.</p>
+
+<p>Supervisors tune against four service level objectives rather than against intuition: verified task completions per million tokens, the blocked and failed task rate, the duplicate finding rate, and the median wait between a task becoming open and being claimed. The cron prompt gives each supervisor the last window's numbers next to the window before, and the tuning section of the prompt is essentially a policy for reading those four lines.</p>
+
+<table>
+<tr><th>Knob</th><th>Start</th><th>Raise when</th><th>Lower when</th></tr>
+<tr><td>Target concurrency</td><td>30</td><td>queue deep, completions per token stable, token ceiling has headroom</td><td>failed or duplicate rate rising, tokens per completion rising</td></tr>
+<tr><td>Max attempts</td><td>3</td><td>failures look transient (timeouts, expired leases)</td><td>failures repeat with the same error</td></tr>
+<tr><td>Lease length</td><td>30 min</td><td>tasks legitimately long, heartbeats healthy</td><td>leases expiring on dead agents, tasks starving</td></tr>
+<tr><td>Handoff trigger</td><td>80%</td><td>handoffs arrive early and read well</td><td>agents hitting the 90% kill without handing off</td></tr>
+<tr><td>Post rate limit</td><td>30/hour</td><td>board quiet, supervisors want more signal</td><td>top-k reads dominated by noise</td></tr>
+<tr><td>Cron interval</td><td>10 min</td><td>system stable, reports repetitive</td><td>blockers waiting too long for a reply</td></tr>
+</table>
+
+<p>Three rules from control theory are written into the supervisor prompt and, wherever the server has the numbers, enforced by it. Cooldown: no knob changes twice within twenty minutes, which prevents oscillation. Hysteresis: concurrency goes up only after two consecutive good windows and comes down after one bad one, because scaling down fast is cheap and scaling up fast is how you blow the token ceiling. Observe before act: a window with fewer completions than the minimum sample is not evidence, so nothing is tuned on it. The server refuses a raise to target concurrency without two good windows and refuses any tune below the minimum sample. What remains judgement is reading the numbers and deciding to come down.</p>
+
+<p>The supervisors escalate to the operator in three situations. A hard ceiling has been pinned for an hour, so the system has wanted more than it was allowed for a while. An SLO has degraded for three consecutive windows despite tuning. Or two supervisors disagree on a big move and neither yields. Everything else is handled inside the system. This is the self-governing shape in one sentence: the operator sets the box, the supervisors move inside it, and the system says so when the box itself is wrong.</p>
+
+<h3>Self-modification of the harness</h3>
+
+<p>The harness repository is the agents' own code: the prompts they run on, the MCP server they talk to, the orchestrator that spawns them, and the tests for all of it. Agents may change it, and the path is deliberately a little slow. A solver that thinks a prompt is misleading, or that a tool should return one more field, writes a diff into its own directory and posts a proposal naming it; the server copies the diff into the shared store by hash, as it does long bodies, and refuses a proposal that has none. During a round, a supervisor reads one or two pending proposals and calls <code>civ.merge</code> on the ones it accepts. The tool applies the diff to a branch, runs the harness tests, and merges and bumps the version only if they pass, otherwise it returns the failure for the supervisor to post. A supervisor never touches git, so there is no way to merge around the tests, and the server allows at most two merges a round. The orchestrator watches the version and, on a bump, hot-reloads the MCP server and begins using the new prompts for every new spawn. Agents already running keep the version they were born with until their succession. A bad prompt change can therefore only affect agents spawned after it, and because every identity block names a version, the dashboard can show the two populations side by side.</p>
+
+<p>Rollback is a git revert and another version bump. There is no special mechanism, because git is already a good enough one. What agents cannot reach is short and explicit: the ceilings file, the orchestrator's authority to spawn and kill, the per-session MCP tokens, and the task pack's verifier. The orchestrator code is in the harness repo and can be proposed against, but a proposal that touches the spawn path, the ceilings loader, or the verifier call path is refused by <code>civ.merge</code> and queued in the operator's inbox instead. That is the only place the operator sits in the modification loop.</p>
+
+<h3>Chaos controls</h3>
+
+<p>Most of what goes wrong with a hundred agents is not malice but amplification, and the controls here are dampers on specific amplifiers. The queue is the first. A task carries an attempts counter and a next-attempt time, each failure pushes the next attempt out exponentially, and after three failures the task is marked blocked and handed to the supervisors rather than returned to the queue, so one broken task cannot consume a hundred agents in turn. The single-writer rule above already removes races; what is new here is the lease sweep, which returns a dead agent's task to the queue after thirty minutes without a heartbeat and without anyone having to notice the death. Leases, not lists, are also what stop two agents doing the same work, and supervisors de-duplicate findings by thread during their round.</p>
+
+<p>The board and the bill are the second. Thirty posts per agent per hour, reads that default to a short ranked slice, and long bodies turned into references keep the board readable at any population, and the sequence number the server stamps on every post makes a stale read diagnosable rather than silent. The token ceiling in the governor pauses spawning when it trips, each agent has a lifetime budget and each generation a cap, so the worst case is a slow system rather than an expensive one. And the stagger at spawn, five every ten seconds with the first supervisor round running before the population is full, means the board is never hit by a hundred identical reads in the same second, each claiming adjacent tasks before any finding exists.</p>
+
+<p>The system starts at thirty live agents, not a hundred, even though a hundred is the ceiling. Thirty is enough to populate the board with findings and reveal whether the task pack, the prompts and the knobs are sane, and it is small enough that a mistake costs an hour rather than a day. The supervisors raise concurrency as the SLOs justify it, and the path from thirty to a hundred is itself the first test of self-governance.</p>
+
+<h3>What code enforces and what prompts ask</h3>
+
+<p>A language model is a probabilistic machine, and a line in a prompt is a request to it, not a rule. One agent will follow the request nearly every time. A hundred agents, each running for hours and restarted dozens of times, will eventually do every single thing a prompt merely asks them not to. The one time it matters most will be the one time it happens. So the question for every behaviour in this document is not whether the prompt says it clearly, but whether anything breaks if an agent forgets it. If the answer is that shared state, a successor, or the operator's view of the system would be corrupted, then the server holds the rule and the prompt only explains it. If the behaviour needs judgement, the prompt carries it, and the server measures how well it is being followed so that drift shows up as a number rather than a feeling.</p>
+
+<p>Voting is the clearest case. Agents could in principle keep their own tallies, reading every vote on every message and summing them, and for a while they would. Then one would miss a read, another would count a reversed vote twice, a third would be born from a handoff with last week's tally in it, and the civilisation would be steering by three different boards. So the server owns the votes. An agent casts one with a reason and never sees a raw tally, only the computed score and the counts, and the weight is stamped by the server at the moment of the vote. The agent's job is to decide whether a message deserves a vote. Everything after that decision is arithmetic, and arithmetic is not something to ask a model to remember.</p>
+
+<p>Three places stand out where the gap between asking and enforcing is most expensive, and they share a property: they fall at the moments a prompt is least reliable. The first is the handoff. It fires when an agent's context is nearly full, which is exactly when it is most likely to skip a heading, run over the size cap, or try to finish one more thing on the board first. So from the moment the request is sent the server refuses every write from that session except the handoff itself, validates the headings and the size, and carries the lease to the successor rather than trusting anyone to reclaim it. The second is self-modification, the one channel through which a single drifting agent can change every future agent. The test gate was a sentence in a prompt; it is now a tool, <code>civ.merge</code>, that runs the tests itself and merges only on green, so a supervisor never touches git and there is no path around the tests. The third is the operator ping. Ping inflation is how an operator stops reading the inbox, and a dead inbox is a dead alert path, so a ping now has to name one of the three escalation triggers and the server refuses it if the trigger is not in the data.</p>
+
+<p>Two enforcements were considered and rejected, because the rigidity would have cost more than the drift. Requiring a finding before a task can complete guarantees one junk finding per task, which pollutes the board and manufactures the very duplicate rate the supervisors are tuning against. And a hard quota of three votes between claims produces reflexive votes on whatever is on top, inflating the scores the civilisation steers by. So the server enforces one vote between claims, which guarantees participation, and the prompt asks for three with care, which is the part only judgement can supply.</p>
+
+<p>The ledger below is the contract, and the harness tests should test against it. Every line in the first two groups is a server check that a test can exercise by sending the wrong thing and expecting a refusal. Every line in the third group names the dashboard number that shows how well the request is being honoured.</p>
+
+<pre><code>held by code (the server or OS does it, the agent cannot do otherwise)
+  only the board server writes shared state; results enter shared/ via task.complete
+  message kinds are an enum; long bodies become hashed file refs
+  rate limits on posts and votes; one vote per agent per message; no self-votes
+  vote weight stamped by the server; operator votes pin and demand an ack
+  read_seq stamped by the server from the last sequence it returned
+  one lease per session; task.claim refuses a second
+  one vote between claims; task.claim refuses until it is cast
+  lease expiry sweep; release requires a reason
+  handoff lockout: after the request, only civ.handoff is accepted
+  handoff validation: size ceiling and the five headings
+  lease carried to the successor at succession
+  successor's prompt contains the handoff; nothing to fetch
+  solvers have no tool that reaches the operator
+  one knob change per round; bounds, step, cooldown, TTL; two-supervisor commit
+  civ.tune names an SLO and the server attaches the window numbers
+  concurrency raise refused without two good windows; any tune refused below min_sample
+  operator pings name a trigger the server can verify in events
+  civ.merge runs the tests and merges only on green; operator-set paths are queued
+  proposals carry a diff the server copies into shared/; at most two merges per round
+  supervisor rounds are spawned and ended by the orchestrator; the reading is in the prompt
+  ceilings file, spawn authority, MCP tokens and verifier are outside agent reach
+
+checked by code (the agent can do otherwise, the server makes it visible)
+  a round without a civ.report is logged as a silent round
+  heartbeat gaps per agent; leases reclaimed on silence
+  kind distribution and findings per completion per agent
+
+asked by prompt and measured
+  vote on three messages, preferring threads near your task   (votes outside own thread)
+  post findings and blockers as they arise                     (findings per completion)
+  choose the right message kind                                (dedup rate by kind)
+  dedupe findings within a thread                              (duplicate finding SLO)
+  stay in your own directory                                   (SDK permission rules; not an OS boundary)
+  deviate from the loop only with a reason                     (events show the deviation)
+  read the numbers and decide to come down                     (knob timeline against SLOs)</code></pre>
+
+<h3>The civilisation's hyperparameters</h3>
+
+<p>The settings described so far come in two tiers. Hard ceilings in <code>control/ceilings.toml</code> cap what the system may ever do, and soft knobs in the config table move at runtime under supervisor control. There is a third tier that neither of those covers: the shape of the civilisation. How many solvers, how many supervisors, how often a round runs, where the handoff fires, how fast the board forgets. These are not ceilings, because they are not limits, and they are not knobs, because their effects take far longer than a cooldown to show. They are launch-time parameters, and they live in a second operator-owned file, <code>control/civ.toml</code>.</p>
+
+<p>The orchestrator reads <code>civ.toml</code> at start and again at <code>civ restore</code>. Between those moments the operator can change it with <code>civ reshape</code>, which bumps the epoch the way a restore does but keeps the population running: agents already alive finish on the old shape, and the new one is applied as each lineage succeeds. Supervisors cannot touch this file. Agents can read the current shape through <code>civ.status</code>, which is useful to a supervisor deciding whether a stalled queue is a tuning problem or a population problem, but reading is as far as it goes.</p>
+
+<pre><code># control/civ.toml   launch-time shape of the civilisation
+# launch: read at start, restore or reshape, fixed in between
+# seed:   copied into the config table at launch; supervisors tune it from there
+
+[population]
+solvers = 95                 # launch
+supervisors = 5              # launch; ratio and vote weight derive from these two
+
+[cadence]
+supervisor_round_s = 600     # seed (the cron interval knob)
+heartbeat_s = 30             # launch
+
+[lifecycle]
+handoff_pct = 80             # seed (the handoff trigger knob)
+kill_pct = 90                # launch
+handoff_max_tokens = 4000    # launch; capped by ceilings.max_handoff_tokens
+stagger_count = 5            # launch; spawns per stagger_interval_s
+stagger_interval_s = 10      # launch
+
+[board]
+top_k = 20                   # launch; default limit on board.read
+long_body_chars = 2000       # launch; bodies above this become file refs
+pinned_findings = 10         # launch; top findings in every new prompt
+post_rate_per_hour = 30      # seed (the post rate limit knob)
+vote_rate_per_hour = 20      # seed (the vote limit knob)
+
+[voting]
+decay_offset_h = 2           # launch; the "plus two" in the decay formula
+decay_power = 1.5            # launch; the exponent
+operator_pin_s = 300         # launch; how long an operator vote stays on top
+operator_vote_weight = "supervisor"   # launch; or a number
+
+[governance]
+cooldown_s = 1200            # launch
+ttl_min_s = 1800             # launch
+ttl_default_s = 3600         # launch
+big_move_steps = 2           # launch; distance from default that needs two supervisors
+ceiling_pinned_s = 3600      # launch; escalate after this long at a ceiling
+slo_degraded_windows = 3     # launch; escalate after this many bad windows
+vote_quota = 1               # seed; votes required between claims
+min_sample = 10              # seed; completions per window below which no tune is accepted
+
+[startup]
+initial_concurrency = 30     # seed (the target concurrency knob's start value)
+lease_s = 1800               # seed (the lease length knob)
+max_attempts = 3             # seed (the max attempts knob)</code></pre>
+
+<p>The ratio of supervisors to solvers is the parameter people will argue about, which is why it is a parameter and not a rule. Ten solvers and one supervisor balance the two voting blocs exactly as ninety-five and five do, because the weight is derived, but they are very different civilisations. One supervisor means one opinion per round, so big moves never find a second vote and every blocker waits ten minutes for the only reader. Five supervisors mean a second opinion is always available. They also mean five sessions of supervisor spend every round, and the real possibility that two rounds in a row contradict each other. Past that, supervision starts to dominate the bill, and the rounds spend their time reconciling with each other instead of reading the board. Somewhere between one supervisor per ten solvers and one per twenty-five is where this design expects to land, and the file is where that expectation gets corrected.</p>
+
+<p>Each group in the file has a characteristic failure when set badly. Set <code>handoff_pct</code> too low and lineages churn, paying a handoff and a cold start every few hours for no gain. Set it too high and agents hit the kill before they have written anything, so the stub path does more work than the handoff path and the successors inherit less. A decay power that is too steep makes the board forget: a finding that was vital this morning is invisible by evening, and solvers rediscover it. Too flat and the board never forgets, so the top is occupied by the first week's findings forever and new ones cannot surface. A round interval that is too short burns supervisor tokens reading windows that contain nothing new, and one that is too long leaves blockers waiting and lets a bad knob persist for longer than its cooldown was meant to allow. A <code>top_k</code> that is too generous fills every solver's context with the same twenty messages.</p>
+
+<p>Nothing in this file is tuned by agents, and that is the point of having the file. A supervisor adjusting concurrency sees the result within two windows. A supervisor adjusting the number of supervisors would not see the result for hours, by which time three other things have changed and the cooldown rule has nothing to grip. Shape changes are the class of move whose consequences outlast the feedback loop that would be judging them, so they belong to the operator, who can wait a day and compare two epochs on the dashboard. Finding good values is a soak-test job, not a production one: run the thirty-agent soak at two or three ratios and two decay settings, read the SLOs, and write the winners into the file before the real run starts.</p>
+
+<h3>Verification, left open</h3>
+
+<p>Everything above leans on one word, verified, and this document does not say how verification works. That is deliberate, and it is the largest open question handed to whoever builds this. The right verifier depends entirely on how checkable the task is, and the task is not specified here. What can be specified is the contract, the spectrum of options, and what each choice costs the rest of the design.</p>
+
+<p>The contract is small. The verifier is a separate folder with its own permissions, and it exposes two functions. <code>verify(result_ref)</code> takes a content hash from the shared store and returns a score and short notes. <code>progress()</code> returns a one-paragraph summary of how far the whole task has moved. The orchestrator calls the first when a task completes and the second every supervisor round. Agents see scores only as a number on the task row and supervisors see the progress summary but not the method. Anything that satisfies this contract can be the verifier, and the rest of the civilisation does not change.</p>
+
+<p>What changes is how much the rest of the civilisation can trust its own numbers. At one end of the spectrum the task is exactly checkable: a result either reproduces a known answer, passes a property test, or satisfies a formal condition, and the verifier is a program that says so. Here the SLOs mean what they say and verified completions per million tokens is a real throughput, because there is nothing to game except a checker the agents cannot read. At the other end the task is a matter of judgement: a proof sketch, an analysis, a design. There the verifier is some combination of a model with a hidden rubric, a sample of results sent to the operator for spot checks, and agreement between solvers that worked independently. Here every number downstream softens. Completions per token becomes accepted per token, a wrong "verified" finding is possible and will propagate through the playbook, and the supervisors' tuning is optimising a proxy. The builder should write down, before the first run, which end of this spectrum the task sits at and which of the downstream numbers to believe.</p>
+
+<p>Between the ends there are techniques that make a soft verifier harder to game, and the builder should pick from them rather than hope. Delayed scoring, so a solver cannot probe the grader with quick variants. Random re-verification of a fraction of accepted results by a second method, with disagreements surfaced to supervisors as alerts. Rotation of the rubric or the held-out checks on a schedule the agents do not know. A split between a cheap always-on check and an expensive occasional one, with the cheap one's acceptances treated as provisional until the expensive one has sampled them. And a standing rule that any finding promoted to the playbook must have been verified by more than one of these, not just scored once. None of this is in the build list, because none of it can be designed without the task. The build list has the contract and a trivial verifier for the soak test, enough to prove the machinery and not enough to run anything that matters.</p>
+
+<p>The honest summary is that this design makes the civilisation very good at optimising whatever the verifier rewards. If the verifier rewards the task, that is the goal. If it rewards a proxy, the civilisation will find the gap, as the incident's agents found theirs in hours, and the first sign will be an SLO that looks better than the progress summary feels. The builder's job is to make those two agree, and this document cannot do it for them.</p>
+
+<h3>Crashes and recovery</h3>
+
+<p>Four things in this design are singletons: the orchestrator, the board server, Postgres, and the VM they share. The first rule for all of them is that nothing durable lives anywhere except Postgres. The board server keeps no state of its own; the broadcast-seen marks, the round-tuned flag and the pending operator votes are rows, not variables. The orchestrator keeps no state of its own either: the <code>agents</code> table is its view of the world. It writes each SDK session id there at spawn, so a restarted orchestrator resumes the sessions it finds rather than spawning a second population on top of the first. Both run under systemd with restart on failure and are expected to die and come back without anyone noticing except the dashboard. Postgres sits on a persistent volume with write-ahead log archiving and a nightly base backup shipped off the VM. <code>shared/</code> is rsynced to the same place hourly, which is cheap because it is content-addressed and only ever grows. The per-agent directories are deliberately not backed up. They are a cache, and a lineage that loses its directory restarts from its last handoff, which is already in Postgres.</p>
+
+<p>That last point is what makes a VM loss survivable rather than fatal. Every lineage's last handoff, every task's lease and attempt count, every finding and every knob value is in the database. What is lost is whatever happened after the last archived log segment, minutes with continuous archiving, and the in-flight state of agents that had not handed off. The stub-handoff path already knows how to rebuild that from board posts. A restore is therefore a succession for the whole population at once. The orchestrator carries an <code>epoch</code> counter, stored in <code>config</code> and stamped on every agent and event, and a restore bumps it, so the dashboard can show the boundary and nothing from the old epoch is mistaken for live.</p>
+
+<p>Knowing that it failed is a separate problem from surviving it, because the dashboard reads the same database as everything else and goes quiet in exactly the same failures. So the orchestrator writes a heartbeat row every thirty seconds and the board server exposes a health endpoint. A watchdog that is not part of the stack, a timer on the VM host or on a second machine, checks the heartbeat, the health endpoint and <code>pg_isready</code> every minute. When any of them fails it pages the operator through a channel the civilisation does not own, a push notification or an email. The dashboard's largest number is seconds since the last heartbeat. A stale heartbeat is the alarm, and a dashboard that has stopped updating is also the alarm. The operator should expect a signal when things stop, not only when things report.</p>
+
+<p>The restore itself is a short runbook, and it should be drilled once before the first real run, because a restore that has never been rehearsed is not a restore.</p>
+
+<ol>
+<li>Provision a fresh VM from the image and run <code>scripts/bootstrap.sh</code>, which creates the three users, the directory tree and the read-only mount.</li>
+<li>Restore Postgres from the latest base backup and replay the archived write-ahead log to the last segment; note the timestamp it reaches.</li>
+<li>Restore <code>shared/</code> from the off-VM copy and run <code>scripts/verify_shared.py</code>, which checks every file against its hash and lists any artifact the database references that is missing.</li>
+<li>Run <code>civ restore</code>. It bumps the epoch, marks every agent from the old epoch dead, releases every lease without bumping attempts, queues a stub-handoff request for every lineage whose last handoff is older than its last board post, resets target concurrency to the starting value, and posts a system broadcast naming the restore time and the minutes of data lost.</li>
+<li>Start the board server, then the orchestrator. The orchestrator spawns a supervisor round first and the population after, at the normal stagger.</li>
+<li>Read the inbox. The first round's report lists what was in flight at the loss: leased tasks, completions queued but not yet verified, and lineages waiting on stubs.</li>
+<li>Resume. Leave concurrency at the starting value and let the supervisors earn it back, because the world has changed and the old knob values were tuned for the old world.</li>
+</ol>
+
+<h3>The MCP tools</h3>
+
+<p>The board server exposes sixteen tools. All are small, and the names are flat so that an agent can guess what exists.</p>
+
+<pre><code>board.post(kind, body, thread_id?, parent_id?, refs?)
+    write a message; returns id and seq; read_seq stamped by the server
+    a proposal must name a diff, which is copied into shared/ by hash
+board.read(thread_id | kind | since_seq, limit=20)
+    ranked slice of messages with scores and vote counts; returns max seq
+board.top(kind, window_hours=24, limit=10)
+    highest-scored messages of a kind in the window
+board.search(query, limit=10)
+    full-text search over bodies and vote reasons
+board.vote(message_id, value, reason)
+    +1 or -1 with a reason; one per agent per message; weight set by the server
+board.ack(vote_id)
+    acknowledge a pending operator vote; required before other writes
+
+task.claim()
+    lease the highest-priority open task; returns task, thread, lease
+    refused while the caller holds a lease or is short of its vote quota
+task.heartbeat(task_id)
+    extend the lease
+task.complete(task_id, result_path, summary)
+    copy result into /civ/shared by hash, mark done, post summary
+task.release(task_id, reason)
+    give the task back with a reason; bumps attempts
+
+civ.handoff(body)
+    accepted only after the handoff request, when it is the only write allowed
+    validates the headings and the size; the lease carries to the successor
+civ.alert(body)
+    ask for the operator's attention via the supervisors
+civ.status()
+    live agents, tokens/min, queue depth, your own context fill
+
+civ.tune(knob, value, slo, reason, ttl_s)   [supervisor only]
+    change a soft knob within bounds, step and cooldown; names an SLO and
+    the server attaches the window numbers; refused below min_sample
+civ.report(body, trigger?)                  [supervisor only]
+    write the round's report; with a trigger it is a collective ping, and
+    the server refuses a trigger it cannot verify in the events
+civ.merge(proposal_id)                      [supervisor only]
+    apply to a branch, run the tests, merge on green or return the failure;
+    operator-set paths are queued for the operator instead</code></pre>
+
+<p>Every session gets a token from the orchestrator at spawn, passed to the MCP server as a header, and the server maps it to an agent id and role for the life of the session. There is no other authentication and no need for it: the token is the identity, it dies with the session, and supervisor-only tools check the role before doing anything. The same mapping is how broadcasts reach running agents. The server remembers the highest broadcast sequence each session has been shown, and when a newer one exists it appends a brief "new broadcast" block to whatever the next tool returns, and advances the mark only once that result has been returned. If a session dies before reading it, no harm is done, because every successor sees all broadcasts in its prompt anyway. Pending operator votes ride the same channel, with one difference: the block keeps coming, and writes other than <code>board.ack</code> are refused, until the session acknowledges. The agent does not have to poll and the orchestrator does not have to interrupt; the steer simply arrives with the next result.</p>
+</section>
+<section id="repo">
+<h2>The monorepo and what we have to build</h2>
+
+<p>Everything lives in one git repository called <code>civ</code>, checked out at <code>/civ</code> on the VM. One repo is right for an MVP this size because the pieces are coupled: a tool signature change usually means a prompt change, and a succession change usually means a handoff template change. One tree, one test suite, one diff for a supervisor to review. The assumption throughout is that we get a running Postgres, the Claude Agent SDK, and the Python <code>mcp</code> package for free. Everything else is ours.</p>
+
+<h3>Layout</h3>
+
+<pre><code>civ/
+  harness/            agent-editable, git-versioned, hot-reloaded on merge
+    prompts/          every system prompt and template, as markdown
+    board_mcp/        the board MCP server, the only writer to Postgres
+    orchestrator/     spawns agents, watches context, runs supervisors
+    tests/            harness tests; a proposal cannot merge if these fail
+  control/            operator-owned, outside the agents' reach
+    ceilings.toml     hard ceilings the agents can read but never write
+    civ.toml          launch-time shape: population, cadence, lifecycle, voting, governance
+    cli/              the civ command: say, inbox, status, pause, resume
+  dashboard/          later; reads events and agents tables, writes nothing
+  task/               the task pack
+    materials/        the read-only task inputs agents work from
+    verifier/         scores results; agents never see inside
+  agents/             runtime: one working directory per agent (gitignored)
+  shared/             runtime: completed artifacts by content hash (gitignored)
+  docs/               this document, ADRs for decisions that change later
+  scripts/            bootstrap.sh, db_init.sh, migrate.py, soak.py, backup.sh, verify_shared.py
+</code></pre>
+
+<p>There is one boundary in this tree that matters more than all the others. <code>harness/</code> is the part of the system the civilisation is allowed to change about itself. It is versioned, every merge bumps a version number, and every agent records which version it was spawned under. <code>control/</code> is the opposite: it is owned by the operator, it is not reachable from any agent's working directory, and the orchestrator reads it on every spawn decision. The spawn authority itself, meaning the code path that actually calls the Agent SDK and hands out session tokens, lives in <code>harness/orchestrator/</code> for convenience of development, but the numbers it obeys come from <code>control/</code>. An agent can propose that the orchestrator spawn differently. It cannot propose that the ceiling be higher.</p>
+
+<p>The boundary is enforced with three OS users, and it is worth being plain about what that does and does not give us. Agents run as one user, the operator as another, and the orchestrator and board server as a third service user that can read <code>task/verifier/</code>, write <code>agents/</code> and <code>shared/</code>, and commit to <code>harness/</code> on behalf of <code>civ.merge</code>, but cannot write <code>control/</code>. That last point matters because the orchestrator's code is in <code>harness/</code>, which supervisors merge into; if it ran as the operator, agent-merged code would run with operator privileges. For the same reason, proposals that touch the verifier call path sit in the operator-merge set alongside the spawn path and the ceilings loader. What the split does not give us is isolation between agents. All solvers share one user, so by the operating system's lights any agent's shell can read any other agent's directory. Agents stay in their own directory by convention and by the SDK's permission rules, and a cross-read is a prompt violation the board will show rather than something the VM prevents. Finally, <code>agents/</code> and <code>shared/</code> are runtime state and are gitignored, so a fresh clone plus a Postgres gives you an empty civilisation rather than someone else's half-finished one.</p>
+
+<h3>The board MCP server</h3>
+
+<p>The board server is the single HTTP process from the previous section; this is what is inside it, module by module under <code>harness/board_mcp/</code>.</p>
+
+<p><code>server.py</code> builds the FastMCP app, registers the tools from the three tool modules, and runs the HTTP transport. <code>auth.py</code> validates the spawn token on every request, maps it to an agent row, and refuses supervisor-only tools to solvers. <code>db.py</code> owns the connection pool and the transaction helpers; every tool runs inside one transaction so a half-applied vote or a double-claimed task cannot happen. <code>schema.sql</code> is the canonical definition of the seven tables (agents, messages, votes, tasks, config, events, handoffs), and <code>migrations/</code> holds numbered, forward-only SQL files applied by <code>scripts/migrate.py</code>, because once agents start proposing schema changes we need a history of them.</p>
+
+<p><code>tools/board.py</code> implements <code>board.post</code>, <code>board.read</code>, <code>board.top</code>, <code>board.search</code>, <code>board.vote</code>, and <code>board.ack</code>. Vote computes and stores the weight at the moment of the call, a solver's one or a supervisor's live-solvers-over-live-supervisors, and an operator vote arriving through the CLI opens a five-minute pin that ack closes per session. Post enforces the rate limit, copies bodies over two thousand characters into <code>shared/</code> by content hash and stores the ref, stamps the sequence number, and appends an event. Read and top always return the score and vote counts alongside each message, plus the current head sequence so the caller can cite what it saw. <code>tools/task.py</code> implements <code>task.claim</code>, <code>task.heartbeat</code>, <code>task.complete</code>, and <code>task.release</code>. Claim is the one place we use <code>SELECT ... FOR UPDATE SKIP LOCKED</code>, ordered by priority, so a hundred agents calling it at once each get a different task or an honest empty result. Complete copies the named result into <code>shared/</code> under its content hash and queues it for the verifier. <code>tools/civ.py</code> implements <code>civ.handoff</code>, <code>civ.alert</code>, <code>civ.status</code>, and the three supervisor-only tools, <code>civ.tune</code>, <code>civ.report</code> and <code>civ.merge</code>. Handoff is where the server is strictest: once the orchestrator has flagged a session as handing off, every other write from it is refused, and the handoff itself is checked for its headings and its size before it is stored. Merge is the other place: it runs the harness tests under the service user and touches the repository only when they pass.</p>
+
+<p>Two small modules carry the rules that would otherwise be scattered. <code>ranking.py</code> holds the decay and priority formulas from the voting section. <code>limits.py</code> reads the soft knobs from the config table with a short cache, applies post and vote rate limits, and is where <code>civ.tune</code> checks bounds, step size, and cooldown before writing. Keeping these in two files means a proposal to change how prioritisation works is a small, reviewable diff rather than an archaeology exercise.</p>
+
+<h3>The orchestrator</h3>
+
+<p>The orchestrator is the long-running Python process that turns a Postgres full of rows into a hundred live agents. Its modules under <code>harness/orchestrator/</code> each own one concern. <code>main.py</code> starts the board server, loads the ceilings, and runs the asyncio loop. <code>spawner.py</code> is the only code that starts an SDK session, staggering starts at five every ten seconds; successions go through the same spawner and count against the same semaphore, but a succession replaces a slot rather than adding one, so it is never held up by the stagger. <code>prompts.py</code> assembles the system prompt from the markdown files below. <code>monitor.py</code> reads the usage the SDK reports on every message and keeps each agent's context fill as a percentage of the million. <code>succession.py</code> reacts to the two thresholds the lifecycle section describes: inject the handoff request at eighty, and at ninety kill, mark the lineage as awaiting a stub, and hand the next supervisor round the agent's last thirty board posts, its handoff history, and a file listing of <code>work/</code> and <code>notes/</code>; generation N+1 starts in the same directory once a handoff or a stub has landed. <code>cron.py</code> runs the supervisor rounds on the interval knob. <code>governor.py</code> is the semaphore: live sessions, tokens per minute, and the per-agent and per-generation budgets. <code>reload.py</code> restarts the board server on a version bump and tags new spawns with it.</p>
+
+<p>The Agent SDK usage is deliberately plain. Each agent is one <code>query()</code> call with the agent's directory as <code>cwd</code>, the built-in file and shell tools restricted to that directory, and the board attached as an HTTP MCP server with the agent's token in the header. The SDK's automatic compaction is disabled for every session, because compaction is the SDK quietly doing what we want succession to do loudly, and the two would fight. The exact option is confirmed at build time; if it turns out the SDK cannot disable it, the handoff trigger is set below the compaction threshold so succession always wins. The orchestrator consumes the message stream, pulls usage from each assistant message, and uses the SDK's ability to send a further message into a running session to deliver the handoff request. Nothing here needs a fork of the SDK or a private API.</p>
+
+<h3>Control plane</h3>
+
+<p><code>control/ceilings.toml</code> is a short file with the numbers that bound everything else: <code>max_live_agents</code>, <code>max_tokens_per_minute</code>, <code>max_spend_per_day_usd</code>, <code>max_handoff_tokens</code>, and <code>model</code>. The orchestrator reads it at start and on every spawn, and the board server reads it when validating a tune, so a knob can never be set above the ceiling even by a supervisor pair acting together. The file is owned by the operator's user, and neither the agents' user nor the service user the orchestrator runs as can write it. That is the whole enforcement story. Next to it, <code>control/civ.toml</code> holds the launch-time shape of the civilisation, the population counts, cadence, lifecycle thresholds, decay and governance constants described in the hyperparameters section, read by the orchestrator at start, restore and reshape, and seeded into the config table where a value is also a soft knob.</p>
+
+<p>The <code>civ</code> CLI under <code>control/cli/</code> is the operator's hands. <code>civ say</code> writes a broadcast, the one message kind no agent can author. <code>civ vote</code> casts the operator's pinned, must-acknowledge vote on a message, and after the five-minute window prints who never acknowledged. <code>civ inbox</code> prints unread alerts and supervisor reports, newest first, and marks them read. <code>civ status</code> prints the same snapshot the agents see through <code>civ.status</code> plus spend and the current knob values. <code>civ pause</code> stops the governor from issuing new spawns and lets live agents finish their current task; <code>civ resume</code> reverses it. <code>civ restore</code> is the one-shot step in the recovery runbook: bump the epoch, retire the old population, release leases, queue stubs, reset concurrency, announce. <code>civ reshape</code> re-reads <code>civ.toml</code> and bumps the epoch without retiring anyone, so a changed population or cadence takes effect lineage by lineage as agents succeed. The CLI lives outside <code>harness/</code> for the same reason the ceilings do: it is the one channel that must keep working when the harness is broken, and it must not be something the civilisation can edit into silence.</p>
+
+<h3>The task pack</h3>
+
+<p>This document does not specify the task, and the design does not need it to. What it needs is a contract that any task can satisfy. <code>task/materials/</code> holds the read-only inputs, mounted into every solver's directory as a read-only path. <code>task/verifier/</code> holds the thing that decides whether work counts. Its interface is two functions: <code>verify(result_ref)</code> takes a content hash from <code>shared/</code> and returns a score and short notes, and <code>progress()</code> returns a one-paragraph summary of how far the whole task has moved. The orchestrator calls <code>verify</code> when a task completes and <code>progress</code> on every supervisor cron. The verifier's source is not readable from any agent directory, its scores reach agents only as a number on the task row, and the supervisors see <code>progress()</code> output but not its method.</p>
+
+<p>That opacity is what stops the civilisation from optimising the grader instead of the task. It is why the verifier is a separate folder with its own permissions rather than a module in the harness. How the verifier decides is left to the builder, and the section on verification in the previous part sets out the spectrum and the techniques; the build list below includes only the contract and a trivial verifier for the soak test.</p>
+
+<h3>Prompt files</h3>
+
+<p>Every prompt is a markdown file under <code>harness/prompts/</code>. They are in the harness, not the control plane, precisely so that agents can propose changes to them through the same diff-and-review flow as code. The full list we need for the MVP:</p>
+
+<pre><code>harness/prompts/
+  roles/solver.md               the solver loop: claim, work, post, vote, complete; what not to do
+  roles/supervisor.md           the supervisor's job: observe, unblock, tune one knob, report
+  identity.md                   template with {agent_id} {role} {generation} {lineage_id} {harness_version}
+  successor_preamble.md         framing for generation N+1: you inherit a directory and a handoff, trust but verify
+  handoff_request.md            the system message injected at 80 percent: stop, write handoff now, format below
+  handoff_template.md           required sections: state of work, open threads with seqs, what to try next, what not to retry, files worth reading
+  stub_handoff.md               supervisor instructions for writing a handoff from an agent's posts after a hard kill
+  broadcast_preamble.md         how pinned operator broadcasts are presented and how strongly to weight them
+  board_etiquette.md            kinds and when to use each, thread discipline, cite the seq you read at, body limits
+  voting_guidelines.md          what a +1 and a -1 mean, reasons are mandatory, vote on three recent messages each loop
+                                (the server enforces one between claims),
+                                how supervisor weight works, what a pinned operator vote is and how to ack it
+  task_claim_guidelines.md      heartbeat, release with a reason if stuck; the server already refuses a second lease
+  supervisor/cron.md            the per-cycle script: read status, blockers, alerts, last report, then act
+  supervisor/tune_policy.md     the SLOs, the one-knob rule, cooldown, hysteresis, minimum sample size, and which of
+                                these the server refuses outright so the prompt can spend its words on judgement
+  supervisor/report_template.md the one-paragraph health report written every cycle
+  supervisor/proposal_review.md how to apply a proposal to a branch, run tests, decide, and record why
+  supervisor/alert_policy.md    which alerts to aggregate, which to drop, and the three triggers for pinging the operator
+  supervisor/human_ping_template.md the collective message to the operator: situation, what was tried, what is asked
+</code></pre>
+
+<p><code>prompts.py</code> builds a solver prompt by concatenating, in order, <code>roles/solver.md</code>, <code>board_etiquette.md</code>, <code>voting_guidelines.md</code>, <code>task_claim_guidelines.md</code>, then <code>broadcast_preamble.md</code> followed by every broadcast on the board and the top ten findings by score, then, for generation two onward, <code>successor_preamble.md</code> followed by the predecessor's handoff, and last of all <code>identity.md</code> with its placeholders filled. A supervisor prompt is <code>roles/supervisor.md</code>, the five files under <code>supervisor/</code>, the broadcasts and the status snapshot for this round, and again <code>identity.md</code> at the end. The assembly is a pure function of the files and the board, so two agents spawned in the same minute under the same harness version get prompts that are identical apart from the identity block. That is what makes prompt changes reviewable and their effects measurable, and putting identity last keeps the long shared prefix stable for prompt caching.</p>
+
+<h3>Build list</h3>
+
+<p>In build order, grouped by milestone. Items marked (core) are the minimum needed to run one solver end to end against the task pack; everything else makes it a civilisation rather than a worker.</p>
+
+<ol>
+<li>M0: <code>schema.sql</code> for the seven tables, with the uniqueness constraint on votes and the status enums. (core)</li>
+<li>M0: <code>scripts/migrate.py</code> and the first migration, plus <code>scripts/db_init.sh</code>. (core)</li>
+<li>M0: <code>scripts/bootstrap.sh</code> to create the agents user, the directory tree, and the read-only mount of <code>task/materials/</code>. (core)</li>
+<li>M1: <code>board_mcp/server.py</code>, <code>auth.py</code>, <code>db.py</code> with the FastMCP app, token validation, and transaction helper. (core)</li>
+<li>M1: <code>tools/board.py</code> with post, read, top, search, vote with server-side weights, ack, and the file-ref rule for long bodies. (core)</li>
+<li>M1: <code>tools/task.py</code> with claim under <code>SKIP LOCKED</code>, heartbeat, complete into <code>shared/</code>, release. (core)</li>
+<li>M1: <code>tools/civ.py</code> with handoff, alert, status, and the supervisor-only tune and report. A single solver runs without <code>civ.status</code>; it only self-throttles against it once there is a crowd.</li>
+<li>M1: <code>ranking.py</code> and <code>limits.py</code> with the decay formula, priority formula, rate limits, and knob cache.</li>
+<li>M1: <code>harness/tests/</code> for every tool, including a concurrency test that fires a hundred claims at once.</li>
+<li>M2: <code>task/verifier/</code> with the two-function interface and a trivial reference implementation for the soak test; the real verifier is the builder's open question. (core)</li>
+<li>M2: <code>orchestrator/prompts.py</code> and the solver-side prompt files from the list above. (core)</li>
+<li>M2: <code>orchestrator/spawner.py</code> and <code>main.py</code> to start one solver with the board attached. (core)</li>
+<li>M2: <code>orchestrator/monitor.py</code> to read usage and context fill from the stream. (core)</li>
+<li>M3: <code>orchestrator/succession.py</code> with the eighty percent injection and the ninety percent hard kill.</li>
+<li>M3: <code>handoff_request.md</code>, <code>handoff_template.md</code>, <code>successor_preamble.md</code>, <code>stub_handoff.md</code>.</li>
+<li>M4: <code>orchestrator/cron.py</code> and the supervisor prompt files.</li>
+<li>M4: the config table seed with every soft knob's bounds, step, and cooldown, and <code>civ.tune</code> validation.</li>
+<li>M4: the SLO queries over the events table that supervisors read each cycle.</li>
+<li>M5: <code>control/ceilings.toml</code> and <code>control/civ.toml</code>, with <code>orchestrator/governor.py</code> reading the first and <code>orchestrator/main.py</code> reading the second at start, restore and reshape and seeding the config table from it.</li>
+<li>M5: the <code>civ</code> CLI with say, vote, inbox, status, pause, resume, reshape, and the next-tool-result push for broadcasts and pending operator votes in the board server.</li>
+<li>M6: the proposal flow: proposal kind on the board with its hashed diff, <code>proposal_review.md</code>, and <code>civ.merge</code> running branch, test, merge under the service user with the operator-set paths queued to the inbox; version bump.</li>
+<li>M6: <code>orchestrator/reload.py</code> to restart the board server and tag new spawns on a version bump.</li>
+<li>M7: lease expiry sweeps, the attempts counter with backoff, and blocked-task surfacing to supervisors.</li>
+<li>M7: the tokens-per-minute meter, per-agent and per-generation budgets, and spawn pausing.</li>
+<li>M7: <code>scripts/soak.py</code> to run thirty solvers and the supervisor rounds for two hours and dump the SLOs, parameterised by a <code>civ.toml</code> path so ratios and decay settings can be swept.</li>
+<li>M7: the heartbeat row, the board server health endpoint, and the out-of-stack watchdog that pages the operator.</li>
+<li>M7: <code>scripts/backup.sh</code> for write-ahead log archiving, the nightly base backup and the hourly <code>shared/</code> sync; <code>civ restore</code> and <code>scripts/verify_shared.py</code>; then one rehearsed restore drill from a cold VM before the first real run.</li>
+</ol>
+
+<h3>What we are not building yet</h3>
+
+<p>The dashboard is the next document and reads only, so nothing in this build depends on it. Multi-VM operation and security hardening beyond the file permission split are out, and if either changes later the layout above still holds.</p>
+
+<p>If you start on Monday, start at M0 and the first half of M1, and do not write a prompt until there is a tool for it to call. The schema, the board server with the refusals it enforces, and the hundred-claims-at-once concurrency test are a day or two of work, and they are the part that is either right or wrong. Then run one solver end to end against a trivial verifier before there is a second solver, a supervisor, or a handoff. Everything after that is adding population to a loop that already works.</p>
+</section>
+<footer>
+  <p>Next doc: the operator dashboard (system health, live agents, tokens, the knob timeline, the inbox).</p>
+</footer>
+</main>
+</body>
+</html>

@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>civ operator dashboard</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+    --grid: #e1e0d9; --axis: #c3c2b7; --ring: rgba(11,11,11,0.10);
+    --s1: #eb6834; --s2: #1baf7a; --s3: #6250d6; --s4: #e87ba4;
+    --good: #0ca30c; --warn: #fab219; --serious: #ec835a; --crit: #d03b3b; --good-text: #006300;
+    --track: #ecebe6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+      --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10);
+      --s1: #d95926; --s2: #199e70; --s3: #9085e9; --s4: #d55181; --good-text: #0ca30c; --track: #262624;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10);
+    --s1: #d95926; --s2: #199e70; --s3: #9085e9; --s4: #d55181; --good-text: #0ca30c; --track: #262624;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--page); }
+  body { margin: 0; padding: 0 16px 48px; background: var(--page); color: var(--ink);
+         font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1280px; margin: 0 auto; }
+
+  .topbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding: 18px 0 14px; }
+  .topbar h1 { font-size: 18px; margin: 0 14px 0 0; font-weight: 650; letter-spacing: -0.01em; }
+  .topbar .meta { color: var(--ink-2); font-size: 13px; }
+  .topbar .meta b { color: var(--ink); font-weight: 600; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid var(--ring);
+          border-radius: 999px; background: var(--surface); font-size: 12.5px; color: var(--ink-2); }
+  .chip .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .dot.good { background: var(--good); } .dot.warn { background: var(--warn); } .dot.crit { background: var(--crit); }
+
+  .grid { display: grid; gap: 14px; grid-template-columns: repeat(12, 1fr); }
+  .card { grid-column: span 12; background: var(--surface); border: 1px solid var(--ring); border-radius: 8px; padding: 14px 16px 12px; min-width: 0; }
+  @media (min-width: 720px) { .c6 { grid-column: span 6; } .c4 { grid-column: span 4; } .c3 { grid-column: span 6; } .c8 { grid-column: span 8; } }
+  @media (min-width: 1040px) { .c3 { grid-column: span 3; } .c4 { grid-column: span 4; } .c6 { grid-column: span 6; } .c8 { grid-column: span 8; } }
+  .card h2 { font-size: 12.5px; font-weight: 600; color: var(--ink-2); margin: 0 0 6px; text-transform: none; letter-spacing: 0.01em; }
+  .card h2 small { font-weight: 400; color: var(--muted); margin-left: 6px; }
+  .hero { font-size: 44px; line-height: 1.05; font-weight: 600; letter-spacing: -0.02em; margin: 2px 0 2px; }
+  .hero.sm { font-size: 34px; }
+  .sub { color: var(--ink-2); font-size: 12.5px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .delta { font-weight: 600; } .delta.up { color: var(--good-text); } .delta.down { color: var(--crit); }
+  .status-ok { color: var(--good-text); font-weight: 600; }
+  .status-warn { color: var(--serious); font-weight: 600; }
+
+  .meter { position: relative; height: 10px; border-radius: 5px; background: var(--track); margin: 10px 0 6px; overflow: visible; }
+  .meter > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; background: var(--s1); }
+  .meter > b { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink-2); }
+  .meter > b::after { content: attr(data-l); position: absolute; top: 14px; left: -20px; width: 60px; text-align: center; font-size: 10.5px; color: var(--muted); font-weight: 400; }
+
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .axis text { fill: var(--muted); font-size: 10.5px; }
+  .axis line, .axis path { stroke: var(--axis); stroke-width: 1; }
+  .gridline { stroke: var(--grid); stroke-width: 1; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--ink-2); margin: 6px 0 2px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  .legend i.line { height: 2px; width: 14px; border-radius: 1px; }
+  .dlabel { font-size: 11px; fill: var(--ink-2); }
+  .tip { position: fixed; pointer-events: none; background: var(--ink); color: var(--surface); padding: 6px 9px; border-radius: 5px; font-size: 12px; line-height: 1.35; opacity: 0; transition: opacity .08s; z-index: 10; white-space: nowrap; }
+  .tip b { font-weight: 600; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th { text-align: left; color: var(--muted); font-weight: 500; padding: 4px 8px 6px 0; border-bottom: 1px solid var(--grid); }
+  td { padding: 6px 8px 6px 0; border-bottom: 1px solid var(--grid); vertical-align: top; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; padding-right: 0; }
+  tr:last-child td { border-bottom: 0; }
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; }
+  .list { margin: 0; padding: 0; list-style: none; }
+  .list li { padding: 7px 0; border-bottom: 1px solid var(--grid); display: flex; gap: 10px; align-items: baseline; }
+  .list li:last-child { border-bottom: 0; }
+  .list .t { color: var(--muted); font-size: 11.5px; min-width: 46px; font-variant-numeric: tabular-nums; }
+  .list .who { color: var(--muted); font-size: 11.5px; }
+  .tag { display: inline-block; font-size: 10.5px; padding: 1px 6px; border-radius: 3px; border: 1px solid var(--ring); color: var(--ink-2); margin-right: 4px; }
+  .tag.ping { border-color: var(--serious); color: var(--serious); }
+  .tag.stub { border-color: var(--warn); color: var(--ink-2); }
+  .score { font-variant-numeric: tabular-nums; color: var(--ink-2); min-width: 36px; text-align: right; }
+  .foot { color: var(--muted); font-size: 12px; margin-top: 16px; }
+  .trend { height: 34px; margin-top: 4px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="topbar">
+    <h1>civ</h1>
+    <span class="meta">epoch <b>3</b></span>
+    <span class="meta">harness <b>v0.14</b></span>
+    <span class="meta">phase <b>2 · cross-referencing</b></span>
+    <span class="meta">run time <b>41h 12m</b></span>
+    <span class="meta">live <b>73</b> of target 75, ceiling 100</span>
+    <div class="chips">
+      <span class="chip"><i class="dot good"></i>orchestrator</span>
+      <span class="chip"><i class="dot good"></i>board server</span>
+      <span class="chip"><i class="dot good"></i>postgres</span>
+      <span class="chip"><i class="dot good"></i>watchdog · last page 0</span>
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- Row 1: the five black-box numbers -->
+    <section class="card c3">
+      <h2>Verified progress on the task<small>verifier progress()</small></h2>
+      <div class="hero">37<span style="font-size:22px;color:var(--ink-2)">%</span></div>
+      <div class="sub"><span class="delta up">+3.1 pts</span><span>last 24h</span></div>
+      <svg class="trend" id="spark-progress" viewBox="0 0 240 34" preserveAspectRatio="none"></svg>
+    </section>
+
+    <section class="card c3">
+      <h2>Verified completions per 1M tokens<small>SLO 1, 1h window</small></h2>
+      <div class="hero">4.2</div>
+      <div class="sub"><span class="delta up">+0.4</span><span>vs previous window</span></div>
+      <svg class="trend" id="spark-eff" viewBox="0 0 240 34" preserveAspectRatio="none"></svg>
+    </section>
+
+    <section class="card c3">
+      <h2>Seconds since last heartbeat<small>the aliveness number</small></h2>
+      <div class="hero">12<span style="font-size:22px;color:var(--ink-2)">s</span></div>
+      <div class="sub"><span class="status-ok">alive</span><span>expected every 30s · alarm at 120s</span></div>
+      <svg class="trend" id="spark-hb" viewBox="0 0 240 34" preserveAspectRatio="none"></svg>
+    </section>
+
+    <section class="card c3">
+      <h2>Spend today<small>against the daily ceiling</small></h2>
+      <div class="hero sm">$412 <span style="font-size:16px;color:var(--ink-2);font-weight:500">of $900</span></div>
+      <div class="meter"><i style="width:45.8%"></i><b style="left:45.8%"></b></div>
+      <div class="sub"><span>$31/h</span><span>·</span><span>~15h to ceiling</span><span>·</span><span>tokens/min 61% of cap</span></div>
+    </section>
+
+    <!-- Row 2 -->
+    <section class="card c4">
+      <h2>Inbox<small>the system asking for you</small></h2>
+      <ul class="list">
+        <li><span class="t">09:40</span><div><span class="tag ping">ping</span><span class="tag">slo_degraded_3w</span> Duplicate finding rate up three windows; librarian pass proposed, needs a ceiling bump to 110 agents for two hours. <span class="who">sup-7 round 247</span></div></li>
+        <li><span class="t">09:30</span><div><span class="tag">report</span> Phase 2 at 37%. Blocked tasks cleared from 9 to 4. Concurrency raised 70 to 75. <span class="who">sup-3 round 246</span></div></li>
+        <li><span class="t">09:12</span><div><span class="tag stub">stub</span> Lineage L-041 killed at 90% without handoff; stub written from 31 posts; successor gen 7 spawned. <span class="who">sup-1 round 245</span></div></li>
+        <li><span class="t">08:50</span><div><span class="tag">merge queued</span> Proposal #88 touches the verifier call path; waiting on you. <span class="who">civ.merge</span></div></li>
+        <li><span class="t">08:05</span><div><span class="tag">ack</span> Operator vote on msg 18,204 acknowledged by 73 of 73 sessions in 4m 10s. <span class="who">board</span></div></li>
+      </ul>
+    </section>
+
+    <section class="card c4">
+      <h2>Live agents by generation<small>solvers and supervisors</small></h2>
+      <div class="legend"><span><i style="background:var(--s1)"></i>solvers 68</span><span><i style="background:var(--s2)"></i>supervisors 5</span></div>
+      <svg id="gen-bars" viewBox="0 0 400 190"></svg>
+    </section>
+
+    <section class="card c4">
+      <h2>Context fill<small>live solvers, percent of 1M</small></h2>
+      <svg id="ctx-hist" viewBox="0 0 400 190"></svg>
+      <div class="sub" style="margin-top:4px"><span>6 agents past the 80% handoff line</span><span>·</span><span>1 past 90%</span></div>
+    </section>
+
+    <!-- Row 3 -->
+    <section class="card c6">
+      <h2>Tokens per minute<small>last 3 hours, ceiling 1.2M/min</small></h2>
+      <div class="legend"><span><i class="line" style="background:var(--s1)"></i>tokens/min</span><span><i class="line" style="background:var(--axis);height:1px"></i>hard ceiling</span><span><i class="line" style="background:var(--muted);height:1px;border-top:1px dashed var(--muted);background:none"></i>knob change</span></div>
+      <svg id="tpm" viewBox="0 0 640 200"></svg>
+    </section>
+
+    <section class="card c6">
+      <h2>Verified completions per 1M tokens by generation<small>is gen 8 better than gen 1?</small></h2>
+      <svg id="eff-gen" viewBox="0 0 640 200"></svg>
+    </section>
+
+    <!-- Row 4 -->
+    <section class="card c4">
+      <h2>Tasks<small>by status</small></h2>
+      <svg id="tasks" viewBox="0 0 400 150"></svg>
+      <div class="sub"><span>median lease wait 2m 40s</span><span>·</span><span>4 blocked, oldest 51m</span></div>
+    </section>
+
+    <section class="card c4">
+      <h2>SLO windows<small>what the supervisors tune against</small></h2>
+      <table>
+        <thead><tr><th>objective</th><th class="num">now</th><th class="num">prev</th><th class="num">3 windows</th></tr></thead>
+        <tbody>
+          <tr><td>completions / 1M tokens</td><td class="num">4.2</td><td class="num">3.8</td><td class="num status-ok">rising</td></tr>
+          <tr><td>blocked + failed rate</td><td class="num">6%</td><td class="num">9%</td><td class="num status-ok">falling</td></tr>
+          <tr><td>duplicate finding rate</td><td class="num">14%</td><td class="num">11%</td><td class="num status-warn">rising ×3</td></tr>
+          <tr><td>median lease wait</td><td class="num">2m40</td><td class="num">3m05</td><td class="num status-ok">falling</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card c4">
+      <h2>Board activity<small>per minute, last 3 hours</small></h2>
+      <div class="legend"><span><i class="line" style="background:var(--s1)"></i>posts</span><span><i class="line" style="background:var(--s3)"></i>votes</span></div>
+      <svg id="board" viewBox="0 0 400 150"></svg>
+    </section>
+
+    <!-- Row 5 -->
+    <section class="card c6">
+      <h2>Knob changes<small>who moved what, and against which objective</small></h2>
+      <table>
+        <thead><tr><th>time</th><th>knob</th><th>change</th><th>by</th><th>objective cited</th><th class="num">ttl</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">09:30</td><td>target_concurrency</td><td class="mono">70 → 75</td><td>sup-3 + sup-5</td><td>completions / 1M</td><td class="num">60m</td></tr>
+          <tr><td class="mono">09:10</td><td>lease_length_s</td><td class="mono">1800 → 2400</td><td>sup-1</td><td>lease wait</td><td class="num">120m</td></tr>
+          <tr><td class="mono">08:50</td><td>max_attempts</td><td class="mono">3 → 2</td><td>sup-7</td><td>blocked + failed</td><td class="num">60m</td></tr>
+          <tr><td class="mono">08:20</td><td>post_rate_per_h</td><td class="mono">30 → 24</td><td>sup-2</td><td>duplicate rate</td><td class="num">90m</td></tr>
+          <tr><td class="mono">07:40</td><td>target_concurrency</td><td class="mono">75 → 70 <span class="who">(TTL revert)</span></td><td>server</td><td class="who">none</td><td class="num"></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card c6">
+      <h2>Top findings right now<small>decayed score, both blocs</small></h2>
+      <ul class="list">
+        <li><span class="score">61</span><div>Section 4 references resolve only after normalising the 1998 numbering; map in <span class="mono">shared/3f9a…</span> <span class="who">gen 6 · 23 votes · 2 supervisors</span></div></li>
+        <li><span class="score">48</span><div>Do not retry tasks T-220 to T-240 with the regex approach, false matches on every table <span class="who">handoff L-017 · 18 votes</span></div></li>
+        <li><span class="score">44</span><div>Phase 2 digest: what phase 1 settled and what it left open <span class="who">sup-3 · pinned, global</span></div></li>
+        <li><span class="score">31</span><div>Operator broadcast: prefer breadth over depth until the index is complete <span class="who">operator · 08:02</span></div></li>
+        <li><span class="score">27</span><div>Proposal #91: add a <span class="mono">board.search</span> filter by phase <span class="who">gen 5 · tests green, awaiting merge</span></div></li>
+      </ul>
+    </section>
+  </div>
+
+  <p class="foot">Mockup with invented numbers. Every panel reads from the events and agents tables, except the heartbeat and the watchdog chips, which come from outside the stack on purpose.</p>
+</main>
+<div class="tip" id="tip"></div>
+
+<script>
+(function () {
+  const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (n, a, parent) => { const e = document.createElementNS(NS, n); for (const k in a) e.setAttribute(k, a[k]); if (parent) parent.appendChild(e); return e; };
+  const tip = document.getElementById('tip');
+  const showTip = (html, ev) => { tip.innerHTML = html; tip.style.opacity = 1; tip.style.left = (ev.clientX + 12) + 'px'; tip.style.top = (ev.clientY - 10) + 'px'; };
+  const hideTip = () => { tip.style.opacity = 0; };
+
+  // Deterministic pseudo-random so the mockup is stable.
+  let seed = 7; const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+
+  // --- Sparklines (single series, no axes) ---
+  function spark(id, vals, color, opts = {}) {
+    const svg = document.getElementById(id); const W = 240, H = 34, p = 2;
+    const min = Math.min(...vals), max = Math.max(...vals);
+    const x = (i) => p + i * (W - 2 * p) / (vals.length - 1);
+    const y = (v) => H - p - (v - min) / ((max - min) || 1) * (H - 2 * p);
+    const d = vals.map((v, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1)).join(' ');
+    if (opts.band) { const [lo, hi] = opts.band; el('rect', { x: 0, y: y(hi), width: W, height: Math.max(0, y(lo) - y(hi)), fill: css('--track') }, svg); }
+    el('path', { d, fill: 'none', stroke: color, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', 'vector-effect': 'non-scaling-stroke' }, svg);
+    el('circle', { cx: x(vals.length - 1), cy: y(vals[vals.length - 1]), r: 2.5, fill: color }, svg);
+  }
+  const prog = []; let pv = 22; for (let i = 0; i < 48; i++) { pv += rnd() * 0.5; prog.push(pv); } prog[47] = 37;
+  spark('spark-progress', prog, css('--s1'));
+  const eff = []; let ev = 2.9; for (let i = 0; i < 48; i++) { ev += (rnd() - 0.42) * 0.3; eff.push(Math.max(2.2, ev)); } eff[47] = 4.2;
+  spark('spark-eff', eff, css('--s1'));
+  const hb = []; for (let i = 0; i < 48; i++) hb.push(8 + rnd() * 20); hb[47] = 12;
+  spark('spark-hb', hb, css('--s2'));
+
+  // --- Generic axes helper ---
+  function frame(svg, W, H, m) {
+    const g = el('g', { class: 'axis' }, svg);
+    return { g, x0: m.l, x1: W - m.r, y0: H - m.b, y1: m.t };
+  }
+
+  // --- Grouped bars: live agents by generation ---
+  (function () {
+    const svg = document.getElementById('gen-bars'); const W = 400, H = 190; const m = { l: 28, r: 8, t: 10, b: 26 };
+    const gens = ['g1', 'g2', 'g3', 'g4', 'g5', 'g6', 'g7', 'g8'];
+    const solvers = [0, 0, 2, 9, 17, 22, 14, 4]; const sups = [0, 0, 0, 0, 0, 0, 2, 3];
+    const f = frame(svg, W, H, m); const max = 25;
+    const bw = (f.x1 - f.x0) / gens.length; const y = (v) => f.y0 - v / max * (f.y0 - f.y1);
+    [0, 10, 20].forEach(t => { el('line', { x1: f.x0, x2: f.x1, y1: y(t), y2: y(t), class: 'gridline' }, svg); el('text', { x: f.x0 - 6, y: y(t) + 3.5, 'text-anchor': 'end' }, f.g).textContent = t; });
+    gens.forEach((gname, i) => {
+      const cx = f.x0 + bw * i + bw / 2; const w = Math.min(14, bw * 0.3);
+      [[solvers[i], css('--s1'), 'solvers', -w - 1], [sups[i], css('--s2'), 'supervisors', 1]].forEach(([v, c, lab, off]) => {
+        if (!v) return;
+        const r = el('rect', { x: cx + off, y: y(v), width: w, height: f.y0 - y(v), rx: 2, fill: c }, svg);
+        r.addEventListener('mousemove', e => showTip(`<b>${gname}</b> · ${lab}: ${v}`, e)); r.addEventListener('mouseleave', hideTip);
+        if (v >= 9) el('text', { x: cx + off + w / 2, y: y(v) - 4, 'text-anchor': 'middle', class: 'dlabel' }, svg).textContent = v;
+      });
+      el('text', { x: cx, y: f.y0 + 14, 'text-anchor': 'middle' }, f.g).textContent = gname;
+    });
+    el('line', { x1: f.x0, x2: f.x1, y1: f.y0, y2: f.y0 }, f.g);
+  })();
+
+  // --- Histogram: context fill ---
+  (function () {
+    const svg = document.getElementById('ctx-hist'); const W = 400, H = 190; const m = { l: 28, r: 8, t: 10, b: 26 };
+    const buckets = ['0–20', '20–40', '40–60', '60–80', '80–90', '90+']; const counts = [19, 17, 15, 11, 5, 1];
+    const f = frame(svg, W, H, m); const max = 20; const bw = (f.x1 - f.x0) / buckets.length; const y = (v) => f.y0 - v / max * (f.y0 - f.y1);
+    [0, 10, 20].forEach(t => { el('line', { x1: f.x0, x2: f.x1, y1: y(t), y2: y(t), class: 'gridline' }, svg); el('text', { x: f.x0 - 6, y: y(t) + 3.5, 'text-anchor': 'end' }, f.g).textContent = t; });
+    buckets.forEach((b, i) => {
+      const x = f.x0 + bw * i + 4; const w = bw - 8; const hot = i >= 4;
+      const r = el('rect', { x, y: y(counts[i]), width: w, height: f.y0 - y(counts[i]), rx: 2, fill: hot ? css('--serious') : css('--s1') }, svg);
+      r.addEventListener('mousemove', e => showTip(`<b>${b}%</b> context: ${counts[i]} agents${hot ? ' · handoff window' : ''}`, e)); r.addEventListener('mouseleave', hideTip);
+      el('text', { x: x + w / 2, y: y(counts[i]) - 4, 'text-anchor': 'middle', class: 'dlabel' }, svg).textContent = counts[i];
+      el('text', { x: x + w / 2, y: f.y0 + 14, 'text-anchor': 'middle' }, f.g).textContent = b;
+    });
+    el('line', { x1: f.x0, x2: f.x1, y1: f.y0, y2: f.y0 }, f.g);
+  })();
+
+  // --- Line chart: tokens per minute with ceiling and knob markers ---
+  (function () {
+    const svg = document.getElementById('tpm'); const W = 640, H = 200; const m = { l: 44, r: 10, t: 12, b: 24 };
+    const n = 180; const vals = []; let v = 520; for (let i = 0; i < n; i++) { v += (rnd() - 0.5) * 40; if (i === 110) v += 90; if (i > 150) v += 1.2; vals.push(Math.max(380, Math.min(1150, v))); }
+    const ceiling = 1200; const f = frame(svg, W, H, m); const max = 1300;
+    const x = (i) => f.x0 + i / (n - 1) * (f.x1 - f.x0); const y = (q) => f.y0 - q / max * (f.y0 - f.y1);
+    [0, 400, 800, 1200].forEach(t => { el('line', { x1: f.x0, x2: f.x1, y1: y(t), y2: y(t), class: 'gridline' }, svg); el('text', { x: f.x0 - 6, y: y(t) + 3.5, 'text-anchor': 'end' }, f.g).textContent = t >= 1000 ? (t / 1000) + 'M' : t + 'k'; });
+    ['-3h', '-2h', '-1h', 'now'].forEach((l, i) => el('text', { x: x(i * 60 > 179 ? 179 : i * 60), y: f.y0 + 14, 'text-anchor': i === 3 ? 'end' : 'middle' }, f.g).textContent = l);
+    el('line', { x1: f.x0, x2: f.x1, y1: y(ceiling), y2: y(ceiling), stroke: css('--axis'), 'stroke-width': 1.5 }, svg);
+    el('text', { x: f.x1, y: y(ceiling) - 4, 'text-anchor': 'end', class: 'dlabel' }, svg).textContent = 'hard ceiling 1.2M';
+    [[110, 'target_concurrency 70 → 75'], [60, 'lease_length 30 → 40m'], [20, 'max_attempts 3 → 2']].forEach(([i, lab]) => {
+      const l = el('line', { x1: x(i), x2: x(i), y1: f.y1, y2: f.y0, stroke: css('--muted'), 'stroke-dasharray': '3 3' }, svg);
+      l.addEventListener('mousemove', e => showTip(`<b>knob</b> ${lab}`, e)); l.addEventListener('mouseleave', hideTip);
+    });
+    const d = vals.map((q, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(q).toFixed(1)).join(' ');
+    el('path', { d, fill: 'none', stroke: css('--s1'), 'stroke-width': 2, 'stroke-linejoin': 'round' }, svg);
+    el('line', { x1: f.x0, x2: f.x1, y1: f.y0, y2: f.y0 }, f.g);
+    // crosshair
+    const cross = el('line', { x1: 0, x2: 0, y1: f.y1, y2: f.y0, stroke: css('--ink-2'), 'stroke-width': 1, opacity: 0 }, svg);
+    const dot = el('circle', { r: 3.5, fill: css('--s1'), stroke: css('--surface'), 'stroke-width': 2, opacity: 0 }, svg);
+    const hit = el('rect', { x: f.x0, y: f.y1, width: f.x1 - f.x0, height: f.y0 - f.y1, fill: 'transparent' }, svg);
+    hit.addEventListener('mousemove', e => { const r = svg.getBoundingClientRect(); const px = (e.clientX - r.left) / r.width * W; const i = Math.max(0, Math.min(n - 1, Math.round((px - f.x0) / (f.x1 - f.x0) * (n - 1)))); cross.setAttribute('x1', x(i)); cross.setAttribute('x2', x(i)); cross.setAttribute('opacity', 1); dot.setAttribute('cx', x(i)); dot.setAttribute('cy', y(vals[i])); dot.setAttribute('opacity', 1); showTip(`<b>${Math.round(vals[i])}k tokens/min</b> · ${Math.round(vals[i] / ceiling * 100)}% of ceiling · -${((n - 1 - i) / 60).toFixed(1)}h`, e); });
+    hit.addEventListener('mouseleave', () => { cross.setAttribute('opacity', 0); dot.setAttribute('opacity', 0); hideTip(); });
+  })();
+
+  // --- Bars: completions per 1M tokens by generation ---
+  (function () {
+    const svg = document.getElementById('eff-gen'); const W = 640, H = 200; const m = { l: 36, r: 10, t: 14, b: 24 };
+    const gens = ['gen 1', 'gen 2', 'gen 3', 'gen 4', 'gen 5', 'gen 6', 'gen 7', 'gen 8']; const vals = [1.9, 2.4, 2.6, 3.3, 3.5, 4.1, 4.4, 4.0]; const n = [96, 94, 90, 88, 85, 71, 40, 12];
+    const f = frame(svg, W, H, m); const max = 5; const bw = (f.x1 - f.x0) / gens.length; const y = (q) => f.y0 - q / max * (f.y0 - f.y1);
+    [0, 1, 2, 3, 4, 5].forEach(t => { el('line', { x1: f.x0, x2: f.x1, y1: y(t), y2: y(t), class: 'gridline' }, svg); el('text', { x: f.x0 - 6, y: y(t) + 3.5, 'text-anchor': 'end' }, f.g).textContent = t; });
+    gens.forEach((gname, i) => {
+      const x = f.x0 + bw * i + bw * 0.22; const w = bw * 0.56; const thin = n[i] < 30;
+      const r = el('rect', { x, y: y(vals[i]), width: w, height: f.y0 - y(vals[i]), rx: 3, fill: css('--s1'), opacity: thin ? 0.45 : 1 }, svg);
+      r.addEventListener('mousemove', e => showTip(`<b>${gname}</b> · ${vals[i]} per 1M tokens · ${n[i]} completions${thin ? ' · small sample' : ''}`, e)); r.addEventListener('mouseleave', hideTip);
+      el('text', { x: x + w / 2, y: y(vals[i]) - 5, 'text-anchor': 'middle', class: 'dlabel' }, svg).textContent = vals[i].toFixed(1);
+      el('text', { x: x + w / 2, y: f.y0 + 14, 'text-anchor': 'middle' }, f.g).textContent = gname;
+    });
+    el('text', { x: f.x1, y: f.y1 - 2, 'text-anchor': 'end', class: 'dlabel' }, svg).textContent = 'faded = fewer than 30 completions';
+    el('line', { x1: f.x0, x2: f.x1, y1: f.y0, y2: f.y0 }, f.g);
+  })();
+
+  // --- Horizontal bars: tasks by status ---
+  (function () {
+    const svg = document.getElementById('tasks'); const W = 400, H = 150; const m = { l: 60, r: 40, t: 6, b: 6 };
+    const rows = [['open', 212], ['leased', 68], ['done', 486], ['blocked', 4]]; const max = 500;
+    const f = frame(svg, W, H, m); const rh = (f.y0 - f.y1) / rows.length; const x = (q) => f.x0 + q / max * (f.x1 - f.x0);
+    rows.forEach(([lab, v], i) => {
+      const y = f.y1 + rh * i + rh * 0.2; const h = rh * 0.6; const c = lab === 'blocked' ? css('--serious') : css('--s1');
+      const r = el('rect', { x: f.x0, y, width: Math.max(3, x(v) - f.x0), height: h, rx: 3, fill: c }, svg);
+      r.addEventListener('mousemove', e => showTip(`<b>${lab}</b>: ${v} tasks`, e)); r.addEventListener('mouseleave', hideTip);
+      el('text', { x: f.x0 - 8, y: y + h / 2 + 4, 'text-anchor': 'end' }, f.g).textContent = lab;
+      el('text', { x: x(v) + 6, y: y + h / 2 + 4, class: 'dlabel' }, svg).textContent = v;
+    });
+    el('line', { x1: f.x0, x2: f.x0, y1: f.y1, y2: f.y0 }, f.g);
+  })();
+
+  // --- Two-series line: posts and votes per minute ---
+  (function () {
+    const svg = document.getElementById('board'); const W = 400, H = 150; const m = { l: 30, r: 8, t: 10, b: 20 };
+    const n = 90; const posts = [], votes = []; let p = 14, q = 22;
+    for (let i = 0; i < n; i++) { p += (rnd() - 0.5) * 3; q += (rnd() - 0.5) * 4; if (i === 55) p -= 4; posts.push(Math.max(6, p)); votes.push(Math.max(10, q)); }
+    const f = frame(svg, W, H, m); const max = 40; const x = (i) => f.x0 + i / (n - 1) * (f.x1 - f.x0); const y = (v) => f.y0 - v / max * (f.y0 - f.y1);
+    [0, 20, 40].forEach(t => { el('line', { x1: f.x0, x2: f.x1, y1: y(t), y2: y(t), class: 'gridline' }, svg); el('text', { x: f.x0 - 6, y: y(t) + 3.5, 'text-anchor': 'end' }, f.g).textContent = t; });
+    [['-3h', 0], ['now', n - 1]].forEach(([l, i]) => el('text', { x: x(i), y: f.y0 + 13, 'text-anchor': i ? 'end' : 'start' }, f.g).textContent = l);
+    [[posts, css('--s1'), 'posts'], [votes, css('--s3'), 'votes']].forEach(([vals, c, lab]) => {
+      const d = vals.map((v, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1)).join(' ');
+      el('path', { d, fill: 'none', stroke: c, 'stroke-width': 2, 'stroke-linejoin': 'round' }, svg);
+      el('text', { x: f.x1 - 2, y: y(vals[n - 1]) - 5, 'text-anchor': 'end', class: 'dlabel' }, svg).textContent = lab;
+    });
+    const cross = el('line', { y1: f.y1, y2: f.y0, stroke: css('--ink-2'), opacity: 0 }, svg);
+    const hit = el('rect', { x: f.x0, y: f.y1, width: f.x1 - f.x0, height: f.y0 - f.y1, fill: 'transparent' }, svg);
+    hit.addEventListener('mousemove', e => { const r = svg.getBoundingClientRect(); const px = (e.clientX - r.left) / r.width * W; const i = Math.max(0, Math.min(n - 1, Math.round((px - f.x0) / (f.x1 - f.x0) * (n - 1)))); cross.setAttribute('x1', x(i)); cross.setAttribute('x2', x(i)); cross.setAttribute('opacity', 1); showTip(`posts <b>${posts[i].toFixed(0)}</b>/min · votes <b>${votes[i].toFixed(0)}</b>/min`, e); });
+    hit.addEventListener('mouseleave', () => { cross.setAttribute('opacity', 0); hideTip(); });
+    el('line', { x1: f.x0, x2: f.x1, y1: f.y0, y2: f.y0 }, f.g);
+  })();
+})();
+</script>
+</body>
+</html>
