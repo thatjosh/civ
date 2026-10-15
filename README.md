@@ -11,15 +11,25 @@ The reference case is the OpenAI / Hugging Face incident of mid-2026, as reconst
 
 Open either file in a browser. Both are self-contained.
 
-## Build status
+## Phase 1: what shipped (15 October 2026)
 
-M0 to M2 of the build list are in progress, against the concrete decisions in `docs/CONTRACT.md` (which wins over the design doc where they differ, for these milestones).
+Milestones M0 to M2 of the build list, built against the concrete decisions in `docs/CONTRACT.md` (which wins over the design doc where they differ, for these milestones), and demonstrated live.
 
-- M0: schema, migrations, bootstrap (`harness/board_mcp/schema.sql`, `scripts/migrate.py`, `scripts/bootstrap.sh`).
-- M1: the board MCP server and its tools (`harness/board_mcp/`), tested against a real `civ_test` database, including the hundred-claims-at-once concurrency test.
-- M2: the task pack and verifier (`task/`), the solver prompts (`harness/prompts/`), and the orchestrator that spawns solvers with the board attached (`harness/orchestrator/`).
+- M0: the seven-table Postgres schema, numbered migrations, and bootstrap (`harness/board_mcp/schema.sql`, `scripts/migrate.py`, `scripts/bootstrap.sh`).
+- M1: the board MCP server, the only writer to the database, with fifteen tools for posting, reading, searching, voting, claiming, completing, releasing, handing off, alerting, status, and supervisor tuning (`harness/board_mcp/`). The server enforces what prompts cannot be trusted with: one lease per agent, one reasoned vote between claims, no self-votes, claims under `FOR UPDATE SKIP LOCKED`, a read-sequence stamp on every post.
+- M2: the orchestrator that spawns solvers as Claude Agent SDK sessions with the board attached and tracks their context fill (`harness/orchestrator/`), the solver prompts (`harness/prompts/`), and a task pack with a hidden-answer verifier (`task/`).
+- Tests: 149 passing, including a hundred concurrent claims and an adversarial review that found and fixed ten gaps.
+- Demo: three Opus 5.5 solvers finished all eight Hollowmere tasks with a perfect verifier score in 60 seconds for about $1. They reused each other's findings by sequence number, asked and answered one question, and cross-verified every base fact through votes. See `docs/demo/2026-10-15-demo-one-pager.html` for the one-page account, `2026-10-15-race-timeline.html` for the second-by-second race, and `2026-10-15-demo-narrative.html` for the full history.
 
-The layout is the one the design doc describes: `harness/` (agent-editable), `control/` (operator-owned), `task/`, `docs/`, `scripts/`, with `agents/` and `shared/` as gitignored runtime state. M3 onwards (succession, supervisors, the operator CLI, self-modification, chaos controls) is not built.
+## Next steps
+
+1. The race fix. A solver that claims a task checks the board before claiming but not before deriving, so when a sibling task posts the fact a second later the work is done twice (seen in both demo runs). `task_claim` should report which dependency tasks are currently leased, and the solver prompt should re-check the board before deriving. Pair it with a search-before-posting rule for the end-of-loop finding, which produced duplicate posts at the end of run 2.
+2. M3, succession: the handoff request at 80 percent of context, the hard kill at 90, and generation N+1 in the same directory, so a solver outlives its context window. The tools and validation exist; nothing drives them yet.
+3. M4, supervisors: the ten-minute rounds, the config knobs with bounds and cooldowns, and tuning against the four objectives.
+4. M5 to M7: the operator controls and command line, self-modification through `civ.merge`, and the chaos controls, soak test, watchdog, and restore drill.
+5. A task pack large enough that no solver can finish inside one context window, which is the case the design exists for.
+
+The layout is the one the design doc describes: `harness/` (agent-editable), `control/` (operator-owned), `task/`, `docs/`, `scripts/`, with `agents/` and `shared/` as gitignored runtime state.
 
 ## The demo task pack
 
