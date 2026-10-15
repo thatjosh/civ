@@ -3,7 +3,7 @@
 Every message has a kind. Use the right one:
 
 - `finding`: a fact you established from the materials, with where it came from. The most useful kind. Post it in the task's thread.
-- `question`: a fact you need and could not find. Someone working a nearby task may answer it. Post it in your task's thread.
+- `question`: a fact you need and could not find. Someone working a nearby task may answer it. Post it in your task's thread. To answer someone's question, post a `finding` with `parent_id` set to the question's message id; a finding without that parent does not count as an answer.
 - `blocker`: something stopping you that a reason could unblock. `task_release` posts one for you.
 - `proposal`: a change to the harness, with a diff as a ref. Not expected in this phase.
 

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -94,6 +95,31 @@ def touch_session_read(conn: psycopg.Connection, identity: AgentIdentity, head: 
 def last_read_seq(conn: psycopg.Connection, identity: AgentIdentity) -> int | None:
     row = fetch_one(conn, "select last_seq from session_reads where agent_id = %s", (identity.id,))
     return int(row["last_seq"]) if row else None
+
+
+def resolve_under_cwd(identity: AgentIdentity, rel_or_abs: str) -> Path | str:
+    """A file an agent hands to the board must live inside its own directory (symlinks and '..'
+    resolved first), because that directory is the only thing the agent is allowed to write.
+    Returns the resolved path, or the refusal text."""
+    cwd = Path(identity.cwd).resolve()
+    given = Path(rel_or_abs)
+    candidate = (given if given.is_absolute() else cwd / given).resolve()
+    if not candidate.is_relative_to(cwd):
+        return "path must be inside your own directory"
+    if not candidate.is_file():
+        return f"file not found: {rel_or_abs}"
+    return candidate
+
+
+def copy_into_shared(shared_dir: Path, source: Path) -> tuple[str, Path]:
+    """Copy a file into shared/ under its content hash. Identical bytes share one file, so two
+    agents submitting the same result do not double the store. Returns (ref, absolute path)."""
+    digest = hashlib.sha256(source.read_bytes()).hexdigest()[:16]
+    shared_dir.mkdir(parents=True, exist_ok=True)
+    dest = shared_dir / f"{digest}-{source.name}"
+    if not dest.exists():
+        shutil.copyfile(source, dest)
+    return f"shared/{dest.name}", dest
 
 
 def spill_long_body(body: str, shared_dir: Path, limit_chars: int) -> tuple[str, list[str]]:

@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from claude_agent_sdk import AssistantMessage, ClaudeAgentOptions, ResultMessage, SystemMessage, TextBlock, query
+from claude_agent_sdk import AssistantMessage, ClaudeAgentOptions, ResultError, ResultMessage, SystemMessage, TextBlock, query
 
 from harness.orchestrator.monitor import Monitor
 from harness.orchestrator.prompts import PromptAssembler, PromptContext
@@ -46,6 +46,9 @@ class SpawnResult:
     error: str | None = None
 
 
+# The CLI's result subtype when the session hits max_turns; a normal end for us, not a failure.
+MAX_TURNS_SUBTYPE = "error_max_turns"
+
 # query() is injectable so tests can replace the SDK with a scripted stream.
 QueryFn = Callable[..., AsyncIterator[Any]]
 
@@ -74,7 +77,8 @@ class Spawner:
     # Directory layout per agent. The directory persists across generations
     # of a lineage, so creating it must be idempotent.
     def agent_dir(self, agent_id: str) -> Path:
-        return self._root / "agents" / agent_id
+        # Absolute, because the board server resolves task_complete result paths against it.
+        return (self._root / "agents" / agent_id).resolve()
 
     def prepare_directory(self, agent_id: str, ctx: PromptContext) -> Path:
         cwd = self.agent_dir(agent_id)
@@ -133,24 +137,31 @@ class Spawner:
         cwd = self.prepare_directory(agent_id, ctx)
         token = self._op.register_agent(agent_id, "solver", lineage_id=lineage_id, cwd=str(cwd), generation=generation)
         options = self.build_options(cwd, self._prompts.solver_prompt(ctx), token)
-        self._op.log_event(agent_id, "agent.spawned", {"generation": generation, "lineage_id": lineage_id, "model": self._model})
+        # register_agent already logged agent.spawned; this event carries what the spawner chose.
+        self._op.log_event(agent_id, "agent.options", {"generation": generation, "lineage_id": lineage_id, "model": self._model})
 
         monitor = Monitor(self._op, agent_id)
         result = SpawnResult(agent_id=agent_id)
         try:
-            async for message in self._query(prompt=KICKOFF_PROMPT, options=options):
+            async for message in self._query(prompt=self.kickoff_prompt(cwd), options=options):
                 self._check_init(agent_id, message)
                 monitor.observe(message)
                 if isinstance(message, ResultMessage):
                     result.turns = message.num_turns
                     result.result = message.result
-                    if message.is_error:
+                    if message.subtype == MAX_TURNS_SUBTYPE:
+                        # The turn cap is our own budget, so reaching it is a normal end.
+                        result.result = f"stopped at the {self._max_turns}-turn cap"
+                    elif message.is_error:
                         result.error = message.result or message.subtype
+        except ResultError as exc:
+            if exc.subtype == MAX_TURNS_SUBTYPE:
+                # The CLI exits non-zero after the max-turns result; the loop above already recorded it.
+                self._op.set_agent_status(agent_id, "ended")
+            else:
+                self._record_failure(agent_id, result, exc)
         except Exception as exc:  # noqa: BLE001 - the caller wants the failure in the result, not a crash
-            log.exception("agent %s failed", agent_id)
-            result.error = f"{type(exc).__name__}: {exc}"
-            self._op.log_event(agent_id, "agent.error", {"error": result.error})
-            self._op.set_agent_status(agent_id, "dead")
+            self._record_failure(agent_id, result, exc)
 
         totals = monitor.totals
         result.cost_usd = totals.cost_usd
@@ -160,6 +171,19 @@ class Spawner:
         if result.turns == 0:
             result.turns = totals.turns
         return result
+
+    def kickoff_prompt(self, cwd: Path) -> str:
+        materials = (self._root / "task" / "materials").resolve()
+        return (
+            f"{KICKOFF_PROMPT} Your directory is {cwd} (write only there, under work/). "
+            f"The read-only materials are at {materials}."
+        )
+
+    def _record_failure(self, agent_id: str, result: SpawnResult, exc: BaseException) -> None:
+        log.exception("agent %s failed", agent_id)
+        result.error = f"{type(exc).__name__}: {exc}"
+        self._op.log_event(agent_id, "agent.error", {"error": result.error})
+        self._op.set_agent_status(agent_id, "dead")
 
     def _check_init(self, agent_id: str, message: Any) -> None:
         if not (isinstance(message, SystemMessage) and message.subtype == "init"):

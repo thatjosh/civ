@@ -1,3 +1,4 @@
+from pathlib import Path
 """M1: board_post, board_read, board_top, board_search, board_vote, board_ack."""
 
 from harness.board_mcp.tools.board import BoardTools
@@ -22,6 +23,10 @@ def test_post_refuses_operator_and_routed_kinds(board, solver):
 
 def test_proposal_requires_a_ref(board, solver):
     assert "ref" in board.post(solver, "proposal", "change the prompt")["error"]
+    # The ref must name a real file under the agent's directory, because the server copies it into shared/.
+    diff = Path(solver.cwd) / "work" / "prompt.diff"
+    diff.parent.mkdir(parents=True, exist_ok=True)
+    diff.write_text("--- a\n+++ b\n")
     assert board.post(solver, "proposal", "change the prompt", refs=["work/prompt.diff"])["ok"]
 
 

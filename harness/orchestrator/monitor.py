@@ -84,7 +84,15 @@ class Monitor:
         self._op.log_event(
             self._agent_id,
             "agent.turn",
-            {"turn": t.turns, "context_tokens": context_size, "output_tokens": out, "context_pct": round(t.context_pct, 3)},
+            {
+                "turn": t.turns,
+                # tokens_in/tokens_out are the per-turn deltas civ_status sums for tokens_per_min.
+                "tokens_in": context_size,
+                "tokens_out": out,
+                "context_tokens": context_size,
+                "output_tokens": out,
+                "context_pct": round(t.context_pct, 3),
+            },
         )
         self._fire_thresholds(t.context_pct)
 

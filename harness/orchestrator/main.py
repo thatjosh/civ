@@ -77,7 +77,7 @@ def format_summary(results: list[SpawnResult], tasks_summary: dict | None = None
         total += cost
         note = r.error or (r.result or "").strip().replace("\n", " ")[:60]
         rows.append(f"{r.agent_id:<9} {r.turns:>5} {cost:>8.4f} {r.tokens_in:>10} {r.tokens_out:>8} {r.context_pct:>6.2f}  {note}")
-    rows.append(f"{'total':<9} {'':>5} {total:>8.4f}")
+    rows.append(f"{'total cost':<15} {total:>8.4f}")
     if tasks_summary:
         rows.append("tasks: " + ", ".join(f"{k}={v}" for k, v in tasks_summary.items()))
     return "\n".join(rows)

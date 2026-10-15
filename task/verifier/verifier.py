@@ -52,7 +52,13 @@ def _norm_name(value: str) -> str:
     return _norm_text(value)
 
 
-def _parse_int(value: str) -> int | None:
+def _parse_int(value: str, prefer_year: bool = False) -> int | None:
+    # A year answer often arrives inside a date ("4 October 1853"), so when the expected value is a
+    # year the first four-digit number wins over the first number of any size.
+    if prefer_year:
+        year = re.search(r"\b[12]\d{3}\b", value)
+        if year:
+            return int(year.group(0))
     match = re.search(r"-?\d[\d,]*", value)
     if not match:
         return None
@@ -92,7 +98,7 @@ def _check_field(name: str, spec: dict, raw: str | None) -> _FieldCheck:
     if raw is None:
         return _FieldCheck(name, False, str(expected), "<missing>")
     if kind == "int":
-        got = _parse_int(raw)
+        got = _parse_int(raw, prefer_year=1000 <= int(expected) <= 2999)
         return _FieldCheck(name, got == int(expected), str(expected), str(got))
     if kind == "text":
         return _FieldCheck(name, _norm_name(raw) == _norm_name(expected), expected, raw.strip())
@@ -138,26 +144,19 @@ def _load_messages(db_url: str | None = None) -> list[dict]:
 
     url = db_url or os.environ.get("CIV_DATABASE_URL", DEFAULT_DB_URL)
     with psycopg.connect(url) as conn:
-        rows = conn.execute("select id, kind, thread_id, author_id from messages order by id").fetchall()
-    return [{"id": r[0], "kind": r[1], "thread_id": r[2], "author_id": r[3]} for r in rows]
+        rows = conn.execute("select id, kind, thread_id, author_id, parent_id from messages order by id").fetchall()
+    return [{"id": r[0], "kind": r[1], "thread_id": r[2], "author_id": r[3], "parent_id": r[4]} for r in rows]
 
 
 def _unanswered_questions(messages: list[dict]) -> set[int]:
-    """A question is answered once a finding appears later in its thread."""
-    unanswered: set[int] = set()
-    for msg in messages:
-        if msg["kind"] != "question":
-            continue
-        thread = msg["thread_id"] or msg["id"]
-        answered = any(
-            other["kind"] == "finding"
-            and (other["thread_id"] or other["id"]) == thread
-            and other["id"] > msg["id"]
-            for other in messages
-        )
-        if not answered:
-            unanswered.add(msg["id"])
-    return unanswered
+    """A question is answered only by a finding posted as a reply to it (parent_id set to the
+    question's id). Any later finding in the thread is not enough, because the task-completion
+    finding lands in every thread whether or not the question was ever addressed."""
+    answered = {
+        other["parent_id"] for other in messages
+        if other["kind"] == "finding" and other.get("parent_id") is not None
+    }
+    return {msg["id"] for msg in messages if msg["kind"] == "question" and msg["id"] not in answered}
 
 
 def _score_questions(text: str, messages: list[dict]) -> tuple[float, str]:

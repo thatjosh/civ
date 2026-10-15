@@ -12,8 +12,8 @@ from typing import Any
 from ..auth import AgentIdentity
 from ..db import Db, fetch_one, head_seq
 from ..limits import Knobs, posts_in_last_hour, vote_weight_for, votes_in_last_hour
-from .common import (insert_message, log_event, pin_block, refuse, select_messages,
-                     touch_session_read)
+from .common import (copy_into_shared, insert_message, log_event, pin_block, refuse, resolve_under_cwd,
+                     select_messages, touch_session_read)
 
 AGENT_KINDS = {"finding", "question", "blocker", "proposal"}
 ROUTED_KINDS = {"alert": "civ_alert", "report": "civ_report", "handoff": "civ_handoff"}
@@ -34,8 +34,18 @@ class BoardTools:
             return refuse(f"agents may post only {', '.join(sorted(AGENT_KINDS))}")
         if not body or not body.strip():
             return refuse("body is empty")
-        if kind == "proposal" and not refs:
-            return refuse("a proposal must carry a ref naming its diff")
+        if kind == "proposal":
+            if not refs:
+                return refuse("a proposal must carry a ref naming its diff")
+            # The reviewing supervisor never reads another agent's directory, so the diff has to be
+            # copied into shared/ (by hash, like long bodies) and the ref rewritten to point there.
+            shared_refs = []
+            for ref in refs:
+                source = resolve_under_cwd(identity, ref)
+                if isinstance(source, str):
+                    return refuse(f"proposal ref {ref}: {source}")
+                shared_refs.append(copy_into_shared(self.shared_dir, source)[0])
+            refs = shared_refs
         with self.db.transaction() as conn:
             blocked = pin_block(conn, identity)
             if blocked:
@@ -65,11 +75,14 @@ class BoardTools:
             if thread_id is None:
                 thread_id = inherited
         if thread_id is not None:
-            root = fetch_one(conn, "select id, thread_id from messages where id = %s", (thread_id,))
+            root = fetch_one(conn, "select id, kind, thread_id from messages where id = %s", (thread_id,))
             if root is None:
                 return {"error": f"thread {thread_id} does not exist"}
             if root["thread_id"] is not None:
                 return {"error": f"message {thread_id} is not a thread root; use thread_id={int(root['thread_id'])}"}
+            # Alerts, broadcasts, reports and handoffs are roots too, but only a task opens a thread.
+            if root["kind"] != "task":
+                return {"error": "thread_id must be a task root"}
         return {"thread_id": thread_id}
 
     def read(self, identity: AgentIdentity, thread_id: int | None = None, kind: str | None = None,

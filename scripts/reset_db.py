@@ -29,22 +29,6 @@ TABLES = [
     "handoffs", "events", "votes", "tasks", "messages", "agents", "config",
 ]
 
-# knob, value, min, max, step (from docs/CONTRACT.md); cooldown keeps its default.
-CONFIG_SEEDS = [
-    ("post_rate_per_h", 30, 5, 120, 5),
-    ("vote_rate_per_h", 20, 5, 60, 5),
-    ("vote_quota", 1, 0, 3, 1),
-    ("lease_length_s", 1800, 300, 7200, 300),
-    ("max_attempts", 3, 1, 6, 1),
-    ("backoff_base_s", 60, 10, 600, 10),
-    ("top_k", 10, 5, 50, 5),
-    ("long_body_chars", 2000, 500, 8000, 500),
-    ("decay_offset_h", 2, 1, 12, 1),
-    ("decay_power", 1.5, 1, 3, 0.25),
-    ("handoff_pct", 80, 50, 90, 5),
-    ("kill_pct", 90, 60, 95, 5),
-    ("max_handoff_tokens", 4000, 1000, 8000, 500),
-]
 
 
 def reset_database(db_url: str) -> None:
@@ -56,10 +40,10 @@ def reset_database(db_url: str) -> None:
         if present:
             conn.execute("truncate " + ", ".join(present) + " restart identity cascade")
         if "config" in existing:
-            conn.executemany(
-                "insert into config (knob, value, min, max, step) values (%s, %s, %s, %s, %s)",
-                CONFIG_SEEDS,
-            )
+            # The seeds live in one place (harness/board_mcp/seed.py) so a knob
+            # added there cannot be missed here.
+            from harness.board_mcp.seed import seed_config
+            seed_config(conn)
         conn.commit()
     missing = [t for t in TABLES if t not in existing]
     if missing:

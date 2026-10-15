@@ -62,7 +62,7 @@ def test_solver_prompt_names_the_mcp_tools_and_the_rules(assembler):
     assert "mcp__civ__" in prompt
     assert "task_claim" in prompt and "task_complete" in prompt and "board_vote" in prompt
     assert "task/verifier/" in prompt
-    assert "task/materials/" in prompt
+    assert "materials directory" in prompt
 
 
 def test_missing_prompt_file_fails_loudly(tmp_path):

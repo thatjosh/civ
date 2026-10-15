@@ -54,18 +54,18 @@ WRONG = {
 }
 
 # A fake board for the questions task: ids 5 and 9 are questions that later
-# got findings in their threads, 7 is a question alone in its thread and so
-# still open, 4 is a finding.
+# got findings posted as replies to them (parent_id), 7 is a question alone in
+# its thread and so still open, 4 is a finding that answers nothing.
 FAKE_BOARD = [
-    {"id": 1, "kind": "task", "thread_id": None, "author_id": "operator"},
-    {"id": 2, "kind": "task", "thread_id": None, "author_id": "operator"},
-    {"id": 4, "kind": "finding", "thread_id": 1, "author_id": "sol-001"},
-    {"id": 5, "kind": "question", "thread_id": 1, "author_id": "sol-002"},
-    {"id": 6, "kind": "finding", "thread_id": 1, "author_id": "sol-003"},
-    {"id": 3, "kind": "task", "thread_id": None, "author_id": "operator"},
-    {"id": 7, "kind": "question", "thread_id": 3, "author_id": "sol-002"},
-    {"id": 9, "kind": "question", "thread_id": 2, "author_id": "sol-001"},
-    {"id": 10, "kind": "finding", "thread_id": 2, "author_id": "sol-003"},
+    {"id": 1, "kind": "task", "thread_id": None, "author_id": "operator", "parent_id": None},
+    {"id": 2, "kind": "task", "thread_id": None, "author_id": "operator", "parent_id": None},
+    {"id": 4, "kind": "finding", "thread_id": 1, "author_id": "sol-001", "parent_id": None},
+    {"id": 5, "kind": "question", "thread_id": 1, "author_id": "sol-002", "parent_id": None},
+    {"id": 6, "kind": "finding", "thread_id": 1, "author_id": "sol-003", "parent_id": 5},
+    {"id": 3, "kind": "task", "thread_id": None, "author_id": "operator", "parent_id": None},
+    {"id": 7, "kind": "question", "thread_id": 3, "author_id": "sol-002", "parent_id": None},
+    {"id": 9, "kind": "question", "thread_id": 2, "author_id": "sol-001", "parent_id": None},
+    {"id": 10, "kind": "finding", "thread_id": 2, "author_id": "sol-003", "parent_id": 9},
 ]
 
 

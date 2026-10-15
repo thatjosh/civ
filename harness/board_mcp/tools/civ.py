@@ -12,7 +12,7 @@ from typing import Any
 
 from ..auth import AgentIdentity
 from ..db import Db, fetch_one
-from ..limits import Knobs, live_counts
+from ..limits import Knobs, live_counts, posts_in_last_hour
 from .common import insert_message, log_event, pin_block, refuse
 
 HANDOFF_HEADINGS = ("State of work", "Open threads", "What to try next", "What not to retry", "Files worth reading")
@@ -57,6 +57,11 @@ class CivTools:
             blocked = pin_block(conn, identity)
             if blocked:
                 return blocked
+            # An alert is a post by another name, so it draws on the same hourly allowance; otherwise
+            # the one kind that reaches the supervisors would be the one kind an agent could flood.
+            limit = int(self.knobs.get("post_rate_per_h", conn))
+            if posts_in_last_hour(conn, identity.id) >= limit:
+                return refuse(f"post rate limit of {limit} per hour reached; alerts count toward it")
             inserted = insert_message(conn, identity, "alert", body.strip(), thread_id=None, parent_id=None,
                                       refs=None, shared_dir=self.shared_dir, knobs=self.knobs)
             log_event(conn, identity.id, "tool.civ_alert", {"id": inserted["id"]})

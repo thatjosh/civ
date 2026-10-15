@@ -6,8 +6,6 @@ calling it at once each get a different task or an honest empty result.
 
 from __future__ import annotations
 
-import hashlib
-import shutil
 from pathlib import Path
 from typing import Any, Callable
 
@@ -15,7 +13,7 @@ from ..auth import AgentIdentity
 from ..db import Db, fetch_one
 from ..limits import Knobs
 from ..ranking import THREAD_SCORE_SQL
-from .common import decay_params, insert_message, log_event, pin_block, refuse
+from .common import copy_into_shared, decay_params, insert_message, log_event, pin_block, refuse, resolve_under_cwd
 
 Verifier = Callable[[str, str], tuple[float | None, str]]
 
@@ -99,8 +97,13 @@ class TaskTools:
 
     def heartbeat(self, identity: AgentIdentity, task_id: str) -> dict[str, Any]:
         with self.db.transaction() as conn:
-            if not self._holds(conn, identity, task_id):
-                return refuse(f"you do not hold the lease on {task_id}")
+            # A heartbeat is a write like any other, so the operator-pin gate applies to it too.
+            blocked = pin_block(conn, identity)
+            if blocked:
+                return blocked
+            lease_error = self._lease_error(conn, identity, task_id)
+            if lease_error:
+                return refuse(lease_error)
             row = fetch_one(
                 conn,
                 "update tasks set lease_expires = now() + make_interval(secs => %s) where id = %s returning lease_expires",
@@ -119,9 +122,10 @@ class TaskTools:
             blocked = pin_block(conn, identity)
             if blocked:
                 return blocked
-            if not self._holds(conn, identity, task_id):
-                return refuse(f"you do not hold the lease on {task_id}")
-            result_ref, abs_copy = self._copy_by_hash(source)
+            lease_error = self._lease_error(conn, identity, task_id)
+            if lease_error:
+                return refuse(lease_error)
+            result_ref, abs_copy = copy_into_shared(self.shared_dir, source)
             score, notes = self._verify(task_id, abs_copy)
             task = fetch_one(
                 conn,
@@ -145,8 +149,9 @@ class TaskTools:
             blocked = pin_block(conn, identity)
             if blocked:
                 return blocked
-            if not self._holds(conn, identity, task_id):
-                return refuse(f"you do not hold the lease on {task_id}")
+            lease_error = self._lease_error(conn, identity, task_id)
+            if lease_error:
+                return refuse(lease_error)
             max_attempts = int(self.knobs.get("max_attempts", conn))
             base = float(self.knobs.get("backoff_base_s", conn))
             current = fetch_one(conn, "select attempts, thread_id from tasks where id = %s", (task_id,))
@@ -171,29 +176,28 @@ class TaskTools:
     # helpers
 
     @staticmethod
-    def _holds(conn, identity: AgentIdentity, task_id: str) -> bool:
-        row = fetch_one(conn, "select 1 from tasks where id = %s and lease_owner = %s and status = 'leased'",
-                        (task_id, identity.id))
-        return row is not None
+    def _lease_error(conn, identity: AgentIdentity, task_id: str) -> str | None:
+        """The refusal text if the caller cannot act on this task, else None. A lease past its
+        expiry is dead the moment it expires, not when the next claim happens to sweep it,
+        because otherwise two agents could both believe they own the task."""
+        row = fetch_one(
+            conn,
+            "select lease_expires > now() as alive from tasks where id = %s and lease_owner = %s and status = 'leased'",
+            (task_id, identity.id),
+        )
+        if row is None:
+            return f"you do not hold the lease on {task_id}"
+        if not row["alive"]:
+            return "your lease expired, claim again"
+        return None
 
     @staticmethod
     def _resolve_result(identity: AgentIdentity, result_path: str) -> Path | str:
         """Results must come from the agent's own directory; anything else is refused."""
-        cwd = Path(identity.cwd).resolve()
-        candidate = (cwd / result_path).resolve() if not Path(result_path).is_absolute() else Path(result_path).resolve()
-        if not candidate.is_relative_to(cwd):
-            return "result_path must be inside your own directory"
-        if not candidate.is_file():
-            return f"result file not found: {result_path}"
-        return candidate
-
-    def _copy_by_hash(self, source: Path) -> tuple[str, Path]:
-        digest = hashlib.sha256(source.read_bytes()).hexdigest()[:16]
-        self.shared_dir.mkdir(parents=True, exist_ok=True)
-        dest = self.shared_dir / f"{digest}-{source.name}"
-        if not dest.exists():
-            shutil.copyfile(source, dest)
-        return f"shared/{dest.name}", dest
+        resolved = resolve_under_cwd(identity, result_path)
+        if isinstance(resolved, str):
+            return resolved.replace("path must be", "result_path must be").replace("file not found", "result file not found")
+        return resolved
 
     def _verify(self, task_id: str, path: Path) -> tuple[float | None, str]:
         if self.verifier is None:

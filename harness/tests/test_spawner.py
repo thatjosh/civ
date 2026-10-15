@@ -28,7 +28,7 @@ async def test_spawn_registers_agent_prepares_directory_and_builds_options(tmp_p
     assert op.registered == [{"id": "sol-001", "role": "solver", "lineage_id": "L-001", "cwd": str(cwd), "generation": 1}]
 
     call = q.calls[0]
-    assert call["prompt"] == KICKOFF_PROMPT
+    assert call["prompt"].startswith(KICKOFF_PROMPT) and "materials" in call["prompt"]
     opts = call["options"]
     assert opts.cwd == str(cwd)
     assert opts.tools == SOLVER_TOOLS
@@ -43,7 +43,7 @@ async def test_spawn_registers_agent_prepares_directory_and_builds_options(tmp_p
     assert res.turns == 2 and res.cost_usd == 0.01 and res.result == "done" and res.error is None
     assert res.tokens_in == 1_000 and res.context_pct == pytest.approx(0.1)
     assert ("sol-001", "ended") in op.status
-    assert [e[1] for e in op.events][:2] == ["agent.spawned", "agent.init"]
+    assert [e[1] for e in op.events][:2] == ["agent.options", "agent.init"]
 
 
 async def test_spawn_fails_fast_when_board_not_connected(tmp_path):

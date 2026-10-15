@@ -7,6 +7,7 @@ Rate limits count rows rather than events so that the limit is exactly what the 
 
 from __future__ import annotations
 
+import json
 import time
 
 import psycopg
@@ -23,17 +24,44 @@ class Knobs:
         self._cache: dict[str, float] = {}
         self._loaded_at = 0.0
 
+    _SELECT = "select knob, value, (expires_at is not null and expires_at < now()) as expired from config"
+
     def _refresh(self, conn: psycopg.Connection | None) -> None:
         # Refresh on the caller's connection when there is one; otherwise open a short direct
         # connection rather than borrowing a second pooled one, because a tool already holding a
         # pooled connection would deadlock the pool under load.
         if conn is not None:
-            rows = fetch_all(conn, "select knob, value from config")
+            self._cache = self._load(conn)
         else:
             with psycopg.connect(self._db.url, row_factory=dict_row) as direct:
-                rows = fetch_all(direct, "select knob, value from config")
-        self._cache = {r["knob"]: float(r["value"]) for r in rows}
+                self._cache = self._load(direct)
         self._loaded_at = time.monotonic()
+
+    def _load(self, conn: psycopg.Connection) -> dict[str, float]:
+        rows = fetch_all(conn, self._SELECT)
+        expired = [r["knob"] for r in rows if r["expired"]]
+        if expired:
+            self._revert(conn, expired)
+        # A tune past its TTL reverts to the seed, so a supervisor's experiment cannot outlive the
+        # round that justified it. The revert is written back so dashboards and civ_status agree.
+        return {r["knob"]: float(CONFIG_SEEDS[r["knob"]][0]) if r["expired"] and r["knob"] in CONFIG_SEEDS
+                else float(r["value"]) for r in rows}
+
+    @staticmethod
+    def _revert(conn: psycopg.Connection, knobs: list[str]) -> None:
+        for knob in knobs:
+            if knob not in CONFIG_SEEDS:
+                continue
+            seed = CONFIG_SEEDS[knob][0]
+            # set_at is left alone on purpose: a TTL revert is logged but starts no cooldown.
+            conn.execute(
+                "update config set value = %s, set_by = null, reason = null, ttl_s = null, expires_at = null where knob = %s",
+                (seed, knob),
+            )
+            conn.execute(
+                "insert into events (agent_id, type, payload) values (null, 'knob.reverted', %s)",
+                (json.dumps({"knob": knob, "to": seed}),),
+            )
 
     def get(self, knob: str, conn: psycopg.Connection | None = None) -> float:
         if time.monotonic() - self._loaded_at > self._ttl_s or knob not in self._cache:
@@ -78,8 +106,12 @@ def live_counts(conn: psycopg.Connection) -> dict[str, int]:
 
 def vote_weight_for(conn: psycopg.Connection, role: str) -> float:
     """A solver vote weighs one; a supervisor vote weighs live solvers over live supervisors, so the
-    two blocs always carry equal total weight. Operator votes use the supervisor weight."""
+    two blocs always carry equal total weight. Operator votes use the supervisor weight, floored at
+    one so a steer cast before any agent is live still counts for something."""
     if role == "solver":
         return 1.0
     counts = live_counts(conn)
-    return float(counts["solver"]) / float(max(counts["supervisor"], 1))
+    weight = float(counts["solver"]) / float(max(counts["supervisor"], 1))
+    if role == "operator":
+        return max(weight, 1.0)
+    return weight

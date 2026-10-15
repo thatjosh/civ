@@ -93,7 +93,7 @@ class Operator:
         if value not in (-1, 1):
             raise ValueError("value must be +1 or -1")
         with self.db.transaction() as conn:
-            weight = vote_weight_for(conn, "supervisor")
+            weight = vote_weight_for(conn, "operator")
             conn.execute(
                 """
                 insert into votes (message_id, voter_id, value, weight, reason) values (%s, %s, %s, %s, %s)

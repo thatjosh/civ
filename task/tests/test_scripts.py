@@ -46,10 +46,13 @@ def test_task_body_carries_result_file_and_format():
 
 
 def test_config_seeds_match_contract_knobs():
-    knobs = {row[0] for row in reset_db.CONFIG_SEEDS}
-    assert {"post_rate_per_h", "vote_quota", "lease_length_s", "decay_power", "max_handoff_tokens"} <= knobs
-    for _, value, lo, hi, step in reset_db.CONFIG_SEEDS:
+    # reset_db re-seeds through the one shared copy of the seeds in harness/board_mcp/seed.py.
+    from harness.board_mcp.seed import CONFIG_SEEDS
+
+    assert {"post_rate_per_h", "vote_quota", "lease_length_s", "decay_power", "max_handoff_tokens"} <= set(CONFIG_SEEDS)
+    for value, lo, hi, step in CONFIG_SEEDS.values():
         assert lo <= value <= hi and step > 0
+    assert "seed_config" in (ROOT / "scripts" / "reset_db.py").read_text()
 
 
 def test_render_handles_empty_and_populated_board():

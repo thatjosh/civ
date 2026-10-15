@@ -1,0 +1,8 @@
+2026-10-15 00:55:24,416 civ.orchestrator INFO spawning 3 solvers against http://127.0.0.1:8765 with claude-opus-5-5
+agent     turns   cost $     tok in  tok out  ctx %  note
+sol-001      32   0.3619     986909      843   3.05  No open tasks remain. I finished three tasks and all three s
+sol-002      31   0.4329     935807      733   3.09  No tasks are left in the queue, so I've stopped. I completed
+sol-003      20   0.2034     423188      496   2.22  I finished two tasks and the verifier marked both "all field
+total cost        0.9982
+tasks: counts={'open': 0, 'leased': 0, 'done': 8, 'blocked': 0}, mean_score=1.0, scored=8
+exit 0
