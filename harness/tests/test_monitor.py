@@ -1,4 +1,4 @@
-from harness.orchestrator.monitor import Monitor
+from harness.orchestrator.monitor import Monitor, StaticKnobs
 from harness.tests.orchestrator_fakes import FakeOperator, assistant, init_message, result
 
 
@@ -52,3 +52,58 @@ def test_messages_without_usage_are_ignored():
     a.usage = None
     m.observe(a)
     assert m.totals.turns == 0 and op.usage == []
+
+
+def test_thresholds_come_from_the_knobs():
+    m = Monitor(FakeOperator(), "sol-001", knobs=StaticKnobs({"handoff_pct": 60, "kill_pct": 75}))
+    assert m.handoff_pct == 60.0 and m.kill_pct == 75.0
+    assert Monitor(FakeOperator(), "sol-001").handoff_pct == 80.0
+
+
+def test_forced_handoff_fires_the_handoff_level_at_the_turn_count_only_once():
+    op = FakeOperator()
+    m = Monitor(op, "sol-001", context_window=1_000_000, force_handoff_after_turns=3)
+    fired: list[float] = []
+    m.on_threshold(m.handoff_pct, lambda _a, pct: fired.append(pct))
+    m.on_threshold(m.kill_pct, lambda _a, pct: fired.append(-1))
+    for _ in range(5):
+        m.observe(assistant(10))
+    # The handoff level fired exactly once, at turn 3, and the kill level never did.
+    assert len(fired) == 1 and fired[0] < 1
+    forced = [e for e in op.events if e[1] == "agent.handoff_forced"]
+    assert len(forced) == 1 and forced[0][2]["turn"] == 3
+
+
+def test_probe_is_due_every_five_turns_and_once_past_seventy_percent():
+    m = Monitor(FakeOperator(), "sol-001", context_window=100)
+    due: list[int] = []
+    for i, size in enumerate((10, 10, 10, 10, 10, 10, 75, 76, 77, 10), start=1):
+        m.observe(assistant(size))
+        if m.probe_due():
+            due.append(i)
+            m.apply_probe({"totalTokens": 0})
+    # Turns 5 and 10 by cadence, turn 7 for the first crossing of seventy percent, not 8 or 9 again.
+    assert due == [5, 7, 10]
+
+
+def test_probe_raises_the_estimate_but_never_lowers_it():
+    op = FakeOperator()
+    m = Monitor(op, "sol-001", context_window=1_000)
+    m.observe(assistant(500))
+    m.apply_probe({"totalTokens": 300, "percentage": 0.03})
+    assert m.totals.context_pct == 50.0 and m.totals.probe_pct == 30.0
+    m.apply_probe({"totalTokens": 900, "percentage": 0.09})
+    assert m.totals.context_pct == 90.0
+    assert op.usage[-1] == ("sol-001", 500, 10, 90.0)
+    assert [e[1] for e in op.events].count("agent.context_probe") == 2
+
+
+def test_compaction_state_is_a_problem_only_when_it_would_fire_first():
+    m = Monitor(FakeOperator(), "sol-001")
+    assert m.note_compaction_state({"isAutoCompactEnabled": False}) is False
+    # Threshold in tokens against the window: 950k of 1M is 95 percent, above our 80, so no problem.
+    assert m.note_compaction_state({"isAutoCompactEnabled": True, "autoCompactThreshold": 950_000, "maxTokens": 1_000_000}) is False
+    assert m.note_compaction_state({"isAutoCompactEnabled": True, "autoCompactThreshold": 700_000, "maxTokens": 1_000_000}) is True
+    # Enabled with no threshold reported is treated as a problem, because nothing proves it fires late.
+    assert m.note_compaction_state({"isAutoCompactEnabled": True}) is True
+    assert m.note_compaction_state(None) is False

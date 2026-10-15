@@ -35,8 +35,22 @@ def log_event(conn: psycopg.Connection, agent_id: str | None, type: str, payload
     )
 
 
-def pin_block(conn: psycopg.Connection, identity: AgentIdentity) -> dict[str, Any] | None:
-    """The refusal every write tool returns while an operator vote awaits this agent's ack."""
+HANDOFF_LOCKOUT = "hand off now: call civ_handoff with the five headings"
+
+
+def pin_block(conn: psycopg.Connection, identity: AgentIdentity, *, during_handoff: bool = False) -> dict[str, Any] | None:
+    """The write gate every write tool passes through first. Two things close it: an operator vote
+    awaiting this agent's ack, and a handoff request. Once the orchestrator has asked for a handoff
+    the only write that makes sense is the handoff itself, so every other write is refused with the
+    same instruction; a prompt alone cannot be trusted to steer an agent whose context is nearly
+    full, but a tool result it has to read can. civ_handoff passes during_handoff so it is exempt
+    from the lockout while still honouring a pending pin."""
+    if not during_handoff:
+        row = fetch_one(conn, "select status from agents where id = %s", (identity.id,))
+        # Status is read fresh rather than taken from the identity, because the orchestrator flips
+        # it mid-session and the token was resolved before that.
+        if row is not None and row["status"] == "handing_off":
+            return refuse(HANDOFF_LOCKOUT)
     pin = pending_pin(conn, identity)
     if pin is None:
         return None

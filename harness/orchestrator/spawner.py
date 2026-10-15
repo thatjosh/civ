@@ -3,20 +3,32 @@
 The spawner is the only place that knows how an agent is wired: its
 directory, its spawn token, the MCP server it talks to, and the SDK options.
 Everything else in the orchestrator deals in agent ids and results.
+
+Sessions run through ClaudeSDKClient rather than query(), because succession
+has to reach into a running session twice: once to send the handoff request
+and once to interrupt it when the handoff has landed.
 """
 
 from __future__ import annotations
 
 import json
 import logging
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
-from claude_agent_sdk import AssistantMessage, ClaudeAgentOptions, ResultError, ResultMessage, SystemMessage, TextBlock, query
+from claude_agent_sdk import (
+    AssistantMessage,
+    ClaudeAgentOptions,
+    ClaudeSDKClient,
+    ResultError,
+    ResultMessage,
+    SystemMessage,
+    TextBlock,
+)
 
-from harness.orchestrator.monitor import Monitor
+from harness.orchestrator.monitor import KnobReader, Monitor
 from harness.orchestrator.prompts import PromptAssembler, PromptContext
 
 log = logging.getLogger(__name__)
@@ -27,6 +39,11 @@ SOLVER_TOOLS = ["Read", "Write", "Edit", "Bash", "Glob", "Grep"]
 KICKOFF_PROMPT = "Begin your solver loop."
 MCP_SERVER_NAME = "civ"
 TOKEN_HEADER = "X-Civ-Token"
+# The bundled CLI honours this switch; the handoff is our compaction, so the CLI's must stay off.
+SESSION_ENV = {"DISABLE_AUTO_COMPACT": "1"}
+
+# The CLI's result subtype when the session hits max_turns; a normal end for us, not a failure.
+MAX_TURNS_SUBTYPE = "error_max_turns"
 
 
 class McpNotConnected(RuntimeError):
@@ -44,13 +61,109 @@ class SpawnResult:
     context_pct: float = 0.0
     result: str | None = None
     error: str | None = None
+    generation: int = 1
+    # Set by the runner when it cut the session short on purpose.
+    stopped_by_runner: bool = False
 
 
-# The CLI's result subtype when the session hits max_turns; a normal end for us, not a failure.
-MAX_TURNS_SUBTYPE = "error_max_turns"
+class ClientLike(Protocol):
+    """The slice of ClaudeSDKClient the spawner uses, so tests can script one."""
 
-# query() is injectable so tests can replace the SDK with a scripted stream.
+    async def connect(self, prompt: str | None = None) -> None: ...
+
+    def receive_messages(self) -> AsyncIterator[Any]: ...
+
+    async def query(self, prompt: str, session_id: str = "default") -> None: ...
+
+    async def interrupt(self) -> None: ...
+
+    async def disconnect(self) -> None: ...
+
+    async def get_context_usage(self) -> Any: ...
+
+
+ClientFactory = Callable[[ClaudeAgentOptions], ClientLike]
 QueryFn = Callable[..., AsyncIterator[Any]]
+
+
+class QueryAdapterClient:
+    """Wraps a query()-style function as a client, for tests written against the M2 spawner."""
+
+    def __init__(self, query_fn: QueryFn, options: ClaudeAgentOptions) -> None:
+        self._query_fn = query_fn
+        self._options = options
+        self._stream: AsyncIterator[Any] | None = None
+        self.sent: list[str] = []
+        self.interrupted = False
+        self.disconnected = False
+
+    async def connect(self, prompt: str | None = None) -> None:
+        self._stream = self._query_fn(prompt=prompt or "", options=self._options)
+
+    async def receive_messages(self) -> AsyncIterator[Any]:
+        assert self._stream is not None
+        async for message in self._stream:
+            yield message
+
+    async def query(self, prompt: str, session_id: str = "default") -> None:
+        self.sent.append(prompt)
+
+    async def interrupt(self) -> None:
+        self.interrupted = True
+
+    async def disconnect(self) -> None:
+        self.disconnected = True
+
+    async def get_context_usage(self) -> Any:
+        return None
+
+
+class SessionControl:
+    """What a running session lets the succession runner do to it."""
+
+    def __init__(self, client: ClientLike, agent_id: str) -> None:
+        self._client = client
+        self.agent_id = agent_id
+        self.stop_requested = False
+        self.stop_reason: str | None = None
+
+    async def send(self, text: str) -> None:
+        """Deliver a further user message into the running session."""
+        await self._client.query(text)
+
+    async def context_usage(self) -> dict[str, Any] | None:
+        try:
+            usage = await self._client.get_context_usage()
+        except Exception as exc:  # noqa: BLE001 - a failed probe must not end the session
+            log.warning("context usage probe failed for %s: %s", self.agent_id, exc)
+            return None
+        return dict(usage) if usage else None
+
+    def request_stop(self, reason: str) -> None:
+        """Ask the session loop to interrupt and disconnect after the current message."""
+        self.stop_requested = True
+        self.stop_reason = reason
+
+    async def interrupt(self) -> None:
+        """Cut the current turn now, for a session that is producing no messages to stop on."""
+        try:
+            await self._client.interrupt()
+        except Exception as exc:  # noqa: BLE001 - the session loop still ends on stop_requested
+            log.warning("interrupt failed for %s: %s", self.agent_id, exc)
+
+
+MessageHook = Callable[[Any, SessionControl], Awaitable[None]]
+
+
+@dataclass
+class Prepared:
+    """Everything decided before a session starts."""
+
+    agent_id: str
+    cwd: Path
+    token: str
+    options: ClaudeAgentOptions
+    kickoff: str
 
 
 class Spawner:
@@ -63,7 +176,11 @@ class Spawner:
         model: str = "claude-opus-5-5",
         max_turns: int = 40,
         harness_version: str = "dev",
-        query_fn: QueryFn = query,
+        query_fn: QueryFn | None = None,
+        client_factory: ClientFactory | None = None,
+        knobs: KnobReader | None = None,
+        context_window: int = 1_000_000,
+        force_handoff_after_turns: int | None = None,
     ) -> None:
         self._op = operator
         self._board_url = board_url.rstrip("/")
@@ -72,7 +189,16 @@ class Spawner:
         self._model = model
         self._max_turns = max_turns
         self._harness_version = harness_version
-        self._query = query_fn
+        self._knobs = knobs
+        self._window = context_window
+        self._force_after = force_handoff_after_turns
+        # A client factory wins; a query_fn is adapted so the M2 tests keep working.
+        if client_factory is not None:
+            self._client_factory = client_factory
+        elif query_fn is not None:
+            self._client_factory = lambda options: QueryAdapterClient(query_fn, options)
+        else:
+            self._client_factory = ClaudeSDKClient
 
     # Directory layout per agent. The directory persists across generations
     # of a lineage, so creating it must be idempotent.
@@ -80,8 +206,8 @@ class Spawner:
         # Absolute, because the board server resolves task_complete result paths against it.
         return (self._root / "agents" / agent_id).resolve()
 
-    def prepare_directory(self, agent_id: str, ctx: PromptContext) -> Path:
-        cwd = self.agent_dir(agent_id)
+    def prepare_directory(self, agent_id: str, ctx: PromptContext, cwd: Path | None = None) -> Path:
+        cwd = (cwd or self.agent_dir(agent_id)).resolve()
         (cwd / "work").mkdir(parents=True, exist_ok=True)
         (cwd / "notes").mkdir(parents=True, exist_ok=True)
         identity = {
@@ -115,16 +241,21 @@ class Spawner:
             model=self._model,
             max_turns=self._max_turns,
             add_dirs=[str(self._root / "task" / "materials")],
+            env=dict(SESSION_ENV),
         )
 
-    async def spawn(
+    def prepare(
         self,
         agent_id: str,
         lineage_id: str,
         generation: int = 1,
         handoff: str | None = None,
+        handoff_is_stub: bool = False,
         broadcasts: list[str] | None = None,
-    ) -> SpawnResult:
+        token: str | None = None,
+        cwd: Path | None = None,
+    ) -> Prepared:
+        """Register the agent (unless a token says it already is) and build its session options."""
         ctx = PromptContext(
             agent_id=agent_id,
             role="solver",
@@ -133,27 +264,68 @@ class Spawner:
             harness_version=self._harness_version,
             broadcasts=list(broadcasts or []),
             handoff=handoff,
+            handoff_is_stub=handoff_is_stub,
         )
-        cwd = self.prepare_directory(agent_id, ctx)
-        token = self._op.register_agent(agent_id, "solver", lineage_id=lineage_id, cwd=str(cwd), generation=generation)
+        cwd = self.prepare_directory(agent_id, ctx, cwd)
+        if token is None:
+            token = self._op.register_agent(agent_id, "solver", lineage_id=lineage_id, cwd=str(cwd), generation=generation)
         options = self.build_options(cwd, self._prompts.solver_prompt(ctx), token)
         # register_agent already logged agent.spawned; this event carries what the spawner chose.
         self._op.log_event(agent_id, "agent.options", {"generation": generation, "lineage_id": lineage_id, "model": self._model})
+        return Prepared(agent_id, cwd, token, options, self.kickoff_prompt(cwd))
 
-        monitor = Monitor(self._op, agent_id)
+    async def spawn(
+        self,
+        agent_id: str,
+        lineage_id: str,
+        generation: int = 1,
+        handoff: str | None = None,
+        broadcasts: list[str] | None = None,
+        token: str | None = None,
+        cwd: Path | None = None,
+        handoff_is_stub: bool = False,
+        on_message: MessageHook | None = None,
+        monitor: Monitor | None = None,
+    ) -> SpawnResult:
+        prepared = self.prepare(agent_id, lineage_id, generation, handoff, handoff_is_stub, broadcasts, token, cwd)
+        monitor = monitor or self.monitor_for(agent_id)
+        result = await self.run_session(prepared, monitor, on_message)
+        result.generation = generation
+        return result
+
+    def monitor_for(self, agent_id: str) -> Monitor:
+        return Monitor(self._op, agent_id, context_window=self._window, knobs=self._knobs, force_handoff_after_turns=self._force_after)
+
+    async def run_session(self, prepared: Prepared, monitor: Monitor, on_message: MessageHook | None = None) -> SpawnResult:
+        """Run one session to its end, feeding every message to the monitor and the hook.
+
+        The hook may ask the session to stop through SessionControl; the loop
+        then interrupts and disconnects after the message it is on. Disconnect
+        always happens, so a crashed hook cannot leave a CLI process behind.
+        """
+        agent_id = prepared.agent_id
         result = SpawnResult(agent_id=agent_id)
+        client = self._client_factory(prepared.options)
+        control = SessionControl(client, agent_id)
+        connected = False
         try:
-            async for message in self._query(prompt=self.kickoff_prompt(cwd), options=options):
+            await client.connect(prepared.kickoff)
+            connected = True
+            async for message in client.receive_messages():
                 self._check_init(agent_id, message)
                 monitor.observe(message)
+                if monitor.probe_due():
+                    monitor.apply_probe(await control.context_usage())
+                if on_message is not None:
+                    await on_message(message, control)
                 if isinstance(message, ResultMessage):
-                    result.turns = message.num_turns
-                    result.result = message.result
-                    if message.subtype == MAX_TURNS_SUBTYPE:
-                        # The turn cap is our own budget, so reaching it is a normal end.
-                        result.result = f"stopped at the {self._max_turns}-turn cap"
-                    elif message.is_error:
-                        result.error = message.result or message.subtype
+                    self._record_result(result, message)
+                    break
+                if control.stop_requested:
+                    result.stopped_by_runner = True
+                    result.result = f"stopped by runner: {control.stop_reason}"
+                    await client.interrupt()
+                    break
         except ResultError as exc:
             if exc.subtype == MAX_TURNS_SUBTYPE:
                 # The CLI exits non-zero after the max-turns result; the loop above already recorded it.
@@ -162,6 +334,12 @@ class Spawner:
                 self._record_failure(agent_id, result, exc)
         except Exception as exc:  # noqa: BLE001 - the caller wants the failure in the result, not a crash
             self._record_failure(agent_id, result, exc)
+        finally:
+            if connected:
+                try:
+                    await client.disconnect()
+                except Exception as exc:  # noqa: BLE001 - nothing useful can be done about a failed disconnect
+                    log.warning("disconnect failed for %s: %s", agent_id, exc)
 
         totals = monitor.totals
         result.cost_usd = totals.cost_usd
@@ -178,6 +356,15 @@ class Spawner:
             f"{KICKOFF_PROMPT} Your directory is {cwd} (write only there, under work/). "
             f"The read-only materials are at {materials}."
         )
+
+    def _record_result(self, result: SpawnResult, message: ResultMessage) -> None:
+        result.turns = message.num_turns
+        result.result = message.result
+        if message.subtype == MAX_TURNS_SUBTYPE:
+            # The turn cap is our own budget, so reaching it is a normal end.
+            result.result = f"stopped at the {self._max_turns}-turn cap"
+        elif message.is_error:
+            result.error = message.result or message.subtype
 
     def _record_failure(self, agent_id: str, result: SpawnResult, exc: BaseException) -> None:
         log.exception("agent %s failed", agent_id)

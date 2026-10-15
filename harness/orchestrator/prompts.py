@@ -22,6 +22,7 @@ SOLVER_FILES = (
 )
 BROADCAST_PREAMBLE = "broadcast_preamble.md"
 SUCCESSOR_PREAMBLE = "successor_preamble.md"
+STUB_PREAMBLE = "stub_handoff.md"
 IDENTITY = "identity.md"
 
 SEPARATOR = "\n\n"
@@ -38,6 +39,9 @@ class PromptContext:
     harness_version: str = "dev"
     broadcasts: list[str] = field(default_factory=list)
     handoff: str | None = None
+    # A stub was written by the orchestrator from board posts after a kill, so the
+    # successor is told to trust it less than a real handoff.
+    handoff_is_stub: bool = False
 
 
 class PromptAssembler:
@@ -66,7 +70,10 @@ class PromptAssembler:
         # A successor gets the preamble and the handoff together, so the
         # framing and the content it frames are adjacent.
         if ctx.handoff:
-            parts.append(self._read(SUCCESSOR_PREAMBLE) + SEPARATOR + ctx.handoff.strip())
+            framing = [self._read(SUCCESSOR_PREAMBLE)]
+            if ctx.handoff_is_stub:
+                framing.append(self._read(STUB_PREAMBLE))
+            parts.append(SEPARATOR.join(framing) + SEPARATOR + ctx.handoff.strip())
 
         parts.append(self.identity_block(ctx))
         return SEPARATOR.join(parts) + "\n"

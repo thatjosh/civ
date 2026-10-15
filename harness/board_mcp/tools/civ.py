@@ -1,7 +1,8 @@
 """The civ tools: handoff, alert, status, and the supervisor-only tune and report.
 
-handoff and tune carry their full validation already, even though nothing drives succession (M3)
-or supervisor rounds (M4) yet, so those milestones add orchestration rather than rules.
+handoff carries its full validation and ends the agent itself (M3); tune carries its validation
+even though supervisor rounds (M4) do not drive it yet, so that milestone adds orchestration
+rather than rules.
 """
 
 from __future__ import annotations
@@ -34,7 +35,7 @@ class CivTools:
         if approx_tokens > max_tokens:
             return refuse(f"handoff is about {int(approx_tokens)} tokens; the ceiling is {max_tokens}")
         with self.db.transaction() as conn:
-            blocked = pin_block(conn, identity)
+            blocked = pin_block(conn, identity, during_handoff=True)
             if blocked:
                 return blocked
             status = fetch_one(conn, "select status from agents where id = %s", (identity.id,))
@@ -47,8 +48,14 @@ class CivTools:
             )
             insert_message(conn, identity, "handoff", body, thread_id=None, parent_id=None, refs=None,
                            shared_dir=self.shared_dir, knobs=self.knobs)
+            # The handoff is the agent's last act: ending it here (rather than waiting for the
+            # orchestrator) means its token stops working at once, so a confused agent cannot keep
+            # writing after it has handed over, and the lease stays put for the successor to inherit.
+            conn.execute("update agents set status = 'ended', ended_at = now() where id = %s", (identity.id,))
             log_event(conn, identity.id, "tool.civ_handoff", {"handoff_id": int(row["id"])})
-            return {"ok": True, "handoff_id": int(row["id"])}
+            log_event(conn, identity.id, "agent.handoff_written",
+                      {"handoff_id": int(row["id"]), "lineage_id": identity.lineage_id, "generation": identity.generation})
+            return {"ok": True, "handoff_id": int(row["id"]), "stop": True}
 
     def alert(self, identity: AgentIdentity, body: str) -> dict[str, Any]:
         if not body or not body.strip():
