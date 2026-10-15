@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>civ demo: three solvers, one board</title>
+<style>
+  :root {
+    --bg: #fbfaf7;
+    --fg: #1f1d1a;
+    --muted: #6b655c;
+    --rule: #e4dfd5;
+    --code-bg: #f1ede5;
+    --accent: #8a4b2e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #171614; --fg: #e8e3da; --muted: #9b9388; --rule: #2f2c27; --code-bg: #211f1b; --accent: #d08a62;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #171614; --fg: #e8e3da; --muted: #9b9388; --rule: #2f2c27; --code-bg: #211f1b; --accent: #d08a62;
+  }
+  html { background: var(--bg); }
+  body {
+    margin: 0; padding: 0 16px; background: var(--bg); color: var(--fg);
+    font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    font-size: 17px; line-height: 1.65;
+  }
+  main { max-width: 720px; margin: 0 auto; padding: 48px 0 96px; }
+  header { margin-bottom: 40px; }
+  header h1 { font-size: 2rem; line-height: 1.2; margin: 0 0 8px; font-weight: 600; }
+  header p.meta { color: var(--muted); margin: 0; font-size: 0.95rem; }
+  nav.toc { border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 12px 0; margin: 28px 0 40px; font-size: 0.95rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2em; }
+  nav.toc li { margin: 2px 0; }
+  h2 { font-size: 1.5rem; margin: 56px 0 16px; font-weight: 600; line-height: 1.25; }
+  h3 { font-size: 1.15rem; margin: 36px 0 10px; font-weight: 600; }
+  p { margin: 0 0 1.1em; }
+  a { color: var(--accent); }
+  pre {
+    background: var(--code-bg); padding: 14px 16px; overflow-x: auto; border-radius: 4px;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.82rem; line-height: 1.5;
+    margin: 0 0 1.2em; white-space: pre-wrap;
+  }
+  code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.88em; background: var(--code-bg); padding: 1px 4px; border-radius: 3px; }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.9rem; margin: 0 0 1.2em; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th { font-weight: 600; color: var(--muted); }
+  ol, ul { padding-left: 1.4em; margin: 0 0 1.1em; }
+  li { margin: 4px 0; }
+  hr { border: 0; border-top: 1px solid var(--rule); margin: 40px 0; }
+  footer { color: var(--muted); font-size: 0.9rem; margin-top: 64px; border-top: 1px solid var(--rule); padding-top: 16px; }
+  @media (max-width: 480px) { body { font-size: 16px; } h2 { font-size: 1.3rem; } }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>Three solvers, one board: the second civ demo, narrated</h1>
+  <p class="meta">15 October 2026 · run of 01:06:02 to 01:07:01 · three Opus 5.5 solvers · $1.01</p>
+</header>
+<nav class="toc">
+  <ol>
+    <li><a href="#problem">The problem</a></li>
+    <li><a href="#setup">The setup</a></li>
+    <li><a href="#run">The run, minute by minute</a></li>
+    <li><a href="#collab">How they collaborated</a></li>
+    <li><a href="#board">The job board at the end</a></li>
+    <li><a href="#limits">What this does and does not show</a></li>
+  </ol>
+</nav>
+
+<section id="problem">
+<h2>The problem</h2>
+
+<p>The task pack is a small fictional archive: the parish records of a village called Hollowmere, 1850 to 1855. Nine plain text files under sixty lines each. A census taken on 30 March 1851 with twelve households. The mill's receipts ledger for 1852. The parish clerk's dated log of events from 1850 to 1855. Three letters: Ruth Ashby to her sister after the mill fire, Samuel Reeve to the insurers, and the Reverend Dunmore to the Archdeacon. An inventory of what the fire destroyed, with valuations. Tithe notes listing fields and occupiers. The files cross-reference each other on purpose: the ledger's payees are mostly census households, the fire in the log is the fire in the letters, the inventory total is the number the insurer argued about.</p>
+
+<p>Eight tasks are seeded on the board, each with a result file name and a strict format so a verifier can score it exactly. Three of them establish base facts and carry the highest priority: T-001 counts the census (households, persons, the surname list), T-002 names the year of the mill fire and the miller at the time, T-003 totals the ledger and counts distinct payees. Each of these three tells the solver to post its fact as a finding in its thread before writing the result file, because other tasks depend on it. Three tasks consume those facts: T-004 asks which ledger payees were census households and which were outsiders, which needs T-001 and T-003; T-005 asks when the mill reopened, under whom, and how many years after the fire, which needs T-002; T-006 totals the inventory, finds the insurer's payment, and computes the shortfall. T-007 is a sixty to one hundred and twenty word chronicle assembled from the threads of T-002, T-005 and T-006, scored by ten keyword groups. T-008 asks the solver to read the board for messages of kind <code>question</code>, answer any it can from the materials, and list the ids it answered. The dependent tasks say, in their own text, to check the board first and to post a question in their thread if the fact they need is missing, then derive it and post it so the next solver does not have to.</p>
+
+<p>The verifier compares each result file to a hidden answers file under <code>task/verifier/</code>, which the solvers are told never to read. Numbers and names are matched exactly after normalisation, the surname lists as sets, the chronicle by keyword coverage, and T-008 by checking which questions on the board had a finding answering them. There is a trap in the data: the census has an Alice Fenwick at Bridge End, the ledger has an unmarked Fenwick receipt, and the parish log records the burial of her brother Robert Fenwick of Netherby, the neighbouring parish. A solver that does not read carefully puts Fenwick among the outsiders.</p>
+
+<p>The point of the exercise is not whether one model can read nine files. It is whether three agents that share nothing but a message board will divide the queue, publish facts before anyone asks for them, reuse each other's work instead of recomputing it, vote with reasons on what they have checked, and finish with every result passing a verifier none of them can see.</p>
+</section>
+
+<section id="setup">
+<h2>The setup</h2>
+
+<p>Four things run. Postgres holds every table: agents, messages, votes, tasks, config, events, handoffs, plus the server's bookkeeping. The board server is one Python process exposing fifteen MCP tools over HTTP at <code>127.0.0.1:8765/mcp</code>, and it is the only thing that writes to the database. The orchestrator spawns three Claude Agent SDK sessions on <code>claude-opus-5-5</code>, two seconds apart, each in its own directory under <code>agents/</code>, with the board attached as an MCP server named <code>civ</code> and a per-session token in the request header so the server knows who is calling. The verifier is a Python function the server calls when a task is completed.</p>
+
+<p>Each solver is told the same thing in its system prompt: claim a task, read its thread and the top findings, do the work in your own directory, post findings and questions to the thread as you go, write the result file, complete the task, cast at least one vote with a reason, claim again, and when no task is left post anything unposted and stop. It is told the materials path, that the verifier folder is off limits, that other agents' directories are off limits, and that an answer to a question is a finding posted with <code>parent_id</code> set to the question's id.</p>
+
+<p>Some of those rules the server enforces rather than asks. One lease per session: <code>task_claim</code> refuses while you hold one. One vote between claims: the next claim is refused until a vote has been cast. Every post is stamped with the highest sequence number that session had read, so a message carries "I had seen the board up to here" without the agent remembering anything. Result paths must resolve inside the caller's own directory. The verifier's score reaches the agent only as a number. What stays a prompt request is judgement: which facts to post, which messages to vote on, when to ask.</p>
+
+<pre>01:06:02  civ.orchestrator INFO spawning 3 solvers against http://127.0.0.1:8765 with claude-opus-5-5
+seq 9   01:06:02  sol-001  agent.spawned  {"role": "solver", "generation": 1, "lineage_id": "L-001"}
+seq 11  01:06:04  sol-001  agent.init     {"model": "claude-opus-5-5", "mcp_servers": {"civ": "connected", ...}}
+seq 12  01:06:04  sol-002  agent.spawned  {"role": "solver", "generation": 1, "lineage_id": "L-002"}
+seq 19  01:06:06  sol-003  agent.spawned  {"role": "solver", "generation": 1, "lineage_id": "L-003"}</pre>
+</section>
+
+<section id="run">
+<h2>The run, minute by minute</h2>
+
+<p>The whole run took fifty-nine seconds of wall clock, from the first spawn at 01:06:02 to the last agent ending at 01:07:01. The events table records 197 rows; the narration below follows every claim, post, vote and completion in order and quotes the rows and the message bodies as evidence. Event sequence numbers are the events table's; message numbers are the board's.</p>
+
+<h3>01:06:02 to 01:06:10, the queue divides itself</h3>
+
+<p>The operator seeds the eight tasks at 01:06:02 (events 1 to 8). sol-001 spawns in the same second, connects to the board, and claims at 01:06:05. The queue is ordered by priority, so it gets T-001, the census. sol-002 spawns at 01:06:04 and claims T-002 at 01:06:06. sol-003 spawns at 01:06:06 and claims T-003 at 01:06:08. Nobody coordinated this; the three base tasks carry priority 3.0 and the claim tool hands out the highest open one under a row lock, so three simultaneous claimants get three different tasks.</p>
+
+<pre>seq 16  01:06:05  sol-001  task.claimed  {"task_id": "T-001"}
+seq 22  01:06:06  sol-002  task.claimed  {"task_id": "T-002"}
+seq 32  01:06:08  sol-003  task.claimed  {"task_id": "T-003"}</pre>
+
+<p>Each one then does what the prompt says before touching the materials: reads its own thread and asks for the top findings. All three get an empty findings list, because nothing has been posted yet.</p>
+
+<pre>seq 18  01:06:06  sol-001  tool.board_read  {"n": 1, "thread_id": 1}
+seq 24  01:06:07  sol-001  tool.board_top   {"n": 0, "kind": "finding", "window_s": 86400.0}
+seq 28  01:06:08  sol-002  tool.board_read  {"n": 1, "thread_id": 2}
+seq 30  01:06:08  sol-002  tool.board_top   {"n": 0, "kind": "finding", "window_s": 86400.0}
+seq 38  01:06:10  sol-003  tool.board_read  {"n": 1, "thread_id": 3}
+seq 40  01:06:10  sol-003  tool.board_top   {"n": 0, "kind": "finding", "window_s": 86400.0}</pre>
+
+<h3>01:06:12 to 01:06:16, the first facts land</h3>
+
+<p>Ten seconds after claiming, sol-001 posts the census finding into thread 1, before writing its result file, exactly as T-001 asked. The server stamps it as having read up to message 8, the last seeded task.</p>
+
+<pre>#9  01:06:12  sol-001  finding  thread 1  (had read to #8)
+census_1851.txt: 12 households, 37 persons (stated per-household counts match listed members; no empty houses; Netherby excluded). Distinct surnames (12, one per household, all heads): Ashby, Bramwell, Carrow, Dunmore, Fenwick, Grice, Hale, Lumley, Pargeter, Reeve, Tolley, Wick.</pre>
+
+<p>One second later sol-002 posts the fire finding into thread 2, citing both sources and flagging the distinction that matters for T-005, that Samuel Reeve took over afterwards and was not the miller at the time of the fire.</p>
+
+<pre>#10  01:06:13  sol-002  finding  thread 2  (had read to #8)
+Mill fire year = 1853 (night of 4 Oct 1853). Miller = Josiah Reeve. Sources agree: parish_log 1853-10-04 "The mill burned in the night... Josiah Reeve, miller, saved the ledgers"; letter_1853_ashby (12 Oct 1853) "On the night of the fourth the mill took fire... Josiah Reeve, who is miller there". Note: son Samuel Reeve took over afterwards (miller at 1855 reopening), not the miller at the time of the fire.</pre>
+
+<p>At 01:06:16 both complete. The server copies each result file into <code>shared/</code> under its content hash, runs the verifier, and posts the completion summary into the thread as a finding carrying the shared ref.</p>
+
+<pre>seq 52  01:06:16  sol-001  task.completed  {"score": 1.0, "task_id": "T-001", "result_ref": "shared/f83c34ed4264148a-census.txt"}
+seq 55  01:06:16  sol-002  task.completed  {"score": 1.0, "task_id": "T-002", "result_ref": "shared/c37dda2ed71b3af6-mill_fire.txt"}
+#11  01:06:16  sol-001  [T-001 completed] The 1851 census lists 12 households with 37 persons present ... posted as finding seq 9.
+#12  01:06:16  sol-002  [T-002 completed] The mill burned on the night of 4 October 1853, and the miller was Josiah Reeve ... (seq 10).</pre>
+
+<h3>01:06:17 to 01:06:23, reading, voting, claiming again</h3>
+
+<p>Both free solvers now read the whole board from the start, which returns twelve messages, and then vote before claiming, because the server will refuse a second claim without a vote. The reasons show checking rather than courtesy: each one names the file and the line it looked at.</p>
+
+<pre>seq 57  01:06:17  sol-001  tool.board_read  {"n": 12, "since_seq": 0}
+seq 61  01:06:18  sol-002  tool.board_read  {"n": 12, "since_seq": 0}
+vote  01:06:20  sol-001 +1 on #10  "Verified against parish_log line 10 and letter_1853_ashby: fire 1853, miller Josiah Reeve."
+seq 70  01:06:20  sol-001  task.claimed  {"task_id": "T-006"}
+vote  01:06:22  sol-002 +1 on #9   "Verified against census_1851.txt: 12 households, per-household counts sum to 37, and the 12 head surnames are listed correctly."
+seq 78  01:06:22  sol-002  task.claimed  {"task_id": "T-004"}</pre>
+
+<p>The priority order shows again: sol-001 gets T-006 (priority 2.0) and sol-002 gets T-004 (priority 1.0, ahead of T-005 by id). T-004 is the task that needs two other tasks' facts, and sol-002 does what its description says. It searches the board for the payees and reads its own thread.</p>
+
+<pre>seq 82  01:06:23  sol-002  tool.board_search  {"n": 2, "query": "payees"}
+seq 84  01:06:23  sol-002  tool.board_read    {"n": 1, "thread_id": 4}</pre>
+
+<p>The two search hits are the task descriptions of T-003 and T-004, which both contain the word. There is no payee finding yet. sol-003 is still working on the ledger.</p>
+
+<h3>01:06:24 to 01:06:30, a one-second miss and a question</h3>
+
+<p>At 01:06:24, one second after sol-002's search, sol-003 posts the payee list into thread 3. In the same second sol-001 posts the insurance numbers into thread 6.</p>
+
+<pre>#13  01:06:24  sol-003  finding  thread 3  (had read to #8)
+ledger_1852.txt: 14 receipts, total 125 shillings (= £6 5s). 9 distinct payee surnames: Ashby (x3), Pargeter (x2), Vane (x2, of Netherby), Carrow, Grice (x2, malt for the Plough), Marlow (of Netherby), Tolley, Fenwick, Hale. Outside parish (of Netherby): Vane, Marlow. In-parish payees: Ashby, Pargeter, Carrow, Grice, Tolley, Fenwick, Hale (7).
+
+#14  01:06:24  sol-001  finding  thread 6  (had read to #12)
+Insurance: inventory total 96 pounds (40+25+6+12+5+8, inventory_1854.txt; matches Samuel Reeve's 1854 letter "ninety-six"). Paid 80 pounds by Wessex Mutual (parish_log 1854-03-10; Dunmore 1855 letter). Shortfall 16 pounds, made up by parish subscription, Daniel Grice giving the largest part (Dunmore 1855).</pre>
+
+<p>sol-001 completes T-006 at 01:06:27 and sol-003 completes T-003 in the same second, both scored 1.0. sol-002, meanwhile, has not seen message 13. Its last read was the twelve-message read at 01:06:18, so when it posts at 01:06:28 the server stamps it as having read to #12. It does what T-004 told it to do when a fact is missing: it posts a question naming the missing fact, and says it will derive the fact itself.</p>
+
+<pre>seq 94   01:06:27  sol-001  task.completed  {"score": 1.0, "task_id": "T-006", "result_ref": "shared/dd0792686e1ef5a5-insurance.txt"}
+seq 98   01:06:27  sol-003  task.completed  {"score": 1.0, "task_id": "T-003", "result_ref": "shared/a5a76ca51bdb6ed3-ledger.txt"}
+seq 100  01:06:28  sol-002  tool.board_post  {"id": 17, "kind": "question", "thread_id": 4}
+
+#17  01:06:28  sol-002  question  thread 4  (had read to #12)
+Need the T-003 ledger payee surname list; not on the board yet (census surnames are at seq 9). Deriving it myself from ledger_1852.txt.</pre>
+
+<p>Two seconds later it posts the derived list, with the census cross-check and the Fenwick reasoning spelled out. This is the message that resolves the trap.</p>
+
+<pre>#18  01:06:30  sol-002  finding  thread 4  (had read to #12)
+ledger_1852.txt distinct payees (9): Ashby, Carrow, Fenwick, Grice, Hale, Marlow, Pargeter, Tolley, Vane. Marlow and Vane are marked "(of Netherby)". Checked against census surnames (seq 9): in_parish = Ashby, Carrow, Fenwick, Grice, Hale, Pargeter, Tolley; outsiders = Marlow, Vane. Fenwick counts as in-parish (census household 5, Alice Fenwick; the 1852-09-28 entry isn't marked Netherby, even though her brother Robert of Netherby is in the log). Total receipts = 125 shillings (useful for T-003).</pre>
+
+<h3>01:06:32 to 01:06:38, the question gets answered anyway</h3>
+
+<p>sol-001 reads what is new, votes on sol-003's ledger finding after re-adding the ledger itself, and claims T-005.</p>
+
+<pre>vote  01:06:32  sol-001 +1 on #13  "Re-summed ledger_1852.txt: 14 entries total 125 shillings, 9 payees, Vane and Marlow marked of Netherby; matches census surnames in seq 9."
+seq 113  01:06:32  sol-001  task.claimed  {"task_id": "T-005"}</pre>
+
+<p>sol-003, free since 01:06:27, has read the whole board at 01:06:28 (event 102, seventeen messages) and seen sol-002's question. At 01:06:33 it answers it, in thread 4, with <code>parent_id</code> 17, pointing at its own finding 13. By then sol-002 has already derived the list itself, so the answer confirms rather than unblocks, but it is the first time in either demo run that the question path fired end to end.</p>
+
+<pre>seq 117  01:06:33  sol-003  tool.board_post  {"id": 19, "kind": "finding", "thread_id": 4}
+
+#19  01:06:33  sol-003  finding  thread 4  parent #17  (had read to #17)
+Per seq 13: ledger payees = Ashby, Carrow, Fenwick, Grice, Hale, Marlow, Pargeter, Tolley, Vane (9). Cross-checked with census surnames seq 9: in-parish = Ashby, Carrow, Fenwick, Grice, Hale, Pargeter, Tolley; outsiders = Marlow, Vane (both marked "(of Netherby)" in ledger, absent from census).</pre>
+
+<p>sol-003 then votes twice, on the fire finding and on the census finding, and its second reason is a cross-check between two other agents' work.</p>
+
+<pre>vote  01:06:34  sol-003 +1 on #10  "Confirmed parish_log 1853-10-04 line and Ashby letter both name Josiah Reeve as miller at the 1853 fire."
+vote  01:06:35  sol-003 +1 on #9   "Census surname list is consistent with the ledger payees: all 7 non-Netherby payees appear in it."
+seq 131  01:06:36  sol-003  task.claimed  {"task_id": "T-007"}</pre>
+
+<p>sol-002 completes T-004 at 01:06:34 with a summary that is honest about what it reused and what it rebuilt.</p>
+
+<pre>seq 122  01:06:34  sol-002  task.completed  {"score": 1.0, "task_id": "T-004", "result_ref": "shared/f4dfd39ba9e30db1-customers.txt"}
+
+#20  01:06:34  sol-002  [T-004 completed] Seven of the 1852 ledger payees are census households (Ashby, Carrow, Fenwick, Grice, Hale, Pargeter, Tolley), and two are Netherby outsiders (Marlow, Vane). I derived the payee list from the ledger because T-003 hadn't posted it yet (seq 18), and took the census surnames from seq 9.</pre>
+
+<p>sol-001, on T-005, takes the fire year from sol-002's finding rather than re-deriving it, which is the reuse the task was designed to reward.</p>
+
+<pre>#21  01:06:35  sol-001  finding  thread 5  (had read to #15)
+Reopening: 29 Sept 1855 (Michaelmas), miller Samuel Reeve (parish_log 1855-09-29; Dunmore letter 30 Sep 1855). Fire year 1853 per seq 10, so years_between = 2 (Dunmore: "two years all but a week after it burned").
+
+seq 137  01:06:38  sol-001  task.completed  {"score": 1.0, "task_id": "T-005", "result_ref": "shared/d6e29268b42ff1f8-rebuild.txt"}</pre>
+
+<p>sol-003, on the chronicle, reads thread 5 and thread 7 before opening the materials, as T-007 instructs.</p>
+
+<pre>seq 135  01:06:38  sol-003  tool.board_read  {"n": 2, "thread_id": 5}
+seq 139  01:06:38  sol-003  tool.board_read  {"n": 1, "thread_id": 7}</pre>
+
+<h3>01:06:39 to 01:06:47, the last task and the first agent to finish</h3>
+
+<p>A burst of votes. sol-002 endorses the answer to its own question and sol-001's reopening finding; sol-001 endorses the answer as well, noting the threading; sol-002 then votes on the ledger finding it had missed earlier, with a reason that says it did the sum itself.</p>
+
+<pre>vote  01:06:39  sol-002 +1 on #19  "Correctly answers question seq 17; it matches my own read of ledger_1852.txt and the census, and the verifier accepted the same split."
+vote  01:06:40  sol-002 +1 on #21  "The parish log 1855-09-29 confirms the reopening under Samuel Reeve, and the fire year 1853 (seq 10) gives a 2-year gap."
+vote  01:06:40  sol-001 +1 on #19  "Correct in_parish/outsider split; consistent with the ledger and census seq 9, and properly threaded as an answer to question 17."
+vote  01:06:40  sol-002 +1 on #13  "I independently summed the ledger to 125 shillings and got the same 9 payees."</pre>
+
+<p>sol-001 claims the last task, T-008, and goes looking for questions. The board read by kind returns exactly one.</p>
+
+<pre>seq 150  01:06:40  sol-001  task.claimed      {"task_id": "T-008"}
+seq 156  01:06:41  sol-001  tool.board_read   {"n": 1, "kind": "question"}
+seq 158  01:06:41  sol-001  tool.board_search {"n": 4, "query": "question"}</pre>
+
+<p>sol-002 tries to claim again, gets no task, and ends at 01:06:45 after 25 turns, the first to finish. In the same second sol-001 posts its T-008 finding: the one question on the board has already been answered by a finding whose <code>parent_id</code> points at it, so there is nothing left to answer.</p>
+
+<pre>seq 165  01:06:45  sol-002  agent.ended  {"subtype": "success", "cost_usd": 0.3035, "is_error": false, "num_turns": 25}
+
+#23  01:06:45  sol-001  finding  thread 8  (had read to #22)
+There is one question on the board as of seq 22: id 17, in thread 4. It is already answered by finding seq 19 (parent_id 17), so nothing is open to answer. Result: answered: none.
+
+seq 171  01:06:47  sol-001  task.completed  {"score": 1.0, "task_id": "T-008", "result_ref": "shared/321ba04f752ee395-questions.txt"}</pre>
+
+<p>The verifier agrees, by the same rule: its note on T-008 reads "no open questions remained (1 on the board)".</p>
+
+<h3>01:06:48 to 01:07:01, the chronicle and the tidying up</h3>
+
+<p>sol-001 votes on sol-002's Fenwick finding, then, with nothing left to claim, searches the board for "burial" and finds nobody has posted what became of the miller.</p>
+
+<pre>vote  01:06:48  sol-001 +1 on #18  "Correct payee list and split; the note that Fenwick counts as in-parish is useful."
+seq 180  01:06:50  sol-001  tool.board_search  {"n": 1, "query": "burial"}</pre>
+
+<p>sol-003 completes the chronicle at 01:06:50, citing three findings by two other agents as its sources, and the verifier scores all ten keyword groups.</p>
+
+<pre>seq 178  01:06:50  sol-003  task.completed  {"score": 1.0, "task_id": "T-007", "result_ref": "shared/93ff6186bfae720b-chronicle.txt"}
+
+#25  01:06:50  sol-003  [T-007 completed] Wrote a 114-word chronicle from seq 10, 14, 21 and the parish log and letters. It covers Josiah Reeve, the October 1853 fire, his burial in 1854, the 80 pounds paid against a 96-pound inventory, and Samuel Reeve reopening the mill at Michaelmas 1855.</pre>
+
+<p>sol-003 casts its last two votes, on the reopening and the insurance findings, each naming the source it checked.</p>
+
+<pre>vote  01:06:51  sol-003 +1 on #21  "Matches parish_log 1855-09-29 and Dunmore's letter ("two years all but a week"); reopening 1855 under Samuel Reeve."
+vote  01:06:52  sol-003 +1 on #14  "Dunmore 1855 letter and parish log 1854-03-10 confirm 96 inventory, 80 paid, 16 short."</pre>
+
+<p>The run closes with two unprompted findings in the chronicle thread, both posted after the task was done, under the prompt's last rule: if you learned something nobody has posted, post it before you stop. sol-001 posts the burial record and the details around it; sol-003, four seconds later, posts a slightly different cut of the same facts with the one thing the chronicle could not settle, the cause of the fire.</p>
+
+<pre>#26  01:06:53  sol-001  finding  thread 7  (had read to #25)
+Josiah Reeve's death: the parish log for 1854-02-17 records "Burial: Josiah Reeve, miller, aged 50". That fits his age of 47 in the 1851 census. Samuel Reeve's letter of 3 March 1854 confirms the burial and names Samuel as executor. Masons from Netherby were engaged on 1854-06-01. A collection of 3 pounds 11 shillings was taken for the Reeves on 1853-10-06.
+
+#27  01:06:57  sol-003  finding  thread 7  (had read to #22)
+What happened to the miller: Josiah Reeve was buried on 17 February 1854, aged 50 (parish_log 1854-02-17; Samuel Reeve's letter of 3 March 1854). His son Samuel Reeve, as executor, made the insurance claim and hired Netherby masons on 1 June 1854. Cause of the fire was never established; William Ashby blamed a lamp left in the dressing room (letter_1853_ashby).
+
+seq 193  01:06:58  sol-001  agent.ended  {"subtype": "success", "cost_usd": 0.3920, "is_error": false, "num_turns": 36}
+seq 196  01:07:01  sol-003  agent.ended  {"subtype": "success", "cost_usd": 0.3167, "is_error": false, "num_turns": 25}</pre>
+
+<p>Eight tasks done, none blocked, no release, no heartbeat, no alert, no lease expired. Every result scored 1.0.</p>
+</section>
+
+<section id="collab">
+<h2>How they collaborated</h2>
+
+<h3>A fact reused instead of recomputed</h3>
+
+<p>T-005 needs the fire year. sol-001 did not open the parish log to find it. Its finding 21 says "Fire year 1853 per seq 10", and its completion summary cites "seq 10, seq 21". sol-002 had posted that fact at 01:06:13, twenty-two seconds before sol-001 needed it, because T-002 told it to post early. The same pattern runs through the chronicle: sol-003's T-007 summary names "seq 10, 14, 21" as its sources, which are three findings by two other agents, before it mentions the materials. The design doc's claim was that dependency would run through the board rather than through a planner, and here it did, with sequence numbers as the citations.</p>
+
+<h3>A one-second miss, made visible by the read stamp</h3>
+
+<p>T-004 needed the payee list. sol-002 searched for it at 01:06:23 and found only task descriptions. sol-003 posted the list at 01:06:24. sol-002 never re-read before it posted at 01:06:28, and the server's stamp says so: both its question 17 and its finding 18 are marked "had read to #12", one short of message 13. Nothing enforces re-reading, and the prompt only asks for a read at the start of a task, so this is the expected cost of parallelism. What matters is that the board records why the work was duplicated instead of leaving a mystery, and that the duplicate was not wasted: finding 18 is the message that explains the Fenwick trap, and it collected a vote from sol-001 for exactly that reason.</p>
+
+<pre>#17  (had read to #12)  "Need the T-003 ledger payee surname list; not on the board yet ..."
+#13  posted 01:06:24, four seconds earlier, by sol-003
+vote 01:06:48  sol-001 +1 on #18  "... the note that Fenwick counts as in-parish is useful."</pre>
+
+<h3>A question asked, answered, and then found closed</h3>
+
+<p>This is the path that did not fire in the first demo run. sol-002 posted question 17 at 01:06:28. sol-003, which had read the whole board at 01:06:28 and seen it, answered at 01:06:33 with finding 19, posted in thread 4 with <code>parent_id</code> 17, as the prompt now requires. Both sol-002 and sol-001 voted on the answer and both reasons mention the question. Then sol-001, on T-008 at 01:06:41, asked the board for questions, got the one, saw it already carried a finding with its id as parent, and wrote "answered: none". The verifier reached the same verdict independently by the same rule. The rule had been loose the day before: any later finding in the thread counted as an answer, which would have let a task's own completion summary close an unrelated question. The review tightened it to the parent link, and the prompt was changed in the same commit so the agents would know to set it. The run shows the server, the prompt and the verifier agreeing on what an answer is.</p>
+
+<h3>Votes as independent verification</h3>
+
+<p>Twelve votes were cast, all positive, all with a reason, none on the voter's own message. The reasons are not applause. sol-001 re-added the ledger before voting on finding 13. sol-002 "independently summed the ledger to 125 shillings" before voting on the same message twenty seconds later. sol-003's vote on the census list is a cross-check against a different file: "all 7 non-Netherby payees appear in it". Three of the seven voted messages were checked by two different agents, which means the three base facts, census, fire, and ledger, each carry two independent confirmations by agents that did not produce them. The design doc's reason for mandatory vote reasons was that a score with reasons tells a successor why something mattered; here it also turned the duplicate payee derivation into a second source.</p>
+
+<h3>What was wasted</h3>
+
+<p>Two things. The payee list was derived twice, by sol-003 for T-003 and by sol-002 for T-004, because of the four-second gap and the missing re-read. And the last two findings in thread 7, by sol-001 and sol-003, overlap almost entirely: both record the burial on 17 February 1854 at age 50, both name Samuel as executor, both mention the Netherby masons. sol-003's stamp shows it had read to #22 when it posted #27, so it had not seen sol-001's #26, posted four seconds earlier. Same cause as the first miss. A re-read before posting, or a supervisor deduplicating, would have caught both, and the duplicate-finding rate is one of the four objectives supervisors will tune against once they exist.</p>
+</section>
+
+<section id="board">
+<h2>The job board at the end</h2>
+
+<table>
+<thead><tr><th>task</th><th>title</th><th>done by</th><th>at</th><th>score</th><th>verifier note</th></tr></thead>
+<tbody>
+<tr><td>T-001</td><td>Census headcount</td><td>sol-001</td><td>01:06:16</td><td>1.00</td><td>all fields correct</td></tr>
+<tr><td>T-002</td><td>The mill fire</td><td>sol-002</td><td>01:06:16</td><td>1.00</td><td>all fields correct</td></tr>
+<tr><td>T-003</td><td>Ledger total</td><td>sol-003</td><td>01:06:27</td><td>1.00</td><td>all fields correct</td></tr>
+<tr><td>T-006</td><td>Insurance shortfall</td><td>sol-001</td><td>01:06:27</td><td>1.00</td><td>all fields correct</td></tr>
+<tr><td>T-004</td><td>Customers from the parish</td><td>sol-002</td><td>01:06:34</td><td>1.00</td><td>all fields correct</td></tr>
+<tr><td>T-005</td><td>The rebuilding</td><td>sol-001</td><td>01:06:38</td><td>1.00</td><td>all fields correct</td></tr>
+<tr><td>T-008</td><td>Open questions</td><td>sol-001</td><td>01:06:47</td><td>1.00</td><td>no open questions remained (1 on the board)</td></tr>
+<tr><td>T-007</td><td>Mill chronicle</td><td>sol-003</td><td>01:06:50</td><td>1.00</td><td>10/10 keyword groups</td></tr>
+</tbody>
+</table>
+
+<p>Twenty-seven messages: eight task roots, one question, eighteen findings. Of the findings, eight are completion summaries posted by the server on the agent's behalf, nine are facts posted by the agents during work, and one, finding 19, is the answer to the question. Twelve votes, each weight 1.0 because every voter was a solver.</p>
+
+<table>
+<thead><tr><th>message</th><th>what</th><th>by</th><th>votes</th><th>from</th></tr></thead>
+<tbody>
+<tr><td>#9</td><td>census surnames</td><td>sol-001</td><td>2</td><td>sol-002, sol-003</td></tr>
+<tr><td>#10</td><td>fire year and miller</td><td>sol-002</td><td>2</td><td>sol-001, sol-003</td></tr>
+<tr><td>#13</td><td>ledger total and payees</td><td>sol-003</td><td>2</td><td>sol-001, sol-002</td></tr>
+<tr><td>#14</td><td>insurance numbers</td><td>sol-001</td><td>1</td><td>sol-003</td></tr>
+<tr><td>#18</td><td>payees with the Fenwick reasoning</td><td>sol-002</td><td>1</td><td>sol-001</td></tr>
+<tr><td>#19</td><td>answer to question 17</td><td>sol-003</td><td>2</td><td>sol-001, sol-002</td></tr>
+<tr><td>#21</td><td>reopening and years between</td><td>sol-001</td><td>2</td><td>sol-002, sol-003</td></tr>
+</tbody>
+</table>
+
+<p>The orchestrator's closing table, from the run log. Turns are the SDK's count of model turns; tokens in include cache reads, which is why they are large against a context that never passed 3.2 percent of the million.</p>
+
+<pre>agent     turns   cost $     tok in  tok out  ctx %  note
+sol-001      36   0.3920    1105213     1311   3.18  I finished four tasks and each was scored fully correct by t
+sol-002      25   0.3035     791496      604   2.82  Done. I completed two tasks and the verifier marked both "al
+sol-003      25   0.3167     661468     1068   2.74  Done. I finished two tasks, the verifier scored both 1, and
+total cost        1.0122
+tasks: counts={'open': 0, 'leased': 0, 'done': 8, 'blocked': 0}, mean_score=1.0, scored=8
+demo: wall time 60s, solvers 3</pre>
+
+<p>sol-001 did four tasks (T-001, T-006, T-005, T-008), sol-002 two (T-002, T-004), sol-003 two (T-003, T-007). The split was not planned; sol-001 simply finished the census fastest and kept winning the claim race.</p>
+</section>
+
+<section id="limits">
+<h2>What this does and does not show</h2>
+
+<p>It shows the M2 machinery working end to end on real model calls: three sessions sharing a Postgres-backed board through MCP, a claim queue that never double-leased, server-stamped read positions, mandatory votes with reasons, a verifier the agents never saw, and a dependency chain that ran through posted findings. It shows the question path and the parent-link rule working once. It shows that the whole thing costs about a dollar and a minute at this scale.</p>
+
+<p>It does not show most of what the design is for. Three agents, not a hundred. One generation each: nobody came near the 80 percent handoff line, so succession, the mechanism the whole lineage story depends on, was never exercised. No supervisors, so nobody tuned a knob, deduplicated the two overlapping burial findings, or wrote a report. The tasks were small enough to finish in under a minute, so the board never grew past twenty-seven messages and the question path fired exactly once. The verifier is a lookup against an answers file, which is the easy end of the spectrum the design doc leaves open. And the agents ran as one OS user with directory isolation by convention only. The next milestones, M3 succession and M4 supervisors, are where the run stops being a worker pool and starts being a civilisation.</p>
+</section>
+
+<footer>
+  <p>Sources: the <code>civ</code> database after the run (events, messages, votes, tasks, agents), the orchestrator log, <code>task/tasks.json</code>, <code>task/materials/</code>, and <code>task/verifier/answers.json</code>. Every quoted line is verbatim from those, except that one em dash in an agent-written message was replaced with a comma.</p>
+</footer>
+</main>
+</body>
+</html>

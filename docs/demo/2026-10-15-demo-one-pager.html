@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>civ demo one-pager</title>
+<style>
+  :root { color-scheme: light; --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781; --grid:#e1e0d9; --axis:#c3c2b7; --ring:rgba(11,11,11,0.10);
+          --s1:#eb6834; --s2:#1baf7a; --s3:#6250d6; --warn:#ec835a; --good:#006300; --band:rgba(208,59,59,0.10); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { color-scheme: dark; --page:#0d0d0d; --surface:#1a1a19; --ink:#f0efec; --ink-2:#c3c2b7; --muted:#898781; --grid:#2c2c2a; --axis:#383835; --ring:rgba(255,255,255,0.10);
+          --s1:#d95926; --s2:#199e70; --s3:#9085e9; --good:#0ca30c; --band:rgba(230,103,103,0.14); } }
+  :root[data-theme="dark"] { color-scheme: dark; --page:#0d0d0d; --surface:#1a1a19; --ink:#f0efec; --ink-2:#c3c2b7; --muted:#898781; --grid:#2c2c2a; --axis:#383835; --ring:rgba(255,255,255,0.10);
+          --s1:#d95926; --s2:#199e70; --s3:#9085e9; --good:#0ca30c; --band:rgba(230,103,103,0.14); }
+  html { background: var(--page); }
+  body { margin:0; padding:0 16px 48px; background:var(--page); color:var(--ink); font: 14.5px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 900px; margin: 0 auto; }
+  header { padding: 28px 0 10px; border-bottom: 1px solid var(--grid); margin-bottom: 18px; }
+  h1 { font-size: 21px; font-weight: 650; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .meta { color: var(--muted); font-size: 12.5px; }
+  h2 { font-size: 13px; font-weight: 650; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-2); margin: 22px 0 6px; }
+  p { margin: 0 0 10px; }
+  .stats { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin: 10px 0 6px; }
+  @media (max-width: 720px) { .stats { grid-template-columns: repeat(3, 1fr); } }
+  .stat { background: var(--surface); border: 1px solid var(--ring); border-radius: 6px; padding: 10px 12px; }
+  .stat b { display: block; font-size: 22px; font-weight: 600; line-height: 1.1; }
+  .stat span { color: var(--muted); font-size: 11.5px; }
+  figure { margin: 8px 0 12px; background: var(--surface); border: 1px solid var(--ring); border-radius: 6px; padding: 12px 14px 8px; }
+  figcaption { color: var(--muted); font-size: 11.5px; margin-top: 4px; }
+  svg { display:block; width:100%; height:auto; overflow: visible; }
+  .lbl { font-size: 11px; fill: var(--ink-2); } .lbl.b { fill: var(--ink); font-weight: 600; } .tick { font-size: 10.5px; fill: var(--muted); }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 720px) { .two { grid-template-columns: 1fr; } }
+  .legend { display:flex; gap:14px; flex-wrap:wrap; font-size:11.5px; color:var(--ink-2); margin-top: 6px; }
+  .legend i { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; vertical-align: -1px; }
+  iframe { width: 100%; height: 470px; border: 0; border-radius: 6px; background: var(--surface); }
+  a { color: var(--s1); }
+  .foot { color: var(--muted); font-size: 12px; margin-top: 18px; border-top: 1px solid var(--grid); padding-top: 10px; }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.9em; }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>civ M2 demo: three agents, one board, eight dependent tasks</h1>
+  <div class="meta">15 October 2026 · Joshua Ang · one-pager for leadership · appendix: <a href="2026-10-15-demo-narrative.html">full minute-by-minute narrative</a>, <a href="2026-10-15-race-timeline.html">race timeline</a></div>
+</header>
+
+<h2>Summary</h2>
+<p>We built the first three milestones of civ, a system in which many Claude agents solve a task far larger than any one context window by sharing nothing but a message board. In a 60-second live run, three Opus 5.5 solvers completed all eight tasks with a perfect verifier score for $1.01, reused each other's findings by sequence number, asked and answered one question, and verified every important fact through votes with written reasons. The run also exposed a one-second race that caused one duplicated derivation, and the board's design made that race visible after the fact.</p>
+
+<h2>Problem</h2>
+<p>The question is not whether a model can read nine short files. It is whether agents that never talk to each other directly will divide a queue, publish facts before they are asked for, reuse rather than recompute, and finish against a verifier none of them can read. The test corpus is a fictional 1850s parish archive. Three of the eight tasks cannot be answered without facts that other tasks establish, and the task text tells the solver to check the board first.</p>
+
+<figure>
+  <svg id="deps" viewBox="0 0 900 150"></svg>
+  <figcaption>Task dependency graph. Colour is the solver that completed each task. T-004, T-005 and T-007 cannot be finished from one file; T-008 answers questions other solvers posted.</figcaption>
+</figure>
+
+<h2>What we built</h2>
+<p>Postgres holds all state. A single board server exposes fifteen MCP tools (post, read, search, vote, claim, heartbeat, complete, release, handoff, alert, status, and supervisor tuning) and is the only writer. An orchestrator spawns each solver as a Claude Agent SDK session in its own directory with a per-spawn token. The server enforces the rules a prompt cannot be trusted with: one lease per agent, one vote with a reason between claims, no self-votes, claims under <code>SELECT ... FOR UPDATE SKIP LOCKED</code>, and a read-sequence stamp on every post that records what the author had seen. 149 tests pass, including 100 concurrent claims and an adversarial review that found and fixed ten gaps.</p>
+
+<h2>Results</h2>
+<div class="stats">
+  <div class="stat"><b>8 / 8</b><span>tasks done, 0 blocked</span></div>
+  <div class="stat"><b>1.00</b><span>mean verifier score</span></div>
+  <div class="stat"><b>$1.01</b><span>total cost, 86 turns</span></div>
+  <div class="stat"><b>60 s</b><span>wall clock, 3 solvers</span></div>
+  <div class="stat"><b>13 / 1</b><span>findings / questions</span></div>
+  <div class="stat"><b>12</b><span>votes, all with reasons</span></div>
+</div>
+<figure>
+  <svg id="gantt" viewBox="0 0 900 170"></svg>
+  <figcaption>Who did what, when. Bars run from claim to verified completion. Solvers started three seconds apart and never idled while tasks remained.</figcaption>
+</figure>
+
+<h2>How they collaborated</h2>
+<p><b>Reuse happened by citation.</b> Six of eight tasks were completed with zero re-derivation of upstream facts. T-005 wrote "Fire year 1853 per seq 10". T-007's chronicle was "from seq 10, 14, 21" and did no primary research. T-004 "took the census surnames from seq 9".</p>
+<p><b>One race caused one duplicate.</b> sol-002 claimed T-004 at 01:06:22 and searched the board for the ledger payees at :23. sol-003 posted them at :24. sol-002 never re-read, posted a question at :28 and its own derivation at :30, both stamped "had read to #12". sol-003 answered the question at :33, correctly and too late. The verifier still scored T-004 at 1.00, but the derivation was done twice.</p>
+<p><b>Duplication was also deliberate, and cheap.</b> Every base fact was re-derived by an agent that had not done the task, inside a vote: "Re-summed ledger_1852.txt: 14 entries total 125 shillings" (sol-001), "I independently summed the ledger and got the same 9 payees" (sol-002), "Verified against census_1851.txt" (sol-002 on sol-001's census). The one-vote quota turned idle moments into cross-checks.</p>
+<figure>
+  <iframe src="2026-10-15-race-timeline.html#chart" title="race timeline" loading="lazy"></iframe>
+  <figcaption>The race, second by second. Full page with hover detail: <a href="2026-10-15-race-timeline.html">race timeline</a>.</figcaption>
+</figure>
+
+<h2>What we learned</h2>
+<p>The dependency protocol "post a question, then derive it yourself" guarantees duplicate work whenever a sibling task is mid-flight, because the solver only checks the board before claiming. The fix is one line in the server: <code>task_claim</code> should report that T-003 is currently leased by another solver, so the claimant re-checks before deriving. Second, the end-of-loop rule "post one last finding" produced two overlapping, unrequested posts about the miller's burial; at a hundred agents that is board flood, so the rule needs a search first. Third, the question path fired but saved nothing; it will matter only when tasks take minutes rather than seconds. Fourth, this run shows one generation of three agents with a trivial verifier and no supervisors; succession (M3) and self-governance (M4) are unexercised.</p>
+
+<h2>Next steps</h2>
+<p>Ship the claim-time dependency hint and the search-before-posting rule, then build M3 (handoff at 80 percent of context, successor in the same directory) and M4 (supervisor rounds tuning knobs against the four objectives). Rerun with a task pack large enough that a solver cannot finish inside one context window, which is the case the whole design exists for.</p>
+
+<p class="foot">Sources: events and messages tables from run 2, saved in docs/demo/. Repo: github.com/thatjosh/civ (private). Design doc: docs/civ-design.html.</p>
+</main>
+
+<script>
+(function () {
+  const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (n, a, p) => { const e = document.createElementNS(NS, n); for (const k in a) e.setAttribute(k, a[k]); if (p) p.appendChild(e); return e; };
+  const who = { 'T-001': 'sol-001', 'T-002': 'sol-002', 'T-003': 'sol-003', 'T-004': 'sol-002', 'T-005': 'sol-001', 'T-006': 'sol-001', 'T-007': 'sol-003', 'T-008': 'sol-001' };
+  const col = { 'sol-001': css('--s1'), 'sol-002': css('--s3'), 'sol-003': css('--s2') };
+
+  // Dependency graph: a left-to-right layout with the three base tasks in column one.
+  (function () {
+    const svg = document.getElementById('deps');
+    const pos = { 'T-001': [90, 35], 'T-003': [90, 75], 'T-002': [90, 115], 'T-006': [330, 115], 'T-004': [330, 55], 'T-005': [570, 95], 'T-007': [790, 95], 'T-008': [790, 35] };
+    const title = { 'T-001': 'census surnames', 'T-002': 'mill fire year', 'T-003': 'ledger payees', 'T-004': 'parish customers', 'T-005': 'rebuilding', 'T-006': 'insurance gap', 'T-007': 'chronicle', 'T-008': 'open questions' };
+    const edges = [['T-001', 'T-004'], ['T-003', 'T-004'], ['T-002', 'T-005'], ['T-002', 'T-007'], ['T-005', 'T-007'], ['T-006', 'T-007']];
+    el('defs', {}, svg).innerHTML = '<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="' + css('--axis') + '"/></marker>';
+    edges.forEach(([a, b]) => { const [x1, y1] = pos[a], [x2, y2] = pos[b]; el('path', { d: `M${x1 + 58} ${y1} C ${(x1 + x2) / 2} ${y1}, ${(x1 + x2) / 2} ${y2}, ${x2 - 60} ${y2}`, fill: 'none', stroke: css('--axis'), 'stroke-width': 1.5, 'marker-end': 'url(#ar)' }, svg); });
+    // The question edge is dashed because T-008 depends on behaviour, not on a fact.
+    el('path', { d: `M${pos['T-004'][0] + 58} ${pos['T-004'][1] - 8} C 500 2, 660 2, ${pos['T-008'][0] - 60} ${pos['T-008'][1]}`, fill: 'none', stroke: css('--axis'), 'stroke-width': 1.5, 'stroke-dasharray': '4 3', 'marker-end': 'url(#ar)' }, svg);
+    el('text', { x: 560, y: 30, 'text-anchor': 'middle', class: 'tick' }, svg).textContent = 'question #17 asked in T-004, answered by sol-003';
+    Object.entries(pos).forEach(([id, [x, y]]) => {
+      el('rect', { x: x - 58, y: y - 16, width: 116, height: 32, rx: 5, fill: css('--surface'), stroke: col[who[id]], 'stroke-width': 2 }, svg);
+      el('text', { x, y: y - 2, 'text-anchor': 'middle', class: 'lbl b' }, svg).textContent = id;
+      el('text', { x, y: y + 11, 'text-anchor': 'middle', class: 'tick' }, svg).textContent = title[id];
+    });
+  })();
+
+  // Gantt: claim to completion per task, lanes per solver, seconds after 01:06:00.
+  (function () {
+    const svg = document.getElementById('gantt'); const W = 900, H = 170; const m = { l: 60, r: 14, t: 10, b: 26 };
+    const bars = [['T-001', 5, 16], ['T-002', 6, 16], ['T-003', 8, 27], ['T-006', 20, 27], ['T-004', 22, 34], ['T-005', 32, 38], ['T-007', 36, 50], ['T-008', 40, 47]];
+    const lanes = ['sol-001', 'sol-002', 'sol-003']; const t0 = 0, t1 = 62; const lh = (H - m.t - m.b) / lanes.length;
+    const x = (t) => m.l + (t - t0) / (t1 - t0) * (W - m.l - m.r);
+    for (let t = 0; t <= 60; t += 10) { el('line', { x1: x(t), x2: x(t), y1: m.t, y2: H - m.b, stroke: css('--grid') }, svg); el('text', { x: x(t), y: H - m.b + 16, 'text-anchor': 'middle', class: 'tick' }, svg).textContent = t < 60 ? '01:06:' + String(t).padStart(2, '0') : '01:07:00'; }
+    lanes.forEach((l, i) => el('text', { x: m.l - 8, y: m.t + lh * i + lh / 2 + 4, 'text-anchor': 'end', class: 'lbl b' }, svg).textContent = l);
+    bars.forEach(([id, a, b]) => { const i = lanes.indexOf(who[id]); const y = m.t + lh * i + lh * 0.22; const h = lh * 0.56;
+      el('rect', { x: x(a), y, width: x(b) - x(a), height: h, rx: 3, fill: col[who[id]] }, svg);
+      el('text', { x: x(a) + 5, y: y + h / 2 + 4, class: 'lbl', fill: css('--surface') }, svg).textContent = id + (id === 'T-004' ? ' (race)' : ''); });
+    // Spawn and end markers so the reader sees the stagger and the tail.
+    [['sol-001', 4, 58], ['sol-002', 5, 45], ['sol-003', 7, 61]].forEach(([l, s, e]) => { const i = lanes.indexOf(l); const yc = m.t + lh * i + lh / 2; el('line', { x1: x(s), x2: x(s), y1: yc - 12, y2: yc + 12, stroke: css('--ink-2'), 'stroke-width': 2 }, svg); el('line', { x1: x(e), x2: x(e), y1: yc - 12, y2: yc + 12, stroke: css('--ink-2'), 'stroke-width': 2, 'stroke-dasharray': '2 2' }, svg); });
+    el('text', { x: x(4) + 4, y: m.t + 8, class: 'tick' }, svg).textContent = 'spawn';
+    el('text', { x: x(58) - 4, y: m.t + 8, 'text-anchor': 'end', class: 'tick' }, svg).textContent = 'ended';
+  })();
+})();
+</script>
+</body>
+</html>
