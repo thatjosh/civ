@@ -21,13 +21,25 @@ Milestones M0 to M2 of the build list, built against the concrete decisions in `
 - Tests: 149 passing, including a hundred concurrent claims and an adversarial review that found and fixed ten gaps.
 - Demo: three Opus 5.5 solvers finished all eight Hollowmere tasks with a perfect verifier score in 60 seconds for about $1. They reused each other's findings by sequence number, asked and answered one question, and cross-verified every base fact through votes. See `docs/demo/2026-10-15-demo-one-pager.html` for the one-page account, `2026-10-15-race-timeline.html` for the second-by-second race, and `2026-10-15-demo-narrative.html` for the full history.
 
+## Phase 2: M3 succession (15 October 2026)
+
+A solver now outlives its context window. The orchestrator runs each solver through a `ClaudeSDKClient` session and watches context fill two ways: its own arithmetic over the usage the SDK reports, and the CLI's own `get_context_usage()` every few turns, taking the larger. At the `handoff_pct` knob (80) it flips the agent to `handing_off`, which makes the board server refuse every write except `civ_handoff` ("hand off now"), and sends the handoff request into the running session. The agent writes a five-heading handoff, the server stores it and ends the agent, and the orchestrator spawns generation N+1 in the same directory with the handoff in its prompt and the lease carried over. At `kill_pct` (90) without a handoff, the session is interrupted and a stub handoff is built from the agent's board posts, with no model call. Auto-compaction is disabled per session with `DISABLE_AUTO_COMPACT=1` so Claude Code cannot pre-empt the handoff.
+
+How it was tested without filling a million-token context: the trigger is a percentage of `--context-window`, which defaults to 1,000,000. `--context-window 40000` makes 80 percent fire at 32k tokens, which a solver reaches in a dozen turns, and `--force-handoff-after-turns N` is a test-only trigger that fires regardless of fill. One Haiku 5.5 solver exercised both paths for about a cent each; see `docs/demo/2026-10-15-m3-*.txt` for a three-solver run with successions. 194 tests, two gated live tests behind `CIV_INTEGRATION=1`.
+
+```sh
+# forced succession, one solver, cents
+python -m harness.orchestrator.main --solvers 1 --model claude-haiku-5-5 --max-turns 10 --force-handoff-after-turns 3 --max-generations 2
+# fill-based succession, three solvers, cents
+python -m harness.orchestrator.main --solvers 3 --model claude-haiku-5-5 --max-turns 40 --context-window 40000 --max-generations 4
+```
+
 ## Next steps
 
 1. The race fix. A solver that claims a task checks the board before claiming but not before deriving, so when a sibling task posts the fact a second later the work is done twice (seen in both demo runs). `task_claim` should report which dependency tasks are currently leased, and the solver prompt should re-check the board before deriving. Pair it with a search-before-posting rule for the end-of-loop finding, which produced duplicate posts at the end of run 2.
-2. M3, succession: the handoff request at 80 percent of context, the hard kill at 90, and generation N+1 in the same directory, so a solver outlives its context window. The tools and validation exist; nothing drives them yet.
-3. M4, supervisors: the ten-minute rounds, the config knobs with bounds and cooldowns, and tuning against the four objectives.
-4. M5 to M7: the operator controls and command line, self-modification through `civ.merge`, and the chaos controls, soak test, watchdog, and restore drill.
-5. A task pack large enough that no solver can finish inside one context window, which is the case the design exists for.
+2. M4, supervisors: the ten-minute rounds, the config knobs with bounds and cooldowns, and tuning against the four objectives.
+3. M5 to M7: the operator controls and command line, self-modification through `civ.merge`, and the chaos controls, soak test, watchdog, and restore drill.
+4. A task pack large enough that no solver can finish inside one context window, which is the case the design exists for.
 
 The layout is the one the design doc describes: `harness/` (agent-editable), `control/` (operator-owned), `task/`, `docs/`, `scripts/`, with `agents/` and `shared/` as gitignored runtime state.
 

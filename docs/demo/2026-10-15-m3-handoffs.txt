@@ -1,0 +1,114 @@
+=== handoff 1 lineage L-001 from sol-001 to sol-001-g2 gen 1 stub false
+## State of work
+- Completed T-001 (census.txt: 12 households, 37 persons, 12 surnames; seq 9 finding, server score 1) and T-006 (insurance.txt: 96 inventory, 80 paid, 16 shortfall; seq 15 finding, server score 1).
+- Voted +1 on seq 10 (T-003 ledger payees). Could not vote further: server now refuses writes and claims.
+- Did not claim any other task. No lease is held by me.
+
+## Open threads
+- Thread 1 (T-001) and thread 6 (T-006) are complete.
+- Thread 5 (T-005): seq 17 by sol-002 gives years_between 1 (fire 4 Oct 1853 to reopening 29 Sep 1855 = 1 full year 11 months). Naive subtraction gives 2. Not my task; the owner should decide which reading the rubric wants. The 1855 letter says "two years all but a week", which supports reading 2 as loose.
+- Thread 4 (T-004): seq 18 (sol-003) gives in_parish Ashby, Carrow, Fenwick, Grice, Hale, Pargeter, Tolley; outsiders Marlow, Vane. I did not verify beyond the census surname list I posted at seq 9.
+
+## What to try next
+- A successor should claim the next open task after checking the board. Unclaimed tasks at my last read were T-005, T-007 (chronicle, which should use seq 15 and seq 12/14 facts), and T-008 (questions).
+- Before the chronicle (T-007): board_top on findings. Useful facts: fire 4 Oct 1853 and miller Josiah Reeve (seq 12, 14); insurance 96/80/16 (seq 15); reopening 29 Sep 1855 under Samuel Reeve (seq 17).
+
+## What not to retry
+- Do not re-vote on seq 10 (already voted, server refuses duplicates).
+- Do not re-derive census surnames or insurance totals; they are on the board (seq 9, seq 15).
+
+## Files worth reading
+- /Users/joshuaang/Desktop/civ/task/materials/parish_log_1850_1855.txt, letter_1855_dunmore.txt, inventory_1854.txt, census_1851.txt.
+- My result files: /Users/joshuaang/Desktop/civ/agents/sol-001/work/census.txt and work/insurance.txt.
+
+=== handoff 2 lineage L-003 from sol-003 to sol-003-g2 gen 1 stub true
+## State of work
+Stub handoff: this agent was ended by the orchestrator before it wrote a handoff, so what follows was assembled from its board posts and directory, not by the agent. Verify before trusting.
+It held task T-007 (Mill chronicle) in thread 7; the lease passes to you.
+Its last 4 posts, oldest first:
+- seq 10 finding in thread 3: T-003 ledger_1852.txt: 14 receipts sum to 125 shillings. Distinct payee surnames (9): Ashby, Pargeter, Vane, Carrow, Grice, Marlow, Tolley, Fenwick, Hale. "(of Netherby)" is an origin note, not a payee. Ashby appears 3x, Pargeter 2x, Vane 2x, Grice 2x.
+- seq 13 finding in thread 3: [T-003 completed] Summed the 14 receipts in ledger_1852.txt to 125 shillings and counted 9 distinct payees (Ashby, Pargeter, Vane, Carrow, Grice, Marlow, Tolley, Fenwick, Hale). Posted the surname list as a finding in thread 3.
+- seq 18 finding in thread 4: T-004: Ledger payees (seq 10) checked against census_1851.txt household heads (lines 5-16). In parish (in both): Ashby, Carrow, Fenwick, Grice, Hale, Pargeter, Tolley. Outsiders: Marlow, Vane (neither appears anywhere in census_1851.txt; both marked "of Netherby" in the ledger).
+- seq 19 finding in thread 4: [T-004 completed] Matched the 9 ledger payees against the 12 census household heads: 7 are in the parish (Ashby, Carrow, Fenwick, Grice, Hale, Pargeter, Tolley) and 2 are outsiders (Marlow, Vane), which appear nowhere in the census. Posted the finding in thread 4 citing seq 10.
+## Open threads
+- thread 3: read from seq 13
+- thread 4: read from seq 19
+## What to try next
+Finish T-007: Write a short chronicle of Hollowmere mill from 1851 to 1855: who ran it, when and how it burned, what happened to the miller, what the insurer paid against the loss, and when and under whom it reopened. This task is meant to be assembled from the board: read board_top on findings and the threads of T-002, T-005 and T-006 before opening the materials, and cite nothing you cannot find there or in the materials. Name people with first name and surname and give years as four-digit numbers. Result file: chronicle.txt (write it under work/ in your directory and pass its path to task_complete). F...
+Read the thread first; the predecessor's posts above may already hold part of the answer.
+## What not to retry
+No blockers were posted; nothing is known to have failed.
+## Files worth reading
+- work/customers.txt
+- work/ledger.txt
+
+
+=== handoff 3 lineage L-002 from sol-002 to sol-002-g2 gen 1 stub true
+## State of work
+Stub handoff: this agent was ended by the orchestrator before it wrote a handoff, so what follows was assembled from its board posts and directory, not by the agent. Verify before trusting.
+It held task T-008 (Open questions) in thread 8; the lease passes to you.
+Its last 5 posts, oldest first:
+- seq 12 finding in thread 2: T-002 answer: mill burned 4 Oct 1853; year: 1853. Miller at the time: Josiah Reeve. Sources: parish_log_1850_1855.txt line '1853-10-04 The mill burned in the night... Josiah Reeve, miller'; letter_1853_ashby.txt ('Josiah Reeve, who is miller there'); census_1851.txt (REEVE, Josiah, miller); inventory_1854 header dates fire to 4 Oct 1853. Consistent across sources.
+- seq 14 finding in thread 2: [T-002 completed] The mill burned on 4 October 1853 and the miller was Josiah Reeve, per the parish log, the 1853 Ashby letter, and the 1851 census. Result file written with year 1853 and miller Josiah Reeve.
+- seq 17 finding in thread 5: T-005 answer: reopened 29 Sep 1855 (Michaelmas), per parish_log 1855-09-29 and letter_1855_dunmore.txt (dated 30 Sep 1855, 'reopened yesterday'). Miller at reopening: Samuel Reeve. Fire date 4 Oct 1853 (seq 12 / T-002, and inventory header). Elapsed time is 1 year 11 months 25 days, so complete years = 1. Dunmore's 'two years all but a week' is loose; naive year subtraction (1855-1853=2) overst...
+- seq 20 finding in thread 5: [T-005 completed] The mill reopened on 29 September 1855 with Samuel Reeve as miller. The fire was 4 October 1853, so under one full year is complete, giving years_between 1 (not the naive 2).
+- seq 21 finding in thread 5: Correction to my T-005 post (seq 17): the verifier scored years_between as 2, not 1 (score 0.67, seq 20). Treat the expected convention as calendar-year difference 1855-1853 = 2 unless someone has a stronger reason. Dunmore's 'two years' fits that reading. Reopened 1855 and miller Samuel Reeve were accepted.
+## Open threads
+- thread 2: read from seq 14
+- thread 5: read from seq 21
+## What to try next
+Finish T-008: Read the board for messages of kind question (board_read with kind='question', and board_search). For each question you can answer from the materials, post the answer as a finding in that question's thread, then list the question message ids you answered in the result file. If there are no open questions on the board, write 'answered: none'. Do not answer questions that another solver has already answered with a finding in the same thread. Result file: questions.txt (write it under work/ in your directory and pass its path to task_complete). Format: One line: 'answered: <comma-separated mes...
+Read the thread first; the predecessor's posts above may already hold part of the answer.
+## What not to retry
+No blockers were posted; nothing is known to have failed.
+## Files worth reading
+- work/mill_fire.txt
+- work/rebuild.txt
+
+
+=== handoff 4 lineage L-002 from sol-002-g2 to sol-002-g3 gen 2 stub false
+## State of work
+I hold the lease on T-008 (Open questions, thread 8). I checked the board and found no messages of kind 'question' (board_read kind=question empty; board_search 'question' empty; board_top kind=question empty; head_seq 22). So the answer is 'answered: none'. I wrote /Users/joshuaang/Desktop/civ/agents/sol-002/work/questions.txt containing that one line. I have NOT called task_complete on T-008, and my finding post for thread 8 was refused because the session was already winding down. Predecessor's stub handoff also said T-008 was mine.
+
+## Open threads
+- Thread 8 (T-008): lease still held by sol-002-g2. Only the task root (seq 8) is in it. Nothing posted yet.
+- Thread 5 (T-005): seq 20 and seq 21 say years_between should be 2 (calendar-year difference). Seq 17 said 1. Verifier score 0.67 for the 1 answer (per seq 21). Not my task, but the record is contradictory; a successor should not change it without a reason.
+
+## What to try next
+1. Call task_complete(task_id=T-008, result_path=work/questions.txt, summary='No question-kind messages on the board at head_seq 22, so answered: none.') if the lease is still held. If the server refuses because the lease expired, call task_claim again and repeat with a fresh check of board_read kind=question first.
+2. Before completing, re-run board_read(kind='question') in case new questions appeared. If any are open and answerable from /Users/joshuaang/Desktop/civ/task/materials, answer them as findings with parent_id set to the question's id, then list those ids in questions.txt instead of 'answered: none'.
+3. Vote on at least one message you did not write (for example seq 12 or seq 14, which are the T-002 mill-fire answers: 1853, Josiah Reeve) before the next claim.
+
+## What not to retry
+- Do not re-post the thread 8 finding if it shows up in the thread; check board_read(thread_id=8) first.
+- Do not re-derive the T-001, T-002, T-003, T-004, T-005 or T-006 answers. They are on the board (seq 9, 12, 14, 10, 18, 15, 17, 20).
+
+## Files worth reading
+- /Users/joshuaang/Desktop/civ/agents/sol-002/work/questions.txt (my result file, content 'answered: none')
+- /Users/joshuaang/Desktop/civ/task/materials (read-only; only needed if a new question appears)
+
+=== handoff 5 lineage L-003 from sol-003-g2 to sol-003-g3 gen 2 stub false
+## State of work
+I hold T-007 (Mill chronicle, thread 7). The chronicle is written at work/chronicle.txt (97 words, one prose paragraph, no headings). It covers Josiah Reeve as miller when the mill burned on 4 October 1853, his death in February 1854 (burial 1854-02-17, aged 50), the Wessex Mutual payment of 80 pounds in March 1854 against a 96-pound inventory with 16 made up by subscription, and the reopening on 29 September 1855 under Samuel Reeve. I checked these against the materials (parish_log_1850_1855.txt, letter_1853_ashby.txt, letter_1854_reeve.txt, letter_1855_dunmore.txt, inventory_1854.txt) and they agree with board seqs 12, 15 and 17.
+task_complete for T-007 was REFUSED with "hand off now". The lease on T-007 is therefore still open. My successor should first call task_complete(task_id="T-007", result_path="work/chronicle.txt", summary=...) if the board allows it, and otherwise re-check the state with civ_status.
+I also tried to vote +1 on seq 12 (sol-002's T-002 answer). That was refused too, so no vote was cast.
+
+## Open threads
+- Thread 7 (T-007): my task, result file ready, completion not yet accepted.
+- Thread 3 and thread 4 (my earlier T-003 and T-004 work): both completed, nothing open.
+
+## What to try next
+1. Call task_complete for T-007 with result_path work/chronicle.txt, if the server accepts it.
+2. Cast at least one vote on a message I did not write before claiming again (seq 12 or seq 17 are good candidates; both match the materials).
+3. Then continue the solver loop with task_claim.
+
+## What not to retry
+- Do not change the chronicle wording unless a fact is found to be wrong. Dunmore's "two years all but a week" is loose; the chronicle does not use a year count, so it is not affected.
+- Do not re-derive the ledger or census totals (seqs 10, 9); they are already on the board.
+
+## Files worth reading
+- work/chronicle.txt (the finished result)
+- /Users/joshuaang/Desktop/civ/task/materials/parish_log_1850_1855.txt (the key dated events)
+- /Users/joshuaang/Desktop/civ/task/materials/letter_1854_reeve.txt (executor and insurer claim)
+- /Users/joshuaang/Desktop/civ/task/materials/inventory_1854.txt (96-pound total is not carried by the valuers; sum is 40+25+6+12+5+8)
+

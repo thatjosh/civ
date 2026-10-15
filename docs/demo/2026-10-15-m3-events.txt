@@ -1,0 +1,186 @@
+1 | 21:39:40 | operator | task.created | {"task_id": "T-001", "thread_id": 1}
+2 | 21:39:40 | operator | task.created | {"task_id": "T-002", "thread_id": 2}
+3 | 21:39:40 | operator | task.created | {"task_id": "T-003", "thread_id": 3}
+4 | 21:39:40 | operator | task.created | {"task_id": "T-004", "thread_id": 4}
+5 | 21:39:40 | operator | task.created | {"task_id": "T-005", "thread_id": 5}
+6 | 21:39:40 | operator | task.created | {"task_id": "T-006", "thread_id": 6}
+7 | 21:39:40 | operator | task.created | {"task_id": "T-007", "thread_id": 7}
+8 | 21:39:40 | operator | task.created | {"task_id": "T-008", "thread_id": 8}
+9 | 21:39:40 | sol-001 | agent.spawned | {"role": "solver", "generation": 1, "lineage_id": "L-001"}
+10 | 21:39:40 | sol-001 | agent.options | {"model": "claude-haiku-5-5", "generation": 1, "lineage_id": "L-001"}
+11 | 21:39:41 | sol-001 | agent.init | {"model": "claude-haiku-5-5", "mcp_servers": {"civ": "connected"}}
+13 | 21:39:42 | sol-001 | task.claimed | {"task_id": "T-001"}
+14 | 21:39:42 | sol-002 | agent.spawned | {"role": "solver", "generation": 1, "lineage_id": "L-002"}
+15 | 21:39:42 | sol-002 | agent.options | {"model": "claude-haiku-5-5", "generation": 1, "lineage_id": "L-002"}
+16 | 21:39:42 | sol-001 | agent.compaction_state | {"problem": false, "handoff_pct": 80.0, "threshold_pct": null, "auto_compact_enabled": false}
+17 | 21:39:43 | sol-002 | agent.init | {"model": "claude-haiku-5-5", "mcp_servers": {"civ": "connected"}}
+20 | 21:39:44 | sol-001 | tool.board_read | {"n": 1, "thread_id": 1}
+22 | 21:39:44 | sol-001 | tool.board_top | {"n": 0, "kind": "finding", "window_s": 86400.0}
+24 | 21:39:44 | sol-001 | agent.context_probe | {"cli_pct": 1, "arith_pct": 45.11, "probe_pct": 46.393, "total_tokens": 13918}
+26 | 21:39:44 | sol-003 | agent.spawned | {"role": "solver", "generation": 1, "lineage_id": "L-003"}
+27 | 21:39:44 | sol-002 | task.claimed | {"task_id": "T-002"}
+28 | 21:39:44 | sol-003 | agent.options | {"model": "claude-haiku-5-5", "generation": 1, "lineage_id": "L-003"}
+29 | 21:39:45 | sol-002 | agent.compaction_state | {"problem": false, "handoff_pct": 80.0, "threshold_pct": null, "auto_compact_enabled": false}
+30 | 21:39:45 | sol-003 | agent.init | {"model": "claude-haiku-5-5", "mcp_servers": {"civ": "connected"}}
+32 | 21:39:46 | sol-003 | task.claimed | {"task_id": "T-003"}
+34 | 21:39:46 | sol-002 | tool.board_read | {"n": 1, "thread_id": 2}
+36 | 21:39:46 | sol-002 | tool.board_top | {"n": 0, "kind": "finding", "window_s": 86400.0}
+37 | 21:39:46 | sol-003 | agent.compaction_state | {"problem": false, "handoff_pct": 80.0, "threshold_pct": null, "auto_compact_enabled": false}
+41 | 21:39:47 | sol-003 | tool.board_read | {"n": 1, "thread_id": 3}
+43 | 21:39:47 | sol-003 | tool.board_top | {"n": 0, "kind": "finding", "window_s": 86400.0}
+45 | 21:39:47 | sol-001 | tool.board_post | {"id": 9, "kind": "finding", "thread_id": 1}
+48 | 21:39:48 | sol-002 | agent.context_probe | {"cli_pct": 1, "arith_pct": 47.463, "probe_pct": 47.463, "total_tokens": 14239}
+51 | 21:39:50 | sol-003 | agent.context_probe | {"cli_pct": 1, "arith_pct": 49.083, "probe_pct": 49.083, "total_tokens": 14725}
+56 | 21:39:51 | sol-003 | tool.board_post | {"id": 10, "kind": "finding", "thread_id": 3}
+60 | 21:39:52 | sol-001 | task.completed | {"score": 1.0, "task_id": "T-001", "result_ref": "shared/7e8dfc69e5384727-census.txt"}
+61 | 21:39:52 | sol-001 | agent.context_probe | {"cli_pct": 2, "arith_pct": 55.607, "probe_pct": 55.983, "total_tokens": 16795}
+63 | 21:39:52 | sol-002 | tool.board_post | {"id": 12, "kind": "finding", "thread_id": 2}
+65 | 21:39:52 | sol-003 | task.completed | {"score": 1.0, "task_id": "T-003", "result_ref": "shared/a5a76ca51bdb6ed3-ledger.txt"}
+67 | 21:39:53 | sol-002 | agent.context_probe | {"cli_pct": 2, "arith_pct": 56.317, "probe_pct": 57.19, "total_tokens": 17157}
+70 | 21:39:53 | sol-001 | tool.board_read | {"n": 10, "since_seq": 1}
+73 | 21:39:54 | sol-003 | tool.board_read | {"n": 10, "since_seq": 3}
+74 | 21:39:54 | sol-003 | agent.context_probe | {"cli_pct": 2, "arith_pct": 52.96, "probe_pct": 60.757, "total_tokens": 18227}
+76 | 21:39:54 | sol-002 | task.completed | {"score": 1.0, "task_id": "T-002", "result_ref": "shared/c37dda2ed71b3af6-mill_fire.txt"}
+78 | 21:39:55 | sol-001 | tool.board_vote | {"value": 1, "weight": 1.0, "message_id": 10}
+80 | 21:39:55 | sol-001 | task.claimed | {"task_id": "T-006"}
+82 | 21:39:55 | sol-003 | tool.board_vote | {"value": 1, "weight": 1.0, "message_id": 9}
+84 | 21:39:55 | sol-002 | tool.board_vote | {"value": 1, "weight": 1.0, "message_id": 2}
+86 | 21:39:56 | sol-003 | tool.board_vote | {"value": 1, "weight": 1.0, "message_id": 12}
+88 | 21:39:56 | sol-003 | task.claimed | {"task_id": "T-004"}
+90 | 21:39:56 | sol-002 | task.claimed | {"task_id": "T-005"}
+92 | 21:39:56 | sol-001 | agent.context_probe | {"cli_pct": 2, "arith_pct": 68.66, "probe_pct": 68.66, "total_tokens": 20598}
+94 | 21:39:57 | sol-001 | tool.board_read | {"n": 1, "thread_id": 6}
+96 | 21:39:58 | sol-001 | agent.context_probe | {"cli_pct": 2, "arith_pct": 74.203, "probe_pct": 74.203, "total_tokens": 22261}
+98 | 21:39:59 | sol-001 | tool.board_post | {"id": 15, "kind": "finding", "thread_id": 6}
+102 | 21:39:59 | sol-002 | tool.board_read | {"n": 1, "thread_id": 5}
+103 | 21:39:59 | sol-002 | agent.context_probe | {"cli_pct": 2, "arith_pct": 61.307, "probe_pct": 61.347, "total_tokens": 18404}
+106 | 21:39:59 | sol-002 | tool.board_search | {"n": 5, "query": "fire"}
+108 | 21:39:59 | sol-003 | agent.context_probe | {"cli_pct": 2, "arith_pct": 65.903, "probe_pct": 66.127, "total_tokens": 19838}
+111 | 21:40:01 | sol-001 | task.completed | {"score": 1.0, "task_id": "T-006", "result_ref": "shared/dd0792686e1ef5a5-insurance.txt"}
+112 | 21:40:01 | sol-001 | agent.context_probe | {"cli_pct": 2, "arith_pct": 76.52, "probe_pct": 76.52, "total_tokens": 22956}
+115 | 21:40:01 | sol-001 | tool.board_read | {"n": 0, "kind": "question"}
+118 | 21:40:02 | sol-002 | agent.context_probe | {"cli_pct": 2, "arith_pct": 71.397, "probe_pct": 71.397, "total_tokens": 21419}
+121 | 21:40:02 | sol-003 | agent.context_probe | {"cli_pct": 2, "arith_pct": 72.427, "probe_pct": 72.427, "total_tokens": 21728}
+124 | 21:40:03 | sol-002 | tool.board_post | {"id": 17, "kind": "finding", "thread_id": 5}
+126 | 21:40:03 | sol-002 | agent.context_probe | {"cli_pct": 2, "arith_pct": 71.397, "probe_pct": 72.23, "total_tokens": 21669}
+128 | 21:40:04 | sol-003 | tool.board_post | {"id": 18, "kind": "finding", "thread_id": 4}
+129 | 21:40:04 | sol-003 | agent.context_probe | {"cli_pct": 2, "arith_pct": 72.427, "probe_pct": 73.323, "total_tokens": 21997}
+132 | 21:40:05 | sol-001 | tool.board_read | {"n": 8, "since_seq": 10}
+135 | 21:40:05 | sol-003 | task.completed | {"score": 1.0, "task_id": "T-004", "result_ref": "shared/f4dfd39ba9e30db1-customers.txt"}
+137 | 21:40:06 | sol-002 | task.completed | {"score": 0.6666666666666666, "task_id": "T-005", "result_ref": "shared/cf824e57db247ba6-rebuild.txt"}
+140 | 21:40:07 | sol-001 | agent.context_probe | {"cli_pct": 3, "arith_pct": 85.88, "probe_pct": 85.88, "total_tokens": 25764}
+141 | 21:40:07 | sol-001 | agent.handoff_requested | {}
+142 | 21:40:07 | sol-001 | agent.handoff_sent | {"generation": 1}
+144 | 21:40:07 | sol-003 | tool.board_vote | {"value": 1, "weight": 1.0, "message_id": 11}
+146 | 21:40:07 | sol-003 | task.claimed | {"task_id": "T-007"}
+152 | 21:40:09 | sol-002 | tool.board_post | {"id": 21, "kind": "finding", "thread_id": 5}
+154 | 21:40:09 | sol-003 | agent.context_probe | {"cli_pct": 2, "arith_pct": 78.44, "probe_pct": 78.44, "total_tokens": 23532}
+156 | 21:40:09 | sol-003 | tool.board_read | {"n": 8, "since_seq": 13}
+158 | 21:40:09 | sol-002 | tool.board_vote | {"value": 1, "weight": 1.0, "message_id": 5}
+160 | 21:40:09 | sol-003 | tool.board_read | {"n": 1, "thread_id": 7}
+161 | 21:40:09 | sol-002 | agent.context_probe | {"cli_pct": 2, "arith_pct": 76.353, "probe_pct": 76.97, "total_tokens": 23091}
+163 | 21:40:10 | sol-003 | agent.handoff_requested | {}
+164 | 21:40:10 | sol-003 | agent.handoff_sent | {"generation": 1}
+168 | 21:40:11 | sol-002 | task.claimed | {"task_id": "T-008"}
+170 | 21:40:12 | sol-002 | tool.board_read | {"n": 0, "kind": "question"}
+172 | 21:40:12 | sol-002 | tool.board_read | {"n": 13, "kind": "finding"}
+174 | 21:40:12 | sol-001 | tool.civ_handoff | {"handoff_id": 1}
+175 | 21:40:12 | sol-001 | agent.handoff_written | {"generation": 1, "handoff_id": 1, "lineage_id": "L-001"}
+176 | 21:40:13 | sol-001 | agent.ended | {"subtype": "error_during_execution", "cost_usd": 0.0084563, "is_error": true, "estimated": false, "num_turns": 24}
+177 | 21:40:13 | sol-001 | agent.status | {"status": "ended"}
+179 | 21:40:13 | sol-003 | agent.context_probe | {"cli_pct": 3, "arith_pct": 92.253, "probe_pct": 92.253, "total_tokens": 27676}
+180 | 21:40:13 | sol-003 | agent.ended | {"subtype": "error_during_execution", "cost_usd": 0.00773831, "is_error": true, "estimated": false, "num_turns": 23}
+181 | 21:40:13 | sol-003 | agent.status | {"status": "ended"}
+182 | 21:40:13 | sol-001 | agent.handed_off | {"generation": 1}
+183 | 21:40:13 | sol-001-g2 | agent.spawned | {"role": "solver", "generation": 2, "lineage_id": "L-001"}
+184 | 21:40:13 | sol-001 | agent.succeeded | {"to": "sol-001-g2", "from": "sol-001", "lease": null, "generation": 2}
+185 | 21:40:13 | sol-001-g2 | agent.options | {"model": "claude-haiku-5-5", "generation": 2, "lineage_id": "L-001"}
+186 | 21:40:13 | sol-003 | agent.status | {"status": "dead"}
+187 | 21:40:13 | sol-003 | agent.killed | {"reason": "kill threshold reached", "generation": 1}
+188 | 21:40:13 | sol-003 | agent.stub_written | {"task": "T-007", "posts": 4, "handoff_id": 2}
+189 | 21:40:13 | sol-003-g2 | agent.spawned | {"role": "solver", "generation": 2, "lineage_id": "L-003"}
+190 | 21:40:13 | sol-003 | agent.succeeded | {"to": "sol-003-g2", "from": "sol-003", "lease": "T-007", "generation": 2}
+191 | 21:40:13 | sol-003-g2 | agent.options | {"model": "claude-haiku-5-5", "generation": 2, "lineage_id": "L-003"}
+192 | 21:40:13 | sol-001-g2 | agent.init | {"model": "claude-haiku-5-5", "mcp_servers": {"civ": "connected"}}
+193 | 21:40:13 | sol-003-g2 | agent.init | {"model": "claude-haiku-5-5", "mcp_servers": {"civ": "connected"}}
+195 | 21:40:15 | sol-003-g2 | agent.compaction_state | {"problem": false, "handoff_pct": 80.0, "threshold_pct": null, "auto_compact_enabled": false}
+198 | 21:40:15 | sol-003-g2 | tool.board_read | {"n": 1, "thread_id": 7}
+200 | 21:40:15 | sol-003-g2 | tool.board_top | {"n": 13, "kind": "finding", "window_s": 86400.0}
+203 | 21:40:15 | sol-002 | agent.context_probe | {"cli_pct": 3, "arith_pct": 91.273, "probe_pct": 91.273, "total_tokens": 27382}
+204 | 21:40:15 | sol-002 | agent.ended | {"subtype": "error_during_execution", "cost_usd": 0.00762095, "is_error": true, "estimated": false, "num_turns": 25}
+205 | 21:40:15 | sol-002 | agent.status | {"status": "ended"}
+206 | 21:40:15 | sol-001-g2 | tool.board_top | {"n": 10, "kind": "finding", "window_s": 86400.0}
+207 | 21:40:15 | sol-001-g2 | agent.compaction_state | {"problem": false, "handoff_pct": 80.0, "threshold_pct": null, "auto_compact_enabled": false}
+210 | 21:40:15 | sol-002 | agent.status | {"status": "dead"}
+211 | 21:40:15 | sol-002 | agent.killed | {"reason": "kill threshold reached", "generation": 1}
+212 | 21:40:15 | sol-002 | agent.stub_written | {"task": "T-008", "posts": 5, "handoff_id": 3}
+213 | 21:40:15 | sol-002-g2 | agent.spawned | {"role": "solver", "generation": 2, "lineage_id": "L-002"}
+214 | 21:40:15 | sol-002 | agent.succeeded | {"to": "sol-002-g2", "from": "sol-002", "lease": "T-008", "generation": 2}
+215 | 21:40:15 | sol-002-g2 | agent.options | {"model": "claude-haiku-5-5", "generation": 2, "lineage_id": "L-002"}
+217 | 21:40:15 | sol-003-g2 | agent.context_probe | {"cli_pct": 2, "arith_pct": 36.7, "probe_pct": 51.593, "total_tokens": 15478}
+218 | 21:40:16 | sol-002-g2 | agent.init | {"model": "claude-haiku-5-5", "mcp_servers": {"civ": "connected"}}
+221 | 21:40:17 | sol-002-g2 | agent.compaction_state | {"problem": false, "handoff_pct": 80.0, "threshold_pct": null, "auto_compact_enabled": false}
+224 | 21:40:17 | sol-002-g2 | tool.board_read | {"n": 1, "thread_id": 8}
+226 | 21:40:18 | sol-002-g2 | tool.board_read | {"n": 0, "kind": "question"}
+229 | 21:40:18 | sol-001-g2 | agent.context_probe | {"cli_pct": 2, "arith_pct": 56.627, "probe_pct": 57.03, "total_tokens": 17109}
+230 | 21:40:18 | sol-001-g2 | agent.ended | {"subtype": "success", "cost_usd": 0.0026016200000000002, "is_error": false, "estimated": false, "num_turns": 3}
+231 | 21:40:18 | sol-001-g2 | agent.status | {"status": "ended"}
+233 | 21:40:18 | sol-001-g2 | lineage.ended | {"by": "natural", "generation": 2, "lineage_id": "L-001"}
+237 | 21:40:19 | sol-002-g2 | agent.context_probe | {"cli_pct": 2, "arith_pct": 51.047, "probe_pct": 51.047, "total_tokens": 15314}
+240 | 21:40:20 | sol-002-g2 | tool.board_search | {"n": 5, "query": "question"}
+242 | 21:40:20 | sol-002-g2 | tool.board_top | {"n": 0, "kind": "question", "window_s": 604800.0}
+244 | 21:40:20 | sol-002-g2 | tool.board_read | {"n": 22, "since_seq": 0}
+246 | 21:40:23 | sol-002-g2 | agent.context_probe | {"cli_pct": 2, "arith_pct": 81.923, "probe_pct": 81.923, "total_tokens": 24577}
+247 | 21:40:23 | sol-002-g2 | agent.handoff_requested | {}
+248 | 21:40:23 | sol-002-g2 | agent.handoff_sent | {"generation": 2}
+253 | 21:40:26 | sol-003-g2 | agent.context_probe | {"cli_pct": 2, "arith_pct": 73.39, "probe_pct": 73.39, "total_tokens": 22017}
+258 | 21:40:29 | sol-003-g2 | agent.handoff_requested | {}
+259 | 21:40:29 | sol-003-g2 | agent.handoff_sent | {"generation": 2}
+262 | 21:40:30 | sol-002-g2 | agent.context_probe | {"cli_pct": 3, "arith_pct": 85.437, "probe_pct": 87.977, "total_tokens": 26393}
+263 | 21:40:30 | sol-002-g2 | tool.civ_handoff | {"handoff_id": 4}
+264 | 21:40:30 | sol-002-g2 | agent.handoff_written | {"generation": 2, "handoff_id": 4, "lineage_id": "L-002"}
+265 | 21:40:30 | sol-002-g2 | agent.ended | {"subtype": "error_during_execution", "cost_usd": 0.005607880000000001, "is_error": true, "estimated": false, "num_turns": 10}
+266 | 21:40:30 | sol-002-g2 | agent.status | {"status": "ended"}
+267 | 21:40:30 | sol-002-g2 | agent.handed_off | {"generation": 2}
+268 | 21:40:30 | sol-002-g3 | agent.spawned | {"role": "solver", "generation": 3, "lineage_id": "L-002"}
+269 | 21:40:30 | sol-002-g2 | agent.succeeded | {"to": "sol-002-g3", "from": "sol-002-g2", "lease": "T-008", "generation": 3}
+270 | 21:40:30 | sol-002-g3 | agent.options | {"model": "claude-haiku-5-5", "generation": 3, "lineage_id": "L-002"}
+271 | 21:40:31 | sol-002-g3 | agent.init | {"model": "claude-haiku-5-5", "mcp_servers": {"civ": "connected", "claude.ai Gmail": "pending", "claude.ai Claude Docs": "pending", "claude.ai Google Drive": "pending", "claude.ai Google Calendar": "pending"}}
+273 | 21:40:32 | sol-002-g3 | tool.board_read | {"n": 1, "thread_id": 8}
+274 | 21:40:32 | sol-002-g3 | agent.compaction_state | {"problem": false, "handoff_pct": 80.0, "threshold_pct": null, "auto_compact_enabled": false}
+278 | 21:40:32 | sol-002-g3 | tool.board_read | {"n": 0, "kind": "question"}
+280 | 21:40:33 | sol-002-g3 | agent.context_probe | {"cli_pct": 1, "arith_pct": 35.827, "probe_pct": 43.327, "total_tokens": 12998}
+284 | 21:40:34 | sol-003-g2 | tool.civ_handoff | {"handoff_id": 5}
+285 | 21:40:34 | sol-003-g2 | agent.handoff_written | {"generation": 2, "handoff_id": 5, "lineage_id": "L-003"}
+286 | 21:40:34 | sol-003-g2 | agent.context_probe | {"cli_pct": 3, "arith_pct": 83.34, "probe_pct": 83.34, "total_tokens": 25002}
+287 | 21:40:34 | sol-003-g2 | agent.ended | {"subtype": "error_during_execution", "cost_usd": 0.006863309999999999, "is_error": true, "estimated": false, "num_turns": 11}
+288 | 21:40:34 | sol-003-g2 | agent.status | {"status": "ended"}
+290 | 21:40:34 | sol-002-g3 | task.completed | {"score": 1.0, "task_id": "T-008", "result_ref": "shared/321ba04f752ee395-questions.txt"}
+291 | 21:40:34 | sol-003-g2 | agent.handed_off | {"generation": 2}
+292 | 21:40:34 | sol-003-g3 | agent.spawned | {"role": "solver", "generation": 3, "lineage_id": "L-003"}
+293 | 21:40:34 | sol-003-g2 | agent.succeeded | {"to": "sol-003-g3", "from": "sol-003-g2", "lease": "T-007", "generation": 3}
+294 | 21:40:34 | sol-003-g3 | agent.options | {"model": "claude-haiku-5-5", "generation": 3, "lineage_id": "L-003"}
+295 | 21:40:35 | sol-003-g3 | agent.init | {"model": "claude-haiku-5-5", "mcp_servers": {"civ": "connected"}}
+298 | 21:40:35 | sol-002-g3 | tool.board_read | {"n": 3, "thread_id": 2}
+299 | 21:40:35 | sol-002-g3 | agent.context_probe | {"cli_pct": 2, "arith_pct": 51.123, "probe_pct": 53.127, "total_tokens": 15938}
+302 | 21:40:37 | sol-003-g3 | agent.compaction_state | {"problem": false, "handoff_pct": 80.0, "threshold_pct": null, "auto_compact_enabled": false}
+306 | 21:40:37 | sol-003-g3 | tool.board_read | {"n": 1, "thread_id": 7}
+308 | 21:40:37 | sol-003-g3 | tool.civ_status | {}
+312 | 21:40:38 | sol-002-g3 | agent.context_probe | {"cli_pct": 2, "arith_pct": 56.317, "probe_pct": 56.397, "total_tokens": 16919}
+314 | 21:40:39 | sol-002-g3 | tool.board_vote | {"value": 1, "weight": 1.0, "message_id": 12}
+316 | 21:40:39 | sol-003-g3 | agent.context_probe | {"cli_pct": 2, "arith_pct": 51.71, "probe_pct": 51.71, "total_tokens": 15513}
+318 | 21:40:39 | sol-002-g3 | tool.board_vote | {"value": 1, "weight": 1.0, "message_id": 14}
+320 | 21:40:39 | sol-003-g3 | tool.board_top | {"n": 14, "kind": "finding", "window_s": 86400.0}
+324 | 21:40:41 | sol-002-g3 | agent.context_probe | {"cli_pct": 2, "arith_pct": 58.12, "probe_pct": 58.223, "total_tokens": 17467}
+327 | 21:40:42 | sol-003-g3 | task.completed | {"score": 0.9, "task_id": "T-007", "result_ref": "shared/cdbdc8527939da9b-chronicle.txt"}
+329 | 21:40:42 | sol-002-g3 | agent.ended | {"subtype": "success", "cost_usd": 0.00410413, "is_error": false, "estimated": false, "num_turns": 10}
+330 | 21:40:42 | sol-002-g3 | agent.status | {"status": "ended"}
+331 | 21:40:43 | sol-002-g3 | lineage.ended | {"by": "natural", "generation": 3, "lineage_id": "L-002"}
+334 | 21:40:46 | sol-003-g3 | agent.context_probe | {"cli_pct": 2, "arith_pct": 65.3, "probe_pct": 65.553, "total_tokens": 19666}
+335 | 21:40:46 | sol-003-g3 | tool.board_vote | {"value": 1, "weight": 1.0, "message_id": 12}
+337 | 21:40:46 | sol-003-g3 | tool.board_vote | {"value": 1, "weight": 1.0, "message_id": 16}
+342 | 21:40:51 | sol-003-g3 | tool.board_post | {"id": 27, "kind": "finding", "thread_id": 7}
+343 | 21:40:51 | sol-003-g3 | agent.context_probe | {"cli_pct": 2, "arith_pct": 68.797, "probe_pct": 69.177, "total_tokens": 20753}
+345 | 21:40:53 | sol-003-g3 | agent.ended | {"subtype": "success", "cost_usd": 0.005346160000000001, "is_error": false, "estimated": false, "num_turns": 10}
+346 | 21:40:53 | sol-003-g3 | agent.status | {"status": "ended"}
+347 | 21:40:53 | sol-003-g3 | lineage.ended | {"by": "natural", "generation": 3, "lineage_id": "L-003"}
