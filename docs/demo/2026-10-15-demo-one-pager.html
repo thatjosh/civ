@@ -69,8 +69,8 @@
   <div class="stat"><b>12</b><span>votes, all with reasons</span></div>
 </div>
 <figure>
-  <svg id="gantt" viewBox="0 0 900 170"></svg>
-  <figcaption>Who did what, when. Bars run from claim to verified completion. Solvers started three seconds apart and never idled while tasks remained.</figcaption>
+  <svg id="gantt" viewBox="0 0 900 210"></svg>
+  <figcaption>Who did what, when. Bars run from claim to verified completion. The hatched segments are the same work done twice: sol-003 derived the ledger payees inside T-003 and posted them at :24; sol-002 had searched at :23, found nothing, and derived them again inside T-004. The dot is sol-003 answering sol-002's question at :33, after sol-002 had already finished.</figcaption>
 </figure>
 
 <h2>How they collaborated</h2>
@@ -117,21 +117,39 @@
     });
   })();
 
-  // Gantt: claim to completion per task, lanes per solver, seconds after 01:06:00.
+  // Gantt: claim to completion per task, lanes per solver, seconds after 01:06:00. The hatched
+  // segments are the one piece of work done twice: deriving the ledger payees, once inside T-003
+  // and once inside T-004 because sol-002 searched one second before #13 landed.
   (function () {
-    const svg = document.getElementById('gantt'); const W = 900, H = 170; const m = { l: 60, r: 14, t: 10, b: 26 };
+    const svg = document.getElementById('gantt'); const W = 900, H = 210; const m = { l: 60, r: 14, t: 14, b: 26 };
     const bars = [['T-001', 5, 16], ['T-002', 6, 16], ['T-003', 8, 27], ['T-006', 20, 27], ['T-004', 22, 34], ['T-005', 32, 38], ['T-007', 36, 50], ['T-008', 40, 47]];
     const lanes = ['sol-001', 'sol-002', 'sol-003']; const t0 = 0, t1 = 62; const lh = (H - m.t - m.b) / lanes.length;
     const x = (t) => m.l + (t - t0) / (t1 - t0) * (W - m.l - m.r);
+    const barY = (i) => m.t + lh * i + lh * 0.2; const barH = lh * 0.52;
+    el('defs', {}, svg).innerHTML = '<pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="8" stroke="' + css('--ink') + '" stroke-width="1.5" opacity="0.7"/></pattern>';
     for (let t = 0; t <= 60; t += 10) { el('line', { x1: x(t), x2: x(t), y1: m.t, y2: H - m.b, stroke: css('--grid') }, svg); el('text', { x: x(t), y: H - m.b + 16, 'text-anchor': 'middle', class: 'tick' }, svg).textContent = t < 60 ? '01:06:' + String(t).padStart(2, '0') : '01:07:00'; }
-    lanes.forEach((l, i) => el('text', { x: m.l - 8, y: m.t + lh * i + lh / 2 + 4, 'text-anchor': 'end', class: 'lbl b' }, svg).textContent = l);
-    bars.forEach(([id, a, b]) => { const i = lanes.indexOf(who[id]); const y = m.t + lh * i + lh * 0.22; const h = lh * 0.56;
-      el('rect', { x: x(a), y, width: x(b) - x(a), height: h, rx: 3, fill: col[who[id]] }, svg);
-      el('text', { x: x(a) + 5, y: y + h / 2 + 4, class: 'lbl', fill: css('--surface') }, svg).textContent = id + (id === 'T-004' ? ' (race)' : ''); });
+    lanes.forEach((l, i) => el('text', { x: m.l - 8, y: barY(i) + barH / 2 + 4, 'text-anchor': 'end', class: 'lbl b' }, svg).textContent = l);
+    bars.forEach(([id, a, b]) => { const i = lanes.indexOf(who[id]); const y = barY(i);
+      el('rect', { x: x(a), y, width: x(b) - x(a), height: barH, rx: 3, fill: col[who[id]] }, svg);
+      el('text', { x: x(a) + 5, y: y + barH / 2 + 4, class: 'lbl', fill: css('--surface') }, svg).textContent = id; });
+    // The duplicated derivation, hatched on both lanes.
+    const dup = [['sol-003', 8, 24, 'derives the ledger payees, posts #13 at :24', 'below'], ['sol-002', 23, 30, 'derives the same payees again, posts #18 at :30', 'below']];
+    dup.forEach(([l, a, b, label, side]) => { const i = lanes.indexOf(l); const y = barY(i);
+      el('rect', { x: x(a), y: y + 2, width: x(b) - x(a), height: barH - 4, rx: 2, fill: 'url(#hatch)', stroke: css('--ink'), 'stroke-width': 1.5 }, svg);
+      el('text', { x: x(a), y: side === 'above' ? y - 5 : y + barH + 13, class: 'lbl b' }, svg).textContent = label; });
+    bars.forEach(([id, a]) => { const i = lanes.indexOf(who[id]); const y = barY(i); const t = el('text', { x: x(a) + 5, y: y + barH / 2 + 4, class: 'lbl b', fill: css('--surface'), stroke: col[who[id]], 'stroke-width': 3, 'paint-order': 'stroke' }, svg); t.textContent = id; });
+    // The moment the fact existed, and the search that missed it by a second.
+    el('line', { x1: x(24), x2: x(24), y1: m.t - 4, y2: H - m.b, stroke: css('--warn'), 'stroke-width': 1.5, 'stroke-dasharray': '4 3' }, svg);
+    el('text', { x: x(24) + 4, y: m.t + 6, class: 'tick' }, svg).textContent = '#13 on the board from :24';
+    el('line', { x1: x(23), x2: x(23), y1: barY(1) - 6, y2: barY(1) + barH + 6, stroke: css('--warn'), 'stroke-width': 2 }, svg);
+    el('text', { x: x(23) - 4, y: barY(1) - 8, 'text-anchor': 'end', class: 'tick' }, svg).textContent = 'sol-002 searches "payees" at :23, finds nothing';
+    // sol-003 answers the question after its own task is done: work for T-004, on sol-003's lane.
+    const ay = barY(2) + barH / 2; el('circle', { cx: x(33), cy: ay, r: 6, fill: css('--s2'), stroke: css('--ink'), 'stroke-width': 1.5 }, svg);
+    el('text', { x: x(33) - 6, y: barY(2) + barH + 13, class: 'tick' }, svg).textContent = '#19 answers T-004\'s question at :33';
     // Spawn and end markers so the reader sees the stagger and the tail.
-    [['sol-001', 4, 58], ['sol-002', 5, 45], ['sol-003', 7, 61]].forEach(([l, s, e]) => { const i = lanes.indexOf(l); const yc = m.t + lh * i + lh / 2; el('line', { x1: x(s), x2: x(s), y1: yc - 12, y2: yc + 12, stroke: css('--ink-2'), 'stroke-width': 2 }, svg); el('line', { x1: x(e), x2: x(e), y1: yc - 12, y2: yc + 12, stroke: css('--ink-2'), 'stroke-width': 2, 'stroke-dasharray': '2 2' }, svg); });
-    el('text', { x: x(4) + 4, y: m.t + 8, class: 'tick' }, svg).textContent = 'spawn';
-    el('text', { x: x(58) - 4, y: m.t + 8, 'text-anchor': 'end', class: 'tick' }, svg).textContent = 'ended';
+    [['sol-001', 4, 58], ['sol-002', 5, 45], ['sol-003', 7, 61]].forEach(([l, s, e]) => { const i = lanes.indexOf(l); const yc = barY(i) + barH / 2; el('line', { x1: x(s), x2: x(s), y1: yc - 12, y2: yc + 12, stroke: css('--ink-2'), 'stroke-width': 2 }, svg); el('line', { x1: x(e), x2: x(e), y1: yc - 12, y2: yc + 12, stroke: css('--ink-2'), 'stroke-width': 2, 'stroke-dasharray': '2 2' }, svg); });
+    el('text', { x: x(4) + 4, y: m.t + 6, class: 'tick' }, svg).textContent = 'spawn';
+    el('text', { x: x(58) - 4, y: m.t + 6, 'text-anchor': 'end', class: 'tick' }, svg).textContent = 'ended';
   })();
 })();
 </script>
