@@ -113,8 +113,9 @@ async def test_hook_can_stop_a_running_session(tmp_path):
             control.request_stop("test")
 
     res = await spawner.spawn("sol-011", "L-011", on_message=hook)
-    # Stopped after the third message: interrupted, disconnected, and the rest of the script never ran.
-    assert seen == ["SystemMessage", "AssistantMessage", "AssistantMessage"]
+    # Stopped after the third message: interrupted, then the interrupt's own result was
+    # drained (and seen by the hook) so cost and turns are real; the rest of the script never ran.
+    assert seen == ["SystemMessage", "AssistantMessage", "AssistantMessage", "ResultMessage"]
     assert client.sent == ["stop please"] and client.interrupted and client.disconnected
     assert res.stopped_by_runner and res.result == "stopped by runner: test"
     assert res.turns == 2
@@ -140,3 +141,60 @@ async def test_probe_is_asked_every_five_turns(tmp_path):
     spawner = Spawner(op, "http://127.0.0.1:8765", tmp_path, PromptAssembler(PROMPTS_DIR), client_factory=client_factory([client]))
     await spawner.spawn("sol-012", "L-012")
     assert client.probes == 2
+
+
+# --- what a runner-stopped session reports ------------------------------------
+
+
+async def test_runner_stop_drains_the_result_so_cost_and_turns_are_real(tmp_path):
+    client = FakeClient([init_message(), assistant(100), assistant(200), assistant(300), result()])
+    op = FakeOperator()
+    spawner = Spawner(op, "http://127.0.0.1:8765", tmp_path, PromptAssembler(PROMPTS_DIR), client_factory=client_factory([client]))
+
+    async def hook(message, control: SessionControl) -> None:
+        if isinstance(message, type(assistant(1))) and control.stop_reason is None:
+            control.request_stop("handoff written")
+
+    res = await spawner.spawn("sol-020", "L-020", on_message=hook)
+    # The fake answers the interrupt with a result carrying cost 0.05 and the turns run so far.
+    assert client.interrupted and res.stopped_by_runner
+    assert res.cost_usd == 0.05 and not res.cost_estimated and res.turns == 1
+    assert res.result == "stopped by runner: handoff written" and res.error is None
+    ends = [e for e in op.events if e[1] == "agent.ended"]
+    assert len(ends) == 1 and ends[0][2]["estimated"] is False and ends[0][2]["cost_usd"] == 0.05
+    assert ("sol-020", "ended") in op.status
+
+
+async def test_runner_stop_without_a_result_estimates_the_cost(tmp_path):
+    client = FakeClient(
+        [init_message(), assistant(100, model="claude-haiku-5-5"), assistant(200, model="claude-haiku-5-5"), assistant(300)],
+        after_interrupt="end",
+    )
+    op = FakeOperator()
+    spawner = Spawner(op, "http://127.0.0.1:8765", tmp_path, PromptAssembler(PROMPTS_DIR), client_factory=client_factory([client]))
+
+    async def hook(message, control: SessionControl) -> None:
+        if getattr(message, "usage", None) and message.usage["input_tokens"] == 100:
+            control.request_stop("test")
+
+    res = await spawner.spawn("sol-021", "L-021", on_message=hook)
+    # Two turns: input 50 + 100, cache write 25 + 50, cache read 25 + 50, output 10 + 10, Haiku prices.
+    expected = (150 * 0.10 + 20 * 0.50 + 75 * 0.01 + 75 * 0.125) / 1_000_000
+    assert res.cost_estimated and res.cost_usd == pytest.approx(expected)
+    assert res.turns == 2 and res.stopped_by_runner and client.disconnected
+    ends = [e for e in op.events if e[1] == "agent.ended"]
+    assert len(ends) == 1 and ends[0][2] == {"subtype": "interrupted", "num_turns": 2, "cost_usd": pytest.approx(expected), "estimated": True, "is_error": False}
+
+
+async def test_runner_stop_that_hangs_times_out_and_estimates(tmp_path):
+    client = FakeClient([init_message(), assistant(100), assistant(200)], after_interrupt="hang")
+    op = FakeOperator()
+    spawner = Spawner(op, "http://127.0.0.1:8765", tmp_path, PromptAssembler(PROMPTS_DIR), client_factory=client_factory([client]), drain_s=0.02)
+
+    async def hook(message, control: SessionControl) -> None:
+        if getattr(message, "usage", None):
+            control.request_stop("test")
+
+    res = await spawner.spawn("sol-022", "L-022", on_message=hook)
+    assert res.cost_estimated and res.cost_usd is not None and res.cost_usd > 0
+    assert client.interrupted and client.disconnected and res.error is None

@@ -11,8 +11,10 @@ and once to interrupt it when the handoff has landed.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
+import time
 from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -44,6 +46,9 @@ SESSION_ENV = {"DISABLE_AUTO_COMPACT": "1"}
 
 # The CLI's result subtype when the session hits max_turns; a normal end for us, not a failure.
 MAX_TURNS_SUBTYPE = "error_max_turns"
+# After an interrupt the CLI normally answers with a result that carries the real
+# cost and turn count; we wait this long for it before falling back to an estimate.
+DRAIN_AFTER_INTERRUPT_S = 10.0
 
 
 class McpNotConnected(RuntimeError):
@@ -64,6 +69,8 @@ class SpawnResult:
     generation: int = 1
     # Set by the runner when it cut the session short on purpose.
     stopped_by_runner: bool = False
+    # True when cost_usd was priced from token counts because no result arrived.
+    cost_estimated: bool = False
 
 
 class ClientLike(Protocol):
@@ -181,8 +188,10 @@ class Spawner:
         knobs: KnobReader | None = None,
         context_window: int = 1_000_000,
         force_handoff_after_turns: int | None = None,
+        drain_s: float = DRAIN_AFTER_INTERRUPT_S,
     ) -> None:
         self._op = operator
+        self._drain_s = drain_s
         self._board_url = board_url.rstrip("/")
         self._root = Path(root).resolve()
         self._prompts = prompts
@@ -311,7 +320,12 @@ class Spawner:
         try:
             await client.connect(prepared.kickoff)
             connected = True
-            async for message in client.receive_messages():
+            stream = client.receive_messages().__aiter__()
+            drain_until: float | None = None
+            while True:
+                message = await self._next_message(agent_id, stream, drain_until)
+                if message is None:
+                    break
                 self._check_init(agent_id, message)
                 monitor.observe(message)
                 if monitor.probe_due():
@@ -321,11 +335,15 @@ class Spawner:
                 if isinstance(message, ResultMessage):
                     self._record_result(result, message)
                     break
-                if control.stop_requested:
+                if control.stop_requested and drain_until is None:
+                    # Interrupt, then keep reading for a bounded time rather than
+                    # breaking out: the CLI answers an interrupt with a result that
+                    # carries the real cost and turn count, and that is the only
+                    # place they come from.
                     result.stopped_by_runner = True
                     result.result = f"stopped by runner: {control.stop_reason}"
                     await client.interrupt()
-                    break
+                    drain_until = time.monotonic() + self._drain_s
         except ResultError as exc:
             if exc.subtype == MAX_TURNS_SUBTYPE:
                 # The CLI exits non-zero after the max-turns result; the loop above already recorded it.
@@ -342,7 +360,15 @@ class Spawner:
                     log.warning("disconnect failed for %s: %s", agent_id, exc)
 
         totals = monitor.totals
+        if not totals.ended:
+            # No result ever arrived (interrupted with no reply, or a crash):
+            # price the session from its token counts so the summary is honest.
+            monitor.finish_without_result(
+                reason="interrupted" if result.stopped_by_runner else "no_result",
+                mark_ended=result.error is None,
+            )
         result.cost_usd = totals.cost_usd
+        result.cost_estimated = totals.cost_estimated
         result.tokens_in = totals.tokens_in
         result.tokens_out = totals.tokens_out
         result.context_pct = totals.context_pct
@@ -357,8 +383,27 @@ class Spawner:
             f"The read-only materials are at {materials}."
         )
 
+    async def _next_message(self, agent_id: str, stream: AsyncIterator[Any], drain_until: float | None) -> Any | None:
+        """The next message, or None when the stream ends or the drain deadline passes."""
+        try:
+            if drain_until is None:
+                return await stream.__anext__()
+            remaining = drain_until - time.monotonic()
+            if remaining <= 0:
+                return None
+            return await asyncio.wait_for(stream.__anext__(), timeout=remaining)
+        except StopAsyncIteration:
+            return None
+        except asyncio.TimeoutError:
+            log.warning("no result within %.0fs of interrupting %s; its cost will be estimated", self._drain_s, agent_id)
+            return None
+
     def _record_result(self, result: SpawnResult, message: ResultMessage) -> None:
         result.turns = message.num_turns
+        if result.stopped_by_runner:
+            # The note already says why it stopped, and an interrupted result's
+            # error flag describes the interrupt, not a failure.
+            return
         result.result = message.result
         if message.subtype == MAX_TURNS_SUBTYPE:
             # The turn cap is our own budget, so reaching it is a normal end.

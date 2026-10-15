@@ -81,7 +81,10 @@ async def run_population(count: int, stagger_s: float, spawn: SpawnFn, sleep=asy
     for i in range(1, count + 1):
         agent_id = f"sol-{i:03d}"
         lineage_id = f"L-{i:03d}"
-        tasks.append(asyncio.create_task(spawn(agent_id, lineage_id)))
+        # By keyword, because a spawner and a lineage runner take the two ids in
+        # different positional orders and a swap here once ran a whole demo with
+        # agents called L-001 in lineage sol-001.
+        tasks.append(asyncio.create_task(spawn(agent_id=agent_id, lineage_id=lineage_id)))
         if i < count and stagger_s > 0:
             await sleep(stagger_s)
     return list(await asyncio.gather(*tasks))
@@ -94,21 +97,29 @@ def _row(r: RunResult) -> dict[str, Any]:
     note = r.error or (r.result or "").strip().replace("\n", " ")[:60]
     return {
         "agent": r.agent_id, "gens": gens, "handoffs": handoffs, "turns": r.turns,
-        "cost": r.cost_usd or 0.0, "tok_in": r.tokens_in, "tok_out": r.tokens_out, "ctx": r.context_pct, "note": note,
+        "cost": r.cost_usd or 0.0, "estimated": bool(getattr(r, "cost_estimated", False)),
+        "tok_in": r.tokens_in, "tok_out": r.tokens_out, "ctx": r.context_pct, "note": note,
     }
+
+
+def _cost_cell(cost: float, estimated: bool) -> str:
+    # A tilde marks a cost priced from token counts rather than reported by the SDK.
+    return f"~{cost:.4f}" if estimated else f"{cost:.4f}"
 
 
 def format_summary(results: list[RunResult], tasks_summary: dict | None = None) -> str:
     rows = [f"{'agent':<9} {'gens':>4} {'hoffs':>5} {'turns':>5} {'cost $':>8} {'tok in':>10} {'tok out':>8} {'ctx %':>6}  note"]
     total = 0.0
+    any_estimated = False
     for r in results:
         d = _row(r)
         total += d["cost"]
+        any_estimated = any_estimated or d["estimated"]
         rows.append(
-            f"{d['agent']:<9} {d['gens']:>4} {d['handoffs']:>5} {d['turns']:>5} {d['cost']:>8.4f} "
+            f"{d['agent']:<9} {d['gens']:>4} {d['handoffs']:>5} {d['turns']:>5} {_cost_cell(d['cost'], d['estimated']):>8} "
             f"{d['tok_in']:>10} {d['tok_out']:>8} {d['ctx']:>6.2f}  {d['note']}"
         )
-    rows.append(f"{'total cost':<26} {total:>8.4f}")
+    rows.append(f"{'total cost':<26} {_cost_cell(total, any_estimated):>8}")
     if tasks_summary:
         rows.append("tasks: " + ", ".join(f"{k}={v}" for k, v in tasks_summary.items()))
     return "\n".join(rows)

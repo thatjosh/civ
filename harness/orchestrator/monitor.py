@@ -28,6 +28,27 @@ DEFAULT_KILL_PCT = 90.0
 PROBE_EVERY_TURNS = 5
 PROBE_AT_PCT = 70.0
 
+# Prices per million tokens (input, output, cache read, cache write). Used only
+# when a session ends without the SDK's own cost figure, which happens when the
+# runner interrupts it and no result follows, so the summary is never blank.
+PRICES_PER_MTOK: dict[str, tuple[float, float, float, float]] = {
+    "claude-opus-5-5": (4.0, 20.0, 0.20, 5.0),
+    "claude-sonnet-5-5": (2.0, 10.0, 0.20, 2.5),
+    "claude-haiku-5-5": (0.10, 0.50, 0.01, 0.125),
+}
+
+
+def estimate_cost_usd(model: str | None, input_tokens: int, output_tokens: int, cache_read: int, cache_write: int) -> float | None:
+    """Price a session from its token counts; None when the model is not in the table."""
+    if not model:
+        return None
+    # The SDK reports exact ids today; a prefix match keeps a dated suffix from breaking it.
+    prices = next((p for name, p in PRICES_PER_MTOK.items() if model.startswith(name)), None)
+    if prices is None:
+        return None
+    p_in, p_out, p_read, p_write = prices
+    return (input_tokens * p_in + output_tokens * p_out + cache_read * p_read + cache_write * p_write) / 1_000_000
+
 
 class UsageSink(Protocol):
     """The slice of the Operator API the monitor writes through."""
@@ -62,8 +83,15 @@ class UsageTotals:
     context_pct: float = 0.0
     turns: int = 0
     cost_usd: float | None = None
+    # True when cost_usd came from the price table rather than the SDK's result.
+    cost_estimated: bool = False
     ended: bool = False
     fired: set[float] = field(default_factory=set)
+    # Per-category token counts and the model, kept for the cost estimate.
+    input_tokens: int = 0
+    cache_creation_tokens: int = 0
+    cache_read_tokens: int = 0
+    model: str | None = None
     # What the CLI itself last reported, kept apart from the arithmetic so a
     # disagreement between the two is visible in the events.
     probe_pct: float | None = None
@@ -119,15 +147,18 @@ class Monitor:
         # The input side of one assistant message is the whole prompt the
         # model just read, cache hits included, so it is the current context
         # size. Output is what it added.
-        context_size = (
-            int(usage.get("input_tokens", 0))
-            + int(usage.get("cache_creation_input_tokens", 0))
-            + int(usage.get("cache_read_input_tokens", 0))
-        )
+        plain_in = int(usage.get("input_tokens", 0))
+        cache_write = int(usage.get("cache_creation_input_tokens", 0))
+        cache_read = int(usage.get("cache_read_input_tokens", 0))
+        context_size = plain_in + cache_write + cache_read
         out = int(usage.get("output_tokens", 0))
 
         t = self.totals
         t.turns += 1
+        t.input_tokens += plain_in
+        t.cache_creation_tokens += cache_write
+        t.cache_read_tokens += cache_read
+        t.model = message.model or t.model
         t.tokens_in += context_size
         t.tokens_out += out
         t.context_pct = context_size / self._window * 100.0
@@ -241,6 +272,7 @@ class Monitor:
     def _observe_result(self, message: ResultMessage) -> None:
         t = self.totals
         t.cost_usd = message.total_cost_usd
+        t.cost_estimated = False
         t.ended = True
         self._op.log_event(
             self._agent_id,
@@ -249,7 +281,34 @@ class Monitor:
                 "subtype": message.subtype,
                 "num_turns": message.num_turns,
                 "cost_usd": message.total_cost_usd,
+                "estimated": False,
                 "is_error": message.is_error,
             },
         )
         self._op.set_agent_status(self._agent_id, "ended")
+
+    def estimate_cost(self) -> float | None:
+        t = self.totals
+        return estimate_cost_usd(t.model, t.input_tokens, t.tokens_out, t.cache_read_tokens, t.cache_creation_tokens)
+
+    def finish_without_result(self, reason: str, mark_ended: bool = True) -> None:
+        """Close the books for a session that produced no ResultMessage.
+
+        An interrupted session sometimes never answers with a result, and a
+        session that crashed never does, so the cost is estimated from the
+        token counts and the end is still logged. mark_ended is False on the
+        error path, where the spawner has already marked the agent dead.
+        """
+        t = self.totals
+        if t.ended:
+            return
+        t.cost_usd = self.estimate_cost()
+        t.cost_estimated = True
+        t.ended = True
+        self._op.log_event(
+            self._agent_id,
+            "agent.ended",
+            {"subtype": reason, "num_turns": t.turns, "cost_usd": t.cost_usd, "estimated": True, "is_error": not mark_ended},
+        )
+        if mark_ended:
+            self._op.set_agent_status(self._agent_id, "ended")

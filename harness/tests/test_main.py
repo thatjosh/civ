@@ -45,3 +45,30 @@ def test_run_config_from_args_and_env(monkeypatch):
     assert cfg.solvers == 5 and cfg.max_turns == 12 and cfg.stagger_s == 0
     assert cfg.board_url == "http://10.0.0.1:9000"
     assert cfg.model == "claude-opus-5-5"
+
+
+async def test_run_population_hands_ids_to_a_lineage_runner_the_right_way_round():
+    # LineageRunner.run takes (lineage_id, agent_id) while a spawner takes
+    # (agent_id, lineage_id); run_population must pass both by keyword so
+    # neither order can swap them (a swap once produced agents called L-001).
+    seen: list[tuple[str, str]] = []
+
+    class RunnerShaped:
+        async def run(self, lineage_id: str, agent_id: str) -> SpawnResult:
+            seen.append((lineage_id, agent_id))
+            return SpawnResult(agent_id=agent_id)
+
+    await run_population(2, 0, RunnerShaped().run)
+    assert seen == [("L-001", "sol-001"), ("L-002", "sol-002")]
+
+
+def test_format_summary_marks_estimated_costs_with_a_tilde():
+    rows = [
+        SpawnResult("sol-001", turns=5, cost_usd=0.25),
+        SpawnResult("sol-002", turns=3, cost_usd=0.1234, cost_estimated=True),
+    ]
+    out = format_summary(rows)
+    lines = out.splitlines()
+    assert " 0.2500 " in lines[1] and "~0.1234" in lines[2]
+    # One estimated row makes the total an estimate too.
+    assert lines[-1].startswith("total cost") and "~0.3734" in lines[-1]

@@ -115,13 +115,13 @@ def init_message(connected: bool = True) -> SystemMessage:
     )
 
 
-def assistant(context_tokens: int, output_tokens: int = 10, text: str = "working") -> AssistantMessage:
+def assistant(context_tokens: int, output_tokens: int = 10, text: str = "working", model: str = "claude-opus-5-5") -> AssistantMessage:
     # Spread the context across the three input fields so a test proves the
     # monitor sums all of them rather than reading input_tokens alone.
     cached = context_tokens // 2
     return AssistantMessage(
         content=[TextBlock(text=text)],
-        model="claude-opus-5-5",
+        model=model,
         usage={
             "input_tokens": context_tokens - cached,
             "cache_creation_input_tokens": cached // 2,
@@ -162,12 +162,25 @@ OnQuery = Callable[["FakeClient", str], None]
 
 
 class FakeClient:
-    """A scripted ClaudeSDKClient: yields its messages, records what was done to it."""
+    """A scripted ClaudeSDKClient: yields its messages, records what was done to it.
 
-    def __init__(self, messages: list[Any], on_query: OnQuery | None = None, usage: dict[str, Any] | None = None) -> None:
+    after_interrupt says what the stream does once interrupted: "result" answers
+    with a result message the way the CLI does, "end" just stops, and "hang"
+    never yields again, so the spawner's drain timeout can be tested.
+    """
+
+    def __init__(
+        self,
+        messages: list[Any],
+        on_query: OnQuery | None = None,
+        usage: dict[str, Any] | None = None,
+        after_interrupt: str = "result",
+    ) -> None:
         self.messages = list(messages)
         self.on_query = on_query
         self.usage = usage
+        self.after_interrupt = after_interrupt
+        self.turns_yielded = 0
         self.options: Any = None
         self.connected_with: str | None = None
         self.sent: list[str] = []
@@ -181,9 +194,15 @@ class FakeClient:
     async def receive_messages(self) -> AsyncIterator[Any]:
         for m in self.messages:
             if self.interrupted:
-                # The real client ends the turn with a result after an interrupt.
-                yield result(text="interrupted")
+                if self.after_interrupt == "result":
+                    # The real client ends the turn with a result after an interrupt,
+                    # and its turn count is what has actually run so far.
+                    yield result(num_turns=self.turns_yielded, text="interrupted")
+                elif self.after_interrupt == "hang":
+                    await asyncio.Event().wait()
                 return
+            if isinstance(m, AssistantMessage):
+                self.turns_yielded += 1
             yield m
             # Give the runner's watcher task a chance to run between messages.
             await asyncio.sleep(0)

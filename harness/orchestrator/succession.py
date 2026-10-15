@@ -72,6 +72,10 @@ class LineageResult:
         return sum(s.tokens_out for s in self.sessions)
 
     @property
+    def cost_estimated(self) -> bool:
+        return any(s.cost_estimated for s in self.sessions)
+
+    @property
     def context_pct(self) -> float:
         return self.sessions[-1].context_pct if self.sessions else 0.0
 
@@ -119,9 +123,13 @@ class LineageRunner:
         self._sleep = sleep
         self._clock = clock
 
-    async def run(self, lineage_id: str, first_agent_id: str) -> LineageResult:
+    async def run(self, lineage_id: str, agent_id: str) -> LineageResult:
+        """Run the lineage `lineage_id` starting from the agent `agent_id` (for example L-001 and sol-001).
+
+        Successors are named after the agent, not the lineage: sol-001-g2, sol-001-g3.
+        """
+        first_agent_id = agent_id
         outcome = LineageResult(lineage_id=lineage_id, agent_id=first_agent_id)
-        agent_id = first_agent_id
         generation = 1
         cwd = self._spawner.agent_dir(first_agent_id)
         token: str | None = None

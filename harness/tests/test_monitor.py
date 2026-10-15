@@ -1,3 +1,5 @@
+import pytest
+
 from harness.orchestrator.monitor import Monitor, StaticKnobs
 from harness.tests.orchestrator_fakes import FakeOperator, assistant, init_message, result
 
@@ -107,3 +109,35 @@ def test_compaction_state_is_a_problem_only_when_it_would_fire_first():
     # Enabled with no threshold reported is treated as a problem, because nothing proves it fires late.
     assert m.note_compaction_state({"isAutoCompactEnabled": True}) is True
     assert m.note_compaction_state(None) is False
+
+
+def test_estimate_cost_prices_each_token_category_from_the_table():
+    from harness.orchestrator.monitor import estimate_cost_usd
+
+    # 1M of each category on Haiku: 0.10 + 0.50 + 0.01 + 0.125.
+    assert estimate_cost_usd("claude-haiku-5-5", 1_000_000, 1_000_000, 1_000_000, 1_000_000) == pytest.approx(0.735)
+    assert estimate_cost_usd("claude-opus-5-5-20270101", 1_000_000, 0, 0, 0) == pytest.approx(4.0)
+    assert estimate_cost_usd("gpt-9", 1, 1, 1, 1) is None and estimate_cost_usd(None, 1, 1, 1, 1) is None
+
+
+def test_finish_without_result_estimates_cost_and_logs_the_end_once():
+    op = FakeOperator()
+    m = Monitor(op, "sol-001")
+    # assistant(100) splits as input 50, cache write 25, cache read 25, output 10.
+    m.observe(assistant(100, model="claude-haiku-5-5"))
+    m.observe(assistant(100, model="claude-haiku-5-5"))
+    m.finish_without_result("interrupted")
+    m.finish_without_result("interrupted")
+    expected = (100 * 0.10 + 20 * 0.50 + 50 * 0.01 + 50 * 0.125) / 1_000_000
+    assert m.totals.ended and m.totals.cost_estimated and m.totals.cost_usd == pytest.approx(expected)
+    ends = [e for e in op.events if e[1] == "agent.ended"]
+    assert len(ends) == 1 and ends[0][2]["estimated"] is True and ends[0][2]["num_turns"] == 2
+    assert op.status == [("sol-001", "ended")]
+
+
+def test_finish_without_result_on_the_error_path_does_not_mark_ended():
+    op = FakeOperator()
+    m = Monitor(op, "sol-001")
+    m.observe(assistant(100))
+    m.finish_without_result("no_result", mark_ended=False)
+    assert op.status == [] and op.events[-1][2]["is_error"] is True

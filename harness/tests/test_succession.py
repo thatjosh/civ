@@ -186,3 +186,33 @@ def test_lineage_result_aggregates_sessions():
     ], handoffs=1)
     assert r.generations == 2 and r.turns == 8 and r.cost_usd == pytest.approx(0.15)
     assert r.tokens_in == 150 and r.tokens_out == 7 and r.context_pct == 12.0
+
+
+async def test_ids_survive_the_trip_through_run_population(tmp_path):
+    # The runner names successors after the agent (sol-001-g2) inside the lineage (L-001),
+    # and run_population must hand it the two ids by keyword so they cannot swap.
+    from harness.orchestrator.main import run_population
+
+    first = FakeClient([init_message(), assistant(850), assistant(860)])
+    second = FakeClient([init_message(), result()])
+    runner, op, _ = make(tmp_path, [first, second])
+    first.on_query = handoff_on_request(op, "sol-001")
+
+    results = await run_population(1, 0, runner.run)
+
+    assert [a["id"] for a in op.registered] == ["sol-001", "sol-001-g2"]
+    assert {a["lineage_id"] for a in op.registered} == {"L-001"}
+    assert results[0].lineage_id == "L-001" and results[0].agent_id == "sol-001"
+
+
+async def test_handed_off_session_reports_its_real_cost(tmp_path):
+    first = FakeClient([init_message(), assistant(100), assistant(850), assistant(860), assistant(870)])
+    second = FakeClient([init_message(), assistant(100), result(num_turns=2, cost=0.02)])
+    runner, op, _ = make(tmp_path, [first, second])
+    first.on_query = handoff_on_request(op, "sol-030")
+    outcome = await runner.run("L-030", "sol-030")
+    # The interrupted first session drained the CLI's result: a real cost, not an estimate.
+    assert outcome.sessions[0].cost_usd == 0.05 and not outcome.sessions[0].cost_estimated
+    assert outcome.cost_usd == pytest.approx(0.07) and not outcome.cost_estimated
+    ends = [e for e in op.events if e[1] == "agent.ended"]
+    assert [e[0] for e in ends] == ["sol-030", "sol-030-g2"]
