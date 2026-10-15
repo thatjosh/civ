@@ -191,3 +191,47 @@ Also `op.set_agent_usage(agent_id, tokens_in, tokens_out, context_pct)`, `op.set
 - `verify` takes `(task_id, result_path)` so the verifier knows which answer to check.
 - Runtime directories `agents/` and `shared/` live at the repo root (gitignored), not under `/civ`.
 - M3 and M4 tools exist in M1 with their validation, but nothing drives them yet.
+
+---
+
+# M3 addendum: succession
+
+Built on top of M0 to M2. Same rules: contract wins for M3, no commits by workstreams, no em dashes, tests against `civ_test`, explanatory comments.
+
+## Verified SDK facts for M3
+
+- `ClaudeSDKClient` (not `query()`) is the session primitive: `await client.connect(prompt)`, then `async for msg in client.receive_messages()`. `await client.query(text)` sends a further user message into the running session (streaming input; it is delivered at the next turn boundary). `await client.interrupt()` stops the current turn. `await client.disconnect()` ends the session.
+- `await client.get_context_usage()` returns `{"totalTokens", "maxTokens", "percentage", "isAutoCompactEnabled", "autoCompactThreshold", ...}`: the CLI's own view of the context window. This is the authoritative fill signal; the usage arithmetic in `Monitor` stays as a cross-check and as the unit-testable path.
+- Auto-compaction must not pre-empt the handoff. The switch is whatever the bundled CLI honours (see the grep the orchestrator ran; if an env var exists, the spawner sets it in `ClaudeAgentOptions.env`; if not, `handoff_pct` must stay below the CLI's `autoCompactThreshold` and the spawner asserts that at start by reading `get_context_usage()` once).
+
+## Ownership
+
+| Workstream | Owns |
+|---|---|
+| WS-D (server and operator) | `harness/board_mcp/operator.py` additions, `harness/board_mcp/tools/civ.py` handoff changes, `harness/board_mcp/stub.py`, tests `test_succession_server*.py` |
+| WS-E (orchestrator) | `harness/orchestrator/spawner.py` (client-based), `monitor.py`, new `succession.py`, `main.py` flags, the four handoff prompt files in `harness/prompts/`, tests `test_succession*.py`, `test_spawner*.py`, `test_monitor*.py` |
+
+## Mechanism
+
+1. Trigger. `Monitor` computes `context_pct` after every assistant message from usage (as now) and, every N turns and whenever the arithmetic crosses 70 percent, calls `get_context_usage()` and takes the larger of the two. Thresholds come from knobs `handoff_pct` (80) and `kill_pct` (90) read through `Knobs`, and from the CLI flags below. A test-only trigger `--force-handoff-after-turns N` fires the handoff at turn N regardless of fill, so succession can be exercised for cents.
+2. Handoff request. At `handoff_pct` the orchestrator calls `Operator.request_handoff(agent_id)`, which sets `agents.status = 'handing_off'` and logs `agent.handoff_requested`. From this moment the server refuses every write except `civ_handoff` (already enforced in M1) with the error "hand off now: call civ_handoff with the five headings". The orchestrator then sends the contents of `handoff_request.md` into the session with `client.query(...)`. Both channels exist because a prompt alone is unreliable at a nearly full context.
+3. Handoff. `civ_handoff(body)` validates the five headings and size (M1), stores the row, posts kind `handoff`, keeps the lease, sets `agents.status = 'ended'`, logs `agent.handoff_written`, and returns `{"ok": true, "handoff_id", "stop": true}`. The agent is told in `handoff_request.md` that the call ends its life and it should not call anything after it.
+4. End of session. The orchestrator watches for the `agent.handoff_written` event (poll the events table, or the `handoffs` row for this agent) and then calls `client.interrupt()` and `client.disconnect()`, marks the agent ended if not already, and logs `agent.succeeded`. If the agent reaches `kill_pct` without handing off, the orchestrator interrupts and disconnects immediately, sets status `dead`, logs `agent.killed`, and writes a stub.
+5. Stub handoff (M3 version). `harness/board_mcp/stub.py` builds a handoff body from the agent's last thirty board posts, its held task, and a listing of its `work/` and `notes/` directories, in the five-heading format, no model call. `Operator.write_stub_handoff(agent_id)` stores it with `stub = true` and logs `agent.stub_written`. In M4 supervisors take this over; the M3 stub is a template, and the doc notes it.
+6. Successor. `Operator.succeed(from_agent, to_agent_id)` registers the successor with the same `lineage_id`, `cwd`, `generation + 1`, a fresh token, transfers any lease (`tasks.lease_owner = to_agent`, `lease_expires = now() + lease_length_s`), records `handoffs.to_agent`, and logs `agent.succeeded`. The spawner builds the successor prompt with `successor_preamble.md` plus the handoff body (stub or real), the pinned broadcasts, and the identity block with the new generation. The successor starts in the same directory, which still holds `work/` and `notes/`.
+7. Lineage loop. `succession.py` exposes `run_lineage(lineage_id, first_agent_id, ...)`: spawn generation 1, and whenever a session ends by handoff or kill, spawn the next generation, until a session ends naturally (the agent stopped because no tasks remained) or `--max-generations` is reached. `main.py` runs one lineage per solver slot.
+
+## Operator API additions (WS-D)
+
+`request_handoff(agent_id)`, `latest_handoff(lineage_id) -> dict | None`, `recent_posts(agent_id, n=30)`, `write_stub_handoff(agent_id, listing: list[str]) -> handoff_id`, `succeed(from_agent, to_agent, cwd) -> token`, `lineage_state(lineage_id) -> {"generation", "head_agent", "status", "lease"}`.
+
+## CLI flags (WS-E)
+
+`--context-window N` (default 1000000; the fill percentage is computed against this, so a small value forces succession cheaply), `--force-handoff-after-turns N` (test only), `--max-generations N` (default 5), `--model`, and the existing ones.
+
+## Testing strategy (so M3 costs cents, not dollars)
+
+1. Unit, free: monitor thresholds with fake usage; `succession.py` state machine with a scripted fake client (connect, messages, query, interrupt, disconnect recorded); stub builder from fake posts; successor prompt assembly; lineage loop ending on natural end, on max generations, and on kill.
+2. Server, free: handing_off lockout, `civ_handoff` ending the agent and returning `stop`, lease transfer, successor registration, stub storage, `latest_handoff` and `lineage_state`.
+3. Live, cents: one solver on `claude-haiku-5-5` with `--context-window 40000` and `--max-turns 12` against the Hollowmere pack; the handoff should fire within a handful of turns. Then the same with `--force-handoff-after-turns 3` on the same model to prove the injected message path and the lockout path both work. Gate both behind `CIV_INTEGRATION=1`.
+4. Demo, about a dollar: three Opus solvers with `--context-window 60000` so every lineage hands off at least once during the eight tasks, then `board_dump.py` shows handoffs and generations.
