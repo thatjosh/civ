@@ -1,0 +1,21 @@
+nothing to apply
+nothing to apply
+bootstrap: ready (postgresql://127.0.0.1:5432/civ)
+reset postgresql://127.0.0.1:5432/civ and cleared agents/ and shared/
+seeded 8 task(s), 0 already present: T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008
+demo: board server up at http://127.0.0.1:8765 (pid 72190)
+2026-10-15 01:06:02,820 civ.orchestrator INFO spawning 3 solvers against http://127.0.0.1:8765 with claude-opus-5-5
+agent     turns   cost $     tok in  tok out  ctx %  note
+sol-001      36   0.3920    1105213     1311   3.18  I finished four tasks and each was scored fully correct by t
+sol-002      25   0.3035     791496      604   2.82  Done. I completed two tasks and the verifier marked both "al
+sol-003      25   0.3167     661468     1068   2.74  Done. I finished two tasks, the verifier scored both 1, and 
+total cost        1.0122
+tasks: counts={'open': 0, 'leased': 0, 'done': 8, 'blocked': 0}, mean_score=1.0, scored=8
+
+agent     turns   cost $     tok in  tok out  ctx %  note
+sol-001      36   0.3920    1105213     1311   3.18  I finished four tasks and each was scored fully correct by t
+sol-002      25   0.3035     791496      604   2.82  Done. I completed two tasks and the verifier marked both "al
+sol-003      25   0.3167     661468     1068   2.74  Done. I finished two tasks, the verifier scored both 1, and 
+total cost        1.0122
+tasks: counts={'open': 0, 'leased': 0, 'done': 8, 'blocked': 0}, mean_score=1.0, scored=8
+

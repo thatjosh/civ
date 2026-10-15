@@ -46,7 +46,8 @@ curl -fsS "$CIV_BOARD_URL/health" >/dev/null || { echo "demo: board server did n
 echo "demo: board server up at $CIV_BOARD_URL (pid $SERVER_PID)"
 
 START=$(date +%s)
-python -m harness.orchestrator.main --solvers "$SOLVERS" --max-turns "$MAX_TURNS" --board-url "$CIV_BOARD_URL" "${PASSTHROUGH[@]}" \
+# macOS bash 3.2 treats an empty array as unbound under set -u, hence the guarded expansion
+python -m harness.orchestrator.main --solvers "$SOLVERS" --max-turns "$MAX_TURNS" --board-url "$CIV_BOARD_URL" ${PASSTHROUGH[@]+"${PASSTHROUGH[@]}"} \
   | tee "$ROOT/shared/orchestrator.log"
 END=$(date +%s)
 
