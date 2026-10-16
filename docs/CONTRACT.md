@@ -235,3 +235,134 @@ Built on top of M0 to M2. Same rules: contract wins for M3, no commits by workst
 2. Server, free: handing_off lockout, `civ_handoff` ending the agent and returning `stop`, lease transfer, successor registration, stub storage, `latest_handoff` and `lineage_state`.
 3. Live, cents: one solver on `claude-haiku-5-5` with `--context-window 40000` and `--max-turns 12` against the Hollowmere pack; the handoff should fire within a handful of turns. Then the same with `--force-handoff-after-turns 3` on the same model to prove the injected message path and the lockout path both work. Gate both behind `CIV_INTEGRATION=1`.
 4. Demo, about a dollar: three Opus solvers with `--context-window 60000` so every lineage hands off at least once during the eight tasks, then `board_dump.py` shows handoffs and generations.
+
+---
+
+# M4 addendum: supervisors
+
+Built on top of M0 to M3 (including the kill-gap rule, migration 0002). Same rules: the contract wins for M4, no commits by workstreams, no em dashes, tests against `civ_test`, explanatory comments. Where this addendum deviates from the design doc the deviation is marked **deviation** and must be recorded in the README's Phase 3 note.
+
+## What a supervisor is for (the thesis of M4)
+
+A supervisor is a short session, spawned by the orchestrator every round, that reads a brief the orchestrator has already assembled and does a bounded set of things: replies to blockers, reopens a wrongly blocked task, votes, tunes at most one knob per round against a named SLO, and writes one report. New in M4 relative to the design doc: **succession health is a first-class SLO**. The brief carries the window's handoff success rate and a root-cause packet for every kill, the server verifies a `succession_failing` ping against the events, and the supervisor's prompt maps each classified cause to one action. The point is that the thing the orchestrator cannot judge (why an agent failed to hand off, and which knob or prompt is at fault) is judged by an agent with the data in front of it, and every judgement leaves a checkable trace: a tune event naming the SLO, or a report naming a classification.
+
+## Ownership
+
+| Workstream | Owns |
+|---|---|
+| WS-F (server and operator) | `harness/board_mcp/slo.py` (new), `harness/board_mcp/migrations/0003_supervisor_rounds.sql`, `schema.sql` additions, `seed.py` additions, `operator.py` additions, `tools/civ.py` (tune round logic, report triggers), `tools/task.py` (`task_reopen`), `server.py` (register `task_reopen`, log refusals), tests `test_slo.py`, `test_rounds.py`, `test_supervisor_tools.py` |
+| WS-G (orchestrator) | `harness/orchestrator/supervisors.py` (new: `SupervisorCron`, `SupervisorRound`), `harness/orchestrator/brief.py` (new: `render_brief`), `spawner.py` (role-aware tools and prompt), `prompts.py` (`supervisor_prompt`), `main.py` flags, `harness/prompts/roles/supervisor.md` and `harness/prompts/supervisor/*.md`, tests `test_supervisors.py`, `test_brief.py`, prompt tests |
+| WS-H (validation) | `scripts/supervisor_replay.py`, `scripts/score_report.py`, `docs/eval/` (rubrics), `scripts/ab_supervisors.sh`, README Phase 3 skeleton, `docs/demo/` records |
+
+WS-F and WS-G meet at the `Operator` methods and the brief dict below; WS-H consumes both. Nobody edits another workstream's files; needs go in the integration notes.
+
+## Schema (migration 0003, mirrored in schema.sql)
+
+```sql
+create table if not exists rounds (
+  id bigserial primary key,
+  number int not null,                      -- 1, 2, 3 within a run; the orchestrator supplies it
+  started_at timestamptz not null default now(),
+  ended_at timestamptz,
+  window_start timestamptz not null,        -- the previous round's started_at, or run start
+  final boolean not null default false,
+  brief jsonb not null default '{}',        -- the brief as built, so slo_degraded can be verified later
+  tuned_knob text,                          -- set by civ_tune; one per round
+  tuned_by text,
+  summary jsonb not null default '{}'       -- written at close: reports, pings, tunes, cost
+);
+create table if not exists tune_proposals (  -- the first half of a two-supervisor commit
+  id bigserial primary key,
+  knob text not null,
+  value double precision not null,
+  proposed_by text not null,
+  round_id bigint not null references rounds(id),
+  created_at timestamptz not null default now(),
+  committed_by text,
+  committed_at timestamptz
+);
+```
+
+Config seeds added (also in `seed.py`): `min_sample` 3 [1, 50, 1] (**deviation**: the design says 10; 3 is for an eight-task pack, and M5's `civ.toml` seeds it at 10 for production), `big_move_steps` 2 [1, 5, 1]. The message kind enum is unchanged; a ping is a `report` whose body starts with `[ping: <trigger>]`.
+
+## SLOs (`harness/board_mcp/slo.py`, pure functions over a connection and a window)
+
+`compute_slos(conn, window_start, window_end) -> dict` returns, for the window:
+
+- `completions_per_mtok`: verified completions (`task.completed` with score not null) divided by tokens in millions (sum of `agent.turn` tokens_in + tokens_out in the window). `n` = completions.
+- `blocked_failed_rate`: (`task.released` events) / (`task.claimed` events), 0 when no claims. `n` = claims.
+- `duplicate_rate`: among `finding` messages in the window, the fraction that have an earlier finding in the same thread by a different author with word-set Jaccard >= 0.6 (bodies of at least 8 words; completion findings starting `[T-` are excluded). `n` = findings considered.
+- `lease_wait_median_s`: median seconds from a task becoming claimable (its `task.created`, or its latest `task.released` with status open, or `knob.reverted`-independent) to its next `task.claimed`. `n` = claims matched.
+- `handoff_success_rate`: real handoffs / (real handoffs + stubs) in the window, from `agent.handed_off` and `agent.killed` events; `None` when neither happened. `n` = real + stubs.
+
+`compute_succession(conn, window_start, window_end) -> dict` returns `{"requests", "handoffs", "stubs", "kills", "success_rate", "median_turns_to_handoff", "median_seconds_to_handoff", "refusals": {reason: count}, "generations": {lineage_id: head generation}, "incidents": [packet, ...]}`. One packet per `agent.killed` in the window:
+
+```
+{"agent_id", "lineage_id", "generation", "reason", "requested": bool, "turns_since_request", "seconds_since_request",
+ "grace_turns", "context_pct_at_request", "tool_calls_after_request": [event type, ...],
+ "handoff_refusals": [error, ...], "task": task_id or null, "classification": one of
+ "never_asked" | "no_chance" | "rejected" | "ignored" | "silent" | "timed_out"}
+```
+
+Classification rules, in order: `never_asked` when `requested` is false; `timed_out` when reason is "handoff timed out"; `rejected` when any `tool.refused` for `civ_handoff` exists after the request; `no_chance` when `turns_since_request` < `grace_turns` (legacy data, or grace 0); `ignored` when there is at least one `tool.*` event after the request and none is `civ_handoff`; otherwise `silent` (no tool call at all after the request: a long tool call or a hung session). The classification is a heuristic the supervisor is told to confirm or override.
+
+Refusal logging (WS-F, `server.py` Gateway): every `{"ok": false}` result is logged as `tool.refused {"tool": <tool name>, "error": <text>}` before the envelope is added. This is what `rejected` and the refusal table in the brief are computed from.
+
+## Operator API additions (WS-F)
+
+- `open_round(number: int, final: bool = False) -> int`: inserts the round with `window_start` = previous round's `started_at` (or the earliest event ts when there is none), logs `round.opened`, returns id.
+- `round_brief(round_id) -> dict`: builds and stores the brief (below) on the round row, returns it.
+- `close_round(round_id, summary: dict) -> None`: sets `ended_at` and `summary`, logs `round.closed` with the summary.
+- `current_round() -> dict | None`: the open round (ended_at null), with id, number, started_at, window_start, tuned_knob, final.
+- `set_knob(knob, value, reason) -> None`: an operator write that respects bounds only (no step, no cooldown, no TTL), sets `set_by = 'operator'`, logs `knob.preset`. For fault injection and launch presets.
+- `register_agent(...)` unchanged; supervisors are registered with role `supervisor`, lineage `S-<slot>` (`S-001`), id `sup-<slot>-r<round number>` (`sup-001-r3`), generation = round number.
+- `reports_for_round(round_id) -> list[dict]` and `pings_since(ts) -> list[dict]`, for the brief and for M5's inbox.
+
+## The brief (dict stored on the round, rendered to markdown by WS-G)
+
+```
+{"round": {"id", "number", "final", "window_start", "window_end", "supervisors": n},
+ "status": <civ_status without "you">,
+ "slo": {"current": compute_slos(window), "previous": compute_slos(previous window) or null,
+         "min_sample": knob, "history": [{"round", <slo name>: value...}, ...] last 5 rounds},
+ "succession": compute_succession(window),
+ "blockers": [{"id", "thread_id", "task_id", "author_id", "body", "score", "created_at"}, ...] top 10 by score in window,
+ "blocked_tasks": [{"id", "title", "attempts", "last_release_reason"}, ...],
+ "alerts": [{"id", "author_id", "body", "created_at"}, ...] since window_start,
+ "previous_reports": [{"id", "author_id", "body"}, ...] from the previous round,
+ "tunes": {"active": [{"knob", "value", "seed", "set_by", "reason", "expires_at"}, ...],
+           "pending": [{"knob", "value", "proposed_by", "round_number"}, ...],
+           "round_tuned": bool},
+ "verifier": {"done", "total", "mean_score", "lowest": [{"id", "score", "notes"}, ...]}}
+```
+
+## Tool changes (WS-F)
+
+- `civ_tune(knob, value, slo, reason, ttl_s=3600)`, in addition to the M1 rules, in this order: refuse "no supervisor round is open" when `current_round()` is None; refuse "round already tuned" when the round has `tuned_knob`; `slo` must be one of the five above (`handoff_success_rate` added); refuse "below min_sample: <slo> has n=<n> in this window, needs <min_sample>" using the stored brief's `slo.current[slo].n` (for `handoff_success_rate` the sample is `succession.handoffs + succession.stubs`); a **big move** (the new value more than `big_move_steps` steps from the seed) by a supervisor with no matching pending proposal from a different supervisor in this or the previous round records a proposal and returns `{"ok": true, "pending": true, "knob", "value", "needs": "a second supervisor"}` without changing the knob or using the round's tune; a matching second call commits it (sets `committed_by`), applies the change, and uses the round's tune. The committed change logs `tool.civ_tune` with `slo`, `n`, `reason`, `big_move`, `round_id`.
+- `civ_report(body, trigger=None)`: refuse "you already reported this round"; refuse "no supervisor round is open"; with `trigger`: must be one of `succession_failing | slo_degraded | big_move_disputed | ceiling_pinned`. Verification: `succession_failing` requires `succession.kills >= 1` in the current brief **and** in the previous round's brief (two consecutive windows); `slo_degraded` requires the body to name an SLO in the form `slo=<name>` and that SLO to have worsened over the last three stored briefs (completions and success rate down, rates and wait up); `big_move_disputed` requires a pending proposal older than two rounds with a different proposal on the same knob; `ceiling_pinned` is refused with "no ceilings until M5". An unverified trigger is refused with "trigger <t> is not in the data: <what was checked>". A verified ping stores the body as `[ping: <trigger>] <body>` and logs `report.ping`.
+- `task_reopen(task_id, reason)` [supervisor]: a blocked task returns to open with `attempts = 0`, `next_attempt_at = now()`, posts a `blocker`-kind reply in the thread saying `[T reopened] <reason>`, logs `task.reopened`. Refused when the task is not blocked. **Deviation**: the design's "split a stuck task" is not built; reopening with guidance is the M4 unblock.
+- Supervisors may `board_post` findings and proposals and `board_vote` (weighted) as before. `board_post` with `parent_id` on a blocker is how a supervisor replies to it.
+
+## Orchestrator (WS-G)
+
+- `Spawner.prepare(..., role="solver")`: tools by role, `SOLVER_TOOLS` as now, `SUPERVISOR_TOOLS = ["Read", "Grep"]` (they read `shared/` refs and nothing else; no Bash, no Write), `add_dirs` for a supervisor is `shared/` not `task/materials`. Prompt by role via `PromptAssembler.supervisor_prompt(ctx, brief_markdown)`. Order: `roles/supervisor.md`, `supervisor/cron.md`, `supervisor/tune_policy.md`, `supervisor/succession_policy.md`, `supervisor/alert_policy.md`, `supervisor/report_template.md`, the broadcasts (if any), the rendered brief under a `# This round's brief` heading, then `identity.md`. Kickoff: "Begin your round."
+- `harness/orchestrator/brief.py`: `render_brief(brief: dict) -> str`, deterministic markdown, tables for SLOs (current vs previous with n), one subsection per incident packet with its classification, blockers with their seqs, active and pending tunes, and a final line "This round has already tuned a knob" when `round_tuned`. Must stay under about 6,000 tokens for a 10-incident window: truncate lists, never bodies below 200 chars.
+- `harness/orchestrator/supervisors.py`: `SupervisorRound(spawner, operator, prompts, count, model, max_turns)` with `async run(number, final=False) -> RoundResult` (open round, build brief, spawn `count` supervisor sessions concurrently as plain `Spawner.spawn` sessions with the brief, wait, close round with `{"reports": n, "pings": n, "tuned": knob or null, "reopened": [...], "cost_usd", "turns"}`). `SupervisorCron(round, interval_s, sleep=asyncio.sleep)` with `async run_until(population_done: asyncio.Event)`: round 1 after the first interval (the design's "first round before the population is full" is **not** built; **deviation**), then every `interval_s`; when the event is set, run one final round with `final=True` and return the list of `RoundResult`.
+- `main.py` flags: `--supervisors N` (default 0: no rounds, so existing demos are unchanged), `--supervisor-interval S` (default 600), `--supervisor-model` (default the solver model), `--supervisor-max-turns` (default 15), `--preset knob=value` (repeatable; applied through `Operator.set_knob` before any spawn). `amain` runs the solver population and the cron concurrently and prints the round summaries after the solver table: one line per round, `round N: reports r, pings p, tuned <knob> (from -> to), reopened [...], cost $`.
+- Supervisors are ordinary sessions (no succession, no monitor thresholds; the monitor still records usage and cost). `max_turns` is the budget.
+
+## Prompt files (WS-G, replacing the M4 placeholders)
+
+`roles/supervisor.md` (what you are, the round, what you may do, end with "round done"), `supervisor/cron.md` (the order of a round), `supervisor/tune_policy.md` (the knob table from the design for the knobs that exist: `handoff_pct`, `kill_grace_turns`, `max_attempts`, `lease_length_s`, `post_rate_per_h`, `max_handoff_tokens`, `top_k`, `vote_quota`; the three rules: cooldown, hysteresis, observe before act; a tune names the SLO it serves and the number that justified it), `supervisor/succession_policy.md` (new: read the succession section first when kills or stubs are non-zero; for each incident confirm the classification against the packet; cause to action: `never_asked` or `no_chance` means the gap is too small, tune `kill_grace_turns` up one step when seconds_since_request was short, or `handoff_pct` down one step when one turn crossed both thresholds; `rejected` means read the refusal, missing headings is a prompt fault (post a `proposal` naming `handoff_request.md`), size is `max_handoff_tokens` up one step; `ignored` is a prompt fault, propose and alert; `silent` or `timed_out` means the request landed inside a long tool call, tune `handoff_pct` down one step; report the success rate this window against last and whether the previous round's tune moved it), `supervisor/alert_policy.md` (the four triggers and that the server verifies them; one ping per round; everything else goes in the report), `supervisor/report_template.md` (headings: `## Window`, `## Succession`, `## Queue and SLOs`, `## Actions taken`, `## Diagnosis`, `## For the operator`), `supervisor/human_ping_template.md`, `supervisor/proposal_review.md` (read pending proposals and vote; merging arrives in M6).
+
+## Validation at small scale (WS-H)
+
+Three measurements, cheapest first, each with a script and a saved record under `docs/demo/`:
+
+1. **Replay eval, diagnosis accuracy on recorded incidents.** `scripts/supervisor_replay.py --fixture docs/demo/2026-10-15-m3-fixture.sql --model <m> [--trials 3] [--without-succession-section]` loads the fixture into a scratch database `civ_replay` (fresh migrate, then the data), starts a board server on a spare port against it, opens a round whose window covers the whole fixture, builds the brief, runs one supervisor session, and writes the report, the tune events and the cost to `docs/demo/<date>-replay-<model>-<trial>.json`. Ground truth from the fixture: sol-002 is `never_asked`, sol-003 is `no_chance` (2.7 s, 0 turns), both stubs landed on T-008 and T-007, the lineages recovered at generation 2 and 3. `scripts/score_report.py <json> --rubric docs/eval/m3-kills.rubric.json` scores: named both agents (2), named each classification or its plain-language equivalent (2), chose a succession knob in the right direction or explained why not (1), did not ping (1, one window only), did not tune a non-succession knob on this evidence (1), report has the six headings (1). Out of 8. The `--without-succession-section` control removes the succession block from the brief; the difference between the two scores is what the orchestrator's packet buys over the supervisor reading the board itself.
+2. **Machinery demo, live.** `scripts/ab_supervisors.sh` runs the Hollowmere pack twice with three Haiku solvers at `--context-window 30000 --preset kill_grace_turns=0` (the fault: the old kill rule): arm A `--supervisors 0`, arm B `--supervisors 1 --supervisor-interval 15 --supervisor-model <m>`. Records per arm: tasks done, mean score, handoffs, stubs, cost, supervisor cost share, and for arm B the round summaries. The run is too short for a closed loop to show in the SLOs; what it proves is the round machinery end to end (round rows, brief, a tune accepted under the round rules, a report, a refused second tune) and what supervision costs as a share of the bill.
+3. **Closed loop, deferred.** The A/B that would show a tune moving an SLO needs the larger task pack (README next steps item 4). The protocol is written in the README: same fault, runs of at least six rounds, compare `handoff_success_rate` per round between arms, three seeds each.
+
+## Deviations summary (record in README)
+
+One tune per round is enforced across all supervisors (as designed); the first round runs after the first interval, not before the population is full; `min_sample` seeds at 3; no task splitting (reopen instead); `ceiling_pinned` is unverifiable until M5; supervisors do not write stubs (the orchestrator's instant stub from M3 stays, supervisors diagnose it instead); cron interval is a flag, not a knob, until M5's `civ.toml`.
