@@ -1,0 +1,18 @@
+{
+  "model": "claude-haiku-5-5",
+  "trial": 0,
+  "control": true,
+  "fixture": "docs/demo/2026-10-15-m3-fixture.sql",
+  "agent_id": "sup-001-r0",
+  "round_id": 0,
+  "brief_markdown": "(hand-written sample of a weak report)",
+  "report": "## Window\nAll eight tasks are done.\n\n## Queue and SLOs\nThe board looks healthy. sol-003 and sol-002 appear in the agents list as dead but their successors finished the work, so this is fine.\n\n## Actions taken\nRaised post_rate_per_h to 35 so solvers can post more findings.\n\n## For the operator\nPing: the system is working well.\n",
+  "tunes": [{"knob": "post_rate_per_h", "from": 30.0, "to": 35.0, "slo": "duplicate_rate", "n": 13, "reason": "more findings", "big_move": false, "round_id": 1}],
+  "refusals": [{"tool": "civ_report", "error": "trigger slo_degraded is not in the data: fewer than three stored briefs"}],
+  "pings": [{"trigger": "succession_failing", "id": 99}],
+  "cost_usd": 0.004,
+  "cost_estimated": false,
+  "turns": 4,
+  "error": null,
+  "written_at": "2026-10-16T00:00:00+00:00"
+}

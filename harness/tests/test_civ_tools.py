@@ -49,25 +49,35 @@ def test_status_shape(civ, tasks, board, solver, other, supervisor, op, task):
     assert civ.status(solver)["you"]["votes_since_claim"] == 1
 
 
-def test_tune_is_supervisor_only_and_validated(civ, solver, supervisor, db, knobs):
-    assert civ.tune(solver, "lease_length_s", 2100, "lease_wait", "r")["error"] == "supervisor only"
-    assert "unknown knob" in civ.tune(supervisor, "nope", 1, "lease_wait", "r")["error"]
+def test_tune_is_supervisor_only_and_validated(civ, solver, supervisor, db, knobs, op):
+    # The M1 rules, inside an open round with enough claims for the sample (the round rules
+    # themselves are covered in test_supervisor_tools.py).
+    for _ in range(3):
+        op.log_event(solver.id, "task.claimed", {"task_id": "T-001"})
+    op.round_brief(op.open_round(1))
+    assert civ.tune(solver, "lease_length_s", 2100, "blocked_failed_rate", "r")["error"] == "supervisor only"
+    assert "unknown knob" in civ.tune(supervisor, "nope", 1, "blocked_failed_rate", "r")["error"]
     assert "slo must be" in civ.tune(supervisor, "lease_length_s", 2100, "vibes", "r")["error"]
-    assert "reason" in civ.tune(supervisor, "lease_length_s", 2100, "lease_wait", "")["error"]
-    assert "one step" in civ.tune(supervisor, "lease_length_s", 2700, "lease_wait", "r")["error"]
-    assert "within" in civ.tune(supervisor, "lease_length_s", 100, "lease_wait", "r")["error"]
-    out = civ.tune(supervisor, "lease_length_s", 2100, "lease_wait", "tasks are legitimately long", ttl_s=600)
+    assert "reason" in civ.tune(supervisor, "lease_length_s", 2100, "blocked_failed_rate", "")["error"]
+    assert "one step" in civ.tune(supervisor, "lease_length_s", 2700, "blocked_failed_rate", "r")["error"]
+    assert "within" in civ.tune(supervisor, "lease_length_s", 100, "blocked_failed_rate", "r")["error"]
+    out = civ.tune(supervisor, "lease_length_s", 2100, "blocked_failed_rate", "tasks are legitimately long", ttl_s=600)
     assert out["ok"] and out["value"] == 2100 and knobs.get("lease_length_s") == 2100
-    assert "cooldown" in civ.tune(supervisor, "lease_length_s", 2400, "lease_wait", "again")["error"]
+    # A second tune in the same round is refused for the round before the cooldown is reached.
+    assert "round already tuned" in civ.tune(supervisor, "lease_length_s", 2400, "blocked_failed_rate", "again")["error"]
+    op.round_brief(op.open_round(2))
+    assert "cooldown" in civ.tune(supervisor, "lease_length_s", 2400, "blocked_failed_rate", "again")["error"]
     row = db.fetch_one("select set_by, reason, ttl_s, expires_at > now() as live from config where knob = 'lease_length_s'")
     assert (row["set_by"], row["reason"], row["ttl_s"], row["live"]) == (supervisor.id, "tasks are legitimately long", 600, True)
     ev = db.fetch_one("select payload from events where type = 'tool.civ_tune'")["payload"]
-    assert ev["slo"] == "lease_wait" and ev["from"] == 1800.0 and ev["to"] == 2100.0
+    assert ev["slo"] == "blocked_failed_rate" and ev["from"] == 1800.0 and ev["to"] == 2100.0 and ev["n"] == 3
 
 
-def test_report_is_supervisor_only_and_trigger_waits_for_m4(civ, solver, supervisor, db):
+def test_report_is_supervisor_only_and_needs_a_round(civ, solver, supervisor, db, op):
     assert civ.report(solver, "x")["error"] == "supervisor only"
-    assert "M4" in civ.report(supervisor, "x", trigger="slo_degraded_3w")["error"]
+    assert civ.report(supervisor, "x")["error"] == "no supervisor round is open"
+    op.open_round(1)
+    assert "trigger must be one of" in civ.report(supervisor, "x", trigger="slo_degraded_3w")["error"]
     out = civ.report(supervisor, "All quiet, 3 tasks done")
     assert out["ok"] and db.fetch_one("select kind from messages where id = %s", (out["id"],))["kind"] == "report"
 

@@ -32,7 +32,7 @@ TEST_URL = os.environ.get("CIV_TEST_DATABASE_URL", "postgresql://127.0.0.1:5432/
 
 DATA_TABLES = (
     "operator_acks", "operator_pins", "broadcast_seen", "session_reads", "handoffs",
-    "events", "votes", "tasks", "messages", "agents",
+    "tune_proposals", "rounds", "events", "votes", "tasks", "messages", "agents",
 )
 
 

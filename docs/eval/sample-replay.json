@@ -1,0 +1,18 @@
+{
+  "model": "claude-opus-5-5",
+  "trial": 0,
+  "control": false,
+  "fixture": "docs/demo/2026-10-15-m3-fixture.sql",
+  "agent_id": "sup-001-r0",
+  "round_id": 0,
+  "brief_markdown": "(hand-written sample; the real file carries the rendered brief)",
+  "report": "## Window\nRound 1, final, covering the whole recorded run (21:39:40 to 21:40:50). Three solver lineages, eight tasks, all done, mean score 0.946.\n\n## Succession\nThree requests, three real handoffs, two stubs. Handoff success rate this window 0.60 (3 of 5); no previous window.\n\n## Queue and SLOs\nQueue empty. completions_per_mtok fine for a pack this small; no blockers, no alerts, no releases.\n\n## Actions taken\nTuned kill_grace_turns from 0 to 1 (slo=handoff_success_rate, n=5). No ping: one window cannot verify a trigger.\n\n## Diagnosis\nsol-002 (L-002, generation 1): never_asked. Its context jumped past both thresholds in one turn and it was killed with no handoff request behind it; the stub landed on T-008. sol-003 (L-003, generation 1): no_chance. It was asked at 21:40:10 and killed 2.7 seconds later, zero turns after the request; the stub landed on T-007. Both lineages recovered at generation 2 and handed off properly at generation 3, so the prompt is not at fault; the gap between the thresholds is.\n\n## For the operator\nNothing needs you this round.\n",
+  "tunes": [{"knob": "kill_grace_turns", "from": 0.0, "to": 1.0, "slo": "handoff_success_rate", "n": 5, "reason": "two kills with no chance to hand off", "big_move": false, "round_id": 1}],
+  "refusals": [],
+  "pings": [],
+  "cost_usd": 0.0912,
+  "cost_estimated": false,
+  "turns": 6,
+  "error": null,
+  "written_at": "2026-10-16T00:00:00+00:00"
+}

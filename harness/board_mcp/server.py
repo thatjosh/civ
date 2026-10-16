@@ -23,6 +23,7 @@ from starlette.responses import JSONResponse
 
 from . import notices
 from .auth import AgentIdentity, resolve_token
+from .tools.common import log_event
 from .db import Db, head_seq
 from .limits import Knobs
 from .tools.board import BoardTools
@@ -75,12 +76,20 @@ class Gateway:
                 payload["notices"] = pending
             return payload
 
-    async def call(self, ctx: Context, method: Callable[..., dict[str, Any]], **kwargs) -> dict[str, Any]:
+    async def call(self, ctx: Context, tool: str, method: Callable[..., dict[str, Any]], **kwargs) -> dict[str, Any]:
         identity = await anyio.to_thread.run_sync(self.identity, ctx)
         if identity is None:
             return {"ok": False, "error": "unknown agent token"}
         result = await anyio.to_thread.run_sync(functools.partial(method, identity, **kwargs))
+        if result.get("ok") is False:
+            # Every refusal is an event, because a supervisor diagnosing a failed handoff needs to
+            # know whether the agent tried and was turned away, and the brief counts them by reason.
+            await anyio.to_thread.run_sync(self.log_refusal, identity, tool, result)
         return await anyio.to_thread.run_sync(self.envelope, identity, result)
+
+    def log_refusal(self, identity: AgentIdentity, tool: str, result: dict[str, Any]) -> None:
+        with self.db.transaction() as conn:
+            log_event(conn, identity.id, "tool.refused", {"tool": tool, "error": str(result.get("error"))})
 
 
 def build_server(db: Db, shared_dir: Path, verifier=None) -> MCPServer:
@@ -98,66 +107,70 @@ def build_server(db: Db, shared_dir: Path, verifier=None) -> MCPServer:
     @server.tool(description="Post a finding, question, blocker or proposal. thread_id must be a task thread root.")
     async def board_post(kind: str, body: str, thread_id: int | None = None, parent_id: int | None = None,
                          refs: list[str] | None = None, ctx: Context = None) -> dict[str, Any]:
-        return await gw.call(ctx, board.post, kind=kind, body=body, thread_id=thread_id, parent_id=parent_id, refs=refs)
+        return await gw.call(ctx, "board_post", board.post, kind=kind, body=body, thread_id=thread_id, parent_id=parent_id, refs=refs)
 
     @server.tool(description="Read messages: a thread in order, a kind by score, or everything after since_seq.")
     async def board_read(thread_id: int | None = None, kind: str | None = None, since_seq: int | None = None,
                          limit: int = 20, ctx: Context = None) -> dict[str, Any]:
-        return await gw.call(ctx, board.read, thread_id=thread_id, kind=kind, since_seq=since_seq, limit=limit)
+        return await gw.call(ctx, "board_read", board.read, thread_id=thread_id, kind=kind, since_seq=since_seq, limit=limit)
 
     @server.tool(description="Highest-scored messages of a kind within the window.")
     async def board_top(kind: str | None = None, window_hours: float = 24, limit: int = 10,
                         ctx: Context = None) -> dict[str, Any]:
-        return await gw.call(ctx, board.top, kind=kind, window_hours=window_hours, limit=limit)
+        return await gw.call(ctx, "board_top", board.top, kind=kind, window_hours=window_hours, limit=limit)
 
     @server.tool(description="Full-text search over message bodies and vote reasons.")
     async def board_search(query: str, limit: int = 10, ctx: Context = None) -> dict[str, Any]:
-        return await gw.call(ctx, board.search, query=query, limit=limit)
+        return await gw.call(ctx, "board_search", board.search, query=query, limit=limit)
 
     @server.tool(description="Vote +1 or -1 on a message you did not write, with a reason. One vote per message.")
     async def board_vote(message_id: int, value: int, reason: str, ctx: Context = None) -> dict[str, Any]:
-        return await gw.call(ctx, board.vote, message_id=message_id, value=value, reason=reason)
+        return await gw.call(ctx, "board_vote", board.vote, message_id=message_id, value=value, reason=reason)
 
     @server.tool(description="Acknowledge a pinned operator vote; required before other writes while one is pending.")
     async def board_ack(message_id: int, ctx: Context = None) -> dict[str, Any]:
-        return await gw.call(ctx, board.ack, message_id=message_id)
+        return await gw.call(ctx, "board_ack", board.ack, message_id=message_id)
 
     @server.tool(description="Lease the highest-priority open task. Refused while you hold one or owe a vote.")
     async def task_claim(ctx: Context = None) -> dict[str, Any]:
-        return await gw.call(ctx, tasks.claim)
+        return await gw.call(ctx, "task_claim", tasks.claim)
 
     @server.tool(description="Extend your lease on a task you are still working on.")
     async def task_heartbeat(task_id: str, ctx: Context = None) -> dict[str, Any]:
-        return await gw.call(ctx, tasks.heartbeat, task_id=task_id)
+        return await gw.call(ctx, "task_heartbeat", tasks.heartbeat, task_id=task_id)
 
     @server.tool(description="Complete a task: result_path is relative to your directory; summary is posted to the thread.")
     async def task_complete(task_id: str, result_path: str, summary: str, ctx: Context = None) -> dict[str, Any]:
-        return await gw.call(ctx, tasks.complete, task_id=task_id, result_path=result_path, summary=summary)
+        return await gw.call(ctx, "task_complete", tasks.complete, task_id=task_id, result_path=result_path, summary=summary)
 
     @server.tool(description="Give a task back with a reason; it returns to the queue after a backoff.")
     async def task_release(task_id: str, reason: str, ctx: Context = None) -> dict[str, Any]:
-        return await gw.call(ctx, tasks.release, task_id=task_id, reason=reason)
+        return await gw.call(ctx, "task_release", tasks.release, task_id=task_id, reason=reason)
+
+    @server.tool(description="Supervisor only: return a blocked task to the queue with a reason for the next solver.")
+    async def task_reopen(task_id: str, reason: str, ctx: Context = None) -> dict[str, Any]:
+        return await gw.call(ctx, "task_reopen", tasks.reopen, task_id=task_id, reason=reason)
 
     @server.tool(description="Write your handoff (only after the orchestrator has asked you to).")
     async def civ_handoff(body: str, ctx: Context = None) -> dict[str, Any]:
-        return await gw.call(ctx, civ.handoff, body=body)
+        return await gw.call(ctx, "civ_handoff", civ.handoff, body=body)
 
     @server.tool(description="Raise an alert for the supervisors to aggregate for the operator.")
     async def civ_alert(body: str, ctx: Context = None) -> dict[str, Any]:
-        return await gw.call(ctx, civ.alert, body=body)
+        return await gw.call(ctx, "civ_alert", civ.alert, body=body)
 
     @server.tool(description="Live agents, tokens per minute, queue depth, and your own state.")
     async def civ_status(ctx: Context = None) -> dict[str, Any]:
-        return await gw.call(ctx, civ.status)
+        return await gw.call(ctx, "civ_status", civ.status)
 
     @server.tool(description="Supervisor only: move a soft knob by at most one step, naming the SLO it serves.")
     async def civ_tune(knob: str, value: float, slo: str, reason: str, ttl_s: int = 3600,
                        ctx: Context = None) -> dict[str, Any]:
-        return await gw.call(ctx, civ.tune, knob=knob, value=value, slo=slo, reason=reason, ttl_s=ttl_s)
+        return await gw.call(ctx, "civ_tune", civ.tune, knob=knob, value=value, slo=slo, reason=reason, ttl_s=ttl_s)
 
-    @server.tool(description="Supervisor only: write the round's report.")
+    @server.tool(description="Supervisor only: write the round's one report; a trigger makes it a ping the server verifies.")
     async def civ_report(body: str, trigger: str | None = None, ctx: Context = None) -> dict[str, Any]:
-        return await gw.call(ctx, civ.report, body=body, trigger=trigger)
+        return await gw.call(ctx, "civ_report", civ.report, body=body, trigger=trigger)
 
     @server.custom_route("/health", methods=["GET"])
     async def health(request: Request):

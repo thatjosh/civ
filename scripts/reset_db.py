@@ -27,6 +27,9 @@ DEFAULT_DB_URL = "postgresql://127.0.0.1:5432/civ"
 TABLES = [
     "operator_acks", "operator_pins", "broadcast_seen", "session_reads",
     "handoffs", "events", "votes", "tasks", "messages", "agents", "config",
+    # M4: a reset must close out the supervisor rounds too, or current_round() would hand the
+    # next run a round left open by the last one.
+    "tune_proposals", "rounds",
 ]
 
 

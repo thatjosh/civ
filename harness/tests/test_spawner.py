@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from harness.orchestrator.prompts import PromptAssembler
-from harness.orchestrator.spawner import KICKOFF_PROMPT, SESSION_ENV, SOLVER_TOOLS, McpNotConnected, SessionControl, Spawner
+from harness.orchestrator.spawner import KICKOFF_PROMPT, SESSION_ENV, SOLVER_TOOLS, SUPERVISOR_KICKOFF, SUPERVISOR_TOOLS, McpNotConnected, SessionControl, Spawner
 from harness.tests.orchestrator_fakes import FakeClient, FakeOperator, assistant, client_factory, init_message, result, scripted_query
 
 PROMPTS_DIR = Path(__file__).resolve().parents[1] / "prompts"
@@ -198,3 +198,40 @@ async def test_runner_stop_that_hangs_times_out_and_estimates(tmp_path):
     res = await spawner.spawn("sol-022", "L-022", on_message=hook)
     assert res.cost_estimated and res.cost_usd is not None and res.cost_usd > 0
     assert client.interrupted and client.disconnected and res.error is None
+
+
+async def test_supervisor_role_gets_its_own_tools_directory_prompt_and_kickoff(tmp_path):
+    q = scripted_query([init_message(), assistant(200), result(num_turns=3, cost=0.02, text="round done")])
+    spawner, op = make_spawner(tmp_path, q, model="claude-opus-5-5", max_turns=15)
+    cwd = tmp_path / "agents" / "sup-001"
+
+    res = await spawner.spawn("sup-001-r1", "S-001", generation=1, role="supervisor", brief="## Round 1\n\nBRIEF BODY", cwd=cwd)
+
+    assert op.registered == [{"id": "sup-001-r1", "role": "supervisor", "lineage_id": "S-001", "cwd": str(cwd.resolve()), "generation": 1}]
+    assert json.loads((cwd / "identity.json").read_text())["role"] == "supervisor"
+    call = q.calls[0]
+    assert call["prompt"].startswith(SUPERVISOR_KICKOFF) and "shared" in call["prompt"] and "materials" not in call["prompt"]
+    opts = call["options"]
+    assert opts.tools == SUPERVISOR_TOOLS == ["Read", "Grep"]
+    assert opts.add_dirs == [str(tmp_path / "shared")]
+    assert "BRIEF BODY" in opts.system_prompt and "You are a supervisor" in opts.system_prompt
+    assert "You are a solver" not in opts.system_prompt
+    assert res.turns == 3 and res.cost_usd == 0.02 and res.error is None
+    options_event = next(e for e in op.events if e[1] == "agent.options")
+    assert options_event[2]["role"] == "supervisor"
+
+
+async def test_supervisor_without_a_brief_and_unknown_roles_are_refused(tmp_path):
+    spawner, _ = make_spawner(tmp_path, scripted_query([]))
+    with pytest.raises(ValueError, match="brief"):
+        spawner.prepare("sup-001-r1", "S-001", role="supervisor")
+    with pytest.raises(ValueError, match="unknown role"):
+        spawner.prepare("x", "L", role="governor")
+
+
+async def test_solver_role_is_the_default_and_unchanged(tmp_path):
+    q = scripted_query([init_message(), result()])
+    spawner, op = make_spawner(tmp_path, q)
+    await spawner.spawn("sol-009", "L-009")
+    assert op.registered[0]["role"] == "solver"
+    assert q.calls[0]["options"].tools == SOLVER_TOOLS and q.calls[0]["prompt"].startswith(KICKOFF_PROMPT)

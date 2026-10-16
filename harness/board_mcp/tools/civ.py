@@ -1,23 +1,35 @@
 """The civ tools: handoff, alert, status, and the supervisor-only tune and report.
 
-handoff carries its full validation and ends the agent itself (M3); tune carries its validation
-even though supervisor rounds (M4) do not drive it yet, so that milestone adds orchestration
-rather than rules.
+handoff carries its full validation and ends the agent itself (M3). tune and report carry the
+round rules (M4): a tune happens inside an open supervisor round, once per round, on a sample the
+round's brief can vouch for, and a big move needs two supervisors; a report happens once per
+supervisor per round, and a report that pings the operator names a trigger the server can find in
+the data.
 """
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 from typing import Any
 
-from ..auth import AgentIdentity
+from ..auth import OPERATOR_ID, AgentIdentity
 from ..db import Db, fetch_one
-from ..limits import Knobs, live_counts, posts_in_last_hour
+from ..limits import Knobs, posts_in_last_hour
+from ..seed import CONFIG_SEEDS
+from ..slo import HIGHER_IS_BETTER, SLO_NAMES, compute_slos, status_snapshot
 from .common import insert_message, log_event, pin_block, refuse
 
 HANDOFF_HEADINGS = ("State of work", "Open threads", "What to try next", "What not to retry", "Files worth reading")
-SLOS = ("completions_per_mtok", "blocked_failed_rate", "duplicate_rate", "lease_wait")
+SLOS = SLO_NAMES
+TRIGGERS = ("succession_failing", "slo_degraded", "big_move_disputed", "ceiling_pinned")
+NO_ROUND = "no supervisor round is open"
+PING_PREFIX = "[ping: "
+# How many stored briefs "degraded for three windows" needs, and how old a pending big move has to
+# be before a disagreement over it counts as a dispute.
+DEGRADED_WINDOWS = 3
+DISPUTE_AGE_ROUNDS = 2
 
 
 class CivTools:
@@ -76,18 +88,7 @@ class CivTools:
 
     def status(self, identity: AgentIdentity) -> dict[str, Any]:
         with self.db.transaction() as conn:
-            live = live_counts(conn)
-            tasks = {"open": 0, "leased": 0, "done": 0, "blocked": 0}
-            for r in conn.execute("select status, count(*) as n from tasks group by status").fetchall():
-                tasks[r["status"]] = int(r["n"])
-            # The orchestrator logs one agent.turn event per model turn with the turn's token deltas.
-            tpm = fetch_one(
-                conn,
-                """
-                select coalesce(sum((payload->>'tokens_in')::bigint + (payload->>'tokens_out')::bigint), 0) as n
-                from events where type = 'agent.turn' and ts > now() - interval '1 minute'
-                """,
-            )
+            snapshot = status_snapshot(conn)
             me = fetch_one(conn, "select generation, context_pct from agents where id = %s", (identity.id,))
             lease = fetch_one(conn, "select id from tasks where lease_owner = %s and status = 'leased'", (identity.id,))
             last_claim = fetch_one(
@@ -101,9 +102,7 @@ class CivTools:
             log_event(conn, identity.id, "tool.civ_status", {})
             return {
                 "ok": True,
-                "live_agents": live,
-                "tokens_per_min": int(tpm["n"]),
-                "tasks": tasks,
+                **snapshot,
                 "you": {
                     "id": identity.id,
                     "generation": int(me["generation"]) if me else identity.generation,
@@ -125,6 +124,13 @@ class CivTools:
             blocked = pin_block(conn, identity)
             if blocked:
                 return blocked
+            rnd = self._open_round(conn)
+            if rnd is None:
+                return refuse(NO_ROUND)
+            if rnd["tuned_knob"] is not None:
+                # One knob change per round across all supervisors, so that a window's numbers can
+                # be attributed to one change.
+                return refuse(f"round already tuned ({rnd['tuned_knob']} by {rnd['tuned_by']})")
             row = fetch_one(conn, "select * from config where knob = %s for update", (knob,))
             if row is None:
                 return refuse(f"unknown knob {knob}")
@@ -133,11 +139,36 @@ class CivTools:
                 return refuse(f"{knob} must stay within [{row['min']}, {row['max']}]")
             if abs(value - float(row["value"])) > float(row["step"]) + 1e-9:
                 return refuse(f"{knob} moves at most one step ({row['step']}) per tune; it is {row['value']}")
-            if row["set_by"] is not None:
+            if row["set_by"] is not None and row["set_by"] != OPERATOR_ID:
+                # The cooldown damps supervisors oscillating a knob. An operator preset is launch
+                # configuration (or an injected fault), and must stay tunable at once.
                 cooling = fetch_one(conn, "select (%s + make_interval(secs => %s)) > now() as hot",
                                     (row["set_at"], int(row["cooldown_s"])))
                 if cooling["hot"]:
                     return refuse(f"{knob} is inside its {row['cooldown_s']}s cooldown")
+            n = self._sample_for(conn, rnd, slo)
+            min_sample = int(self.knobs.get("min_sample", conn))
+            if n < min_sample:
+                # Observe before act: a window with too few observations is not evidence.
+                return refuse(f"below min_sample: {slo} has n={n} in this window, needs {min_sample}")
+            seed = float(CONFIG_SEEDS[knob][0]) if knob in CONFIG_SEEDS else float(row["value"])
+            big_move = abs(value - seed) > float(self.knobs.get("big_move_steps", conn)) * float(row["step"]) + 1e-9
+            if big_move:
+                pending = self._matching_proposal(conn, rnd, identity, knob, value)
+                if pending is None:
+                    # First half of a two-supervisor commit: record it, change nothing, and leave
+                    # the round's one tune unused so the second supervisor can still commit it.
+                    # Repeating oneself records nothing new: one supervisor is one opinion.
+                    mine = fetch_one(conn, "select 1 from tune_proposals where knob = %s and abs(value - %s) < 1e-9 "
+                                           "and proposed_by = %s and committed_by is null", (knob, value, identity.id))
+                    if mine is None:
+                        fetch_one(conn, "insert into tune_proposals (knob, value, proposed_by, round_id) values (%s, %s, %s, %s) returning id",
+                                  (knob, value, identity.id, rnd["id"]))
+                        log_event(conn, identity.id, "tool.civ_tune_proposed",
+                                  {"knob": knob, "value": value, "slo": slo, "reason": reason.strip(), "round_id": rnd["id"]})
+                    return {"ok": True, "pending": True, "knob": knob, "value": value, "needs": "a second supervisor"}
+                conn.execute("update tune_proposals set committed_by = %s, committed_at = now() where id = %s",
+                             (identity.id, pending["id"]))
             updated = fetch_one(
                 conn,
                 """
@@ -147,23 +178,124 @@ class CivTools:
                 """,
                 (value, identity.id, reason.strip(), int(ttl_s), int(ttl_s), knob),
             )
+            conn.execute("update rounds set tuned_knob = %s, tuned_by = %s where id = %s", (knob, identity.id, rnd["id"]))
             log_event(conn, identity.id, "tool.civ_tune",
-                      {"knob": knob, "from": float(row["value"]), "to": value, "slo": slo, "reason": reason.strip()})
+                      {"knob": knob, "from": float(row["value"]), "to": value, "slo": slo, "n": n, "reason": reason.strip(),
+                       "big_move": big_move, "round_id": rnd["id"]})
             self.knobs.invalidate()
             return {"ok": True, "knob": knob, "value": value, "expires_at": updated["expires_at"].isoformat()}
+
+    @staticmethod
+    def _open_round(conn) -> dict[str, Any] | None:
+        row = fetch_one(conn, "select id, number, started_at, window_start, tuned_knob, tuned_by, brief from rounds "
+                              "where ended_at is null order by id desc limit 1 for update")
+        return dict(row) if row else None
+
+    @staticmethod
+    def _sample_for(conn, rnd: dict[str, Any], slo: str) -> int:
+        """The window sample behind an SLO, read from the brief the round's supervisors were shown.
+        A round opened without a brief (tests, a crashed orchestrator) is measured live instead."""
+        brief = rnd.get("brief") or {}
+        if slo == "handoff_success_rate" and brief.get("succession"):
+            succession = brief["succession"]
+            return int(succession.get("handoffs", 0)) + int(succession.get("stubs", 0))
+        current = (brief.get("slo") or {}).get("current")
+        if current and slo in current:
+            return int(current[slo].get("n", 0))
+        live = compute_slos(conn, rnd["window_start"], fetch_one(conn, "select now() as now")["now"])
+        return int(live[slo]["n"])
+
+    @staticmethod
+    def _matching_proposal(conn, rnd: dict[str, Any], identity: AgentIdentity, knob: str, value: float) -> dict[str, Any] | None:
+        """A pending proposal for the same knob and value from a different supervisor, made in this
+        round or the one before. Same supervisor twice is one opinion, not two."""
+        return fetch_one(
+            conn,
+            """
+            select p.id from tune_proposals p join rounds r on r.id = p.round_id
+            where p.knob = %s and abs(p.value - %s) < 1e-9 and p.committed_by is null
+              and p.proposed_by <> %s and r.number >= %s - 1 and r.number <= %s
+            order by p.id limit 1
+            """,
+            (knob, value, identity.id, rnd["number"], rnd["number"]),
+        )
 
     def report(self, identity: AgentIdentity, body: str, trigger: str | None = None) -> dict[str, Any]:
         if not identity.is_supervisor:
             return refuse("supervisor only")
-        if trigger:
-            return refuse("trigger verification arrives in M4")
         if not body or not body.strip():
             return refuse("report body is empty")
+        if trigger is not None and trigger not in TRIGGERS:
+            return refuse("trigger must be one of " + ", ".join(TRIGGERS))
         with self.db.transaction() as conn:
             blocked = pin_block(conn, identity)
             if blocked:
                 return blocked
-            inserted = insert_message(conn, identity, "report", body.strip(), thread_id=None, parent_id=None,
+            rnd = self._open_round(conn)
+            if rnd is None:
+                return refuse(NO_ROUND)
+            already = fetch_one(conn, "select 1 from messages where kind = 'report' and author_id = %s and created_at >= %s",
+                                (identity.id, rnd["started_at"]))
+            if already:
+                return refuse("you already reported this round")
+            stored = body.strip()
+            if trigger is not None:
+                problem = self._verify_trigger(conn, rnd, trigger, stored)
+                if problem:
+                    return refuse(problem)
+                stored = f"{PING_PREFIX}{trigger}] {stored}"
+            inserted = insert_message(conn, identity, "report", stored, thread_id=None, parent_id=None,
                                       refs=None, shared_dir=self.shared_dir, knobs=self.knobs)
-            log_event(conn, identity.id, "tool.civ_report", {"id": inserted["id"]})
+            log_event(conn, identity.id, "tool.civ_report", {"id": inserted["id"], "round_id": rnd["id"], "trigger": trigger})
+            if trigger is not None:
+                log_event(conn, identity.id, "report.ping", {"id": inserted["id"], "round_id": rnd["id"], "trigger": trigger})
             return {"ok": True, "id": inserted["id"]}
+
+    def _verify_trigger(self, conn, rnd: dict[str, Any], trigger: str, body: str) -> str | None:
+        """The refusal text when the data does not support the trigger, else None. Ping inflation is
+        how an inbox dies, so a ping has to point at something the server can see."""
+        if trigger == "ceiling_pinned":
+            return "no ceilings until M5"
+        if trigger == "succession_failing":
+            kills_now = ((rnd.get("brief") or {}).get("succession") or {}).get("kills", 0)
+            previous = fetch_one(conn, "select brief from rounds where id < %s order by id desc limit 1", (rnd["id"],))
+            kills_before = ((previous["brief"] if previous else {}).get("succession") or {}).get("kills", 0)
+            if kills_now >= 1 and kills_before >= 1:
+                return None
+            return f"trigger succession_failing is not in the data: kills this window = {kills_now}, previous window = {kills_before}"
+        if trigger == "slo_degraded":
+            match = re.search(r"slo=([a-z_]+)", body)
+            if not match or match.group(1) not in SLOS:
+                return "trigger slo_degraded is not in the data: name the SLO as slo=<name> in the body"
+            name = match.group(1)
+            rows = fetch_one(conn, "select brief from rounds where id = %s", (rnd["id"],))
+            briefs = [rows["brief"]] if rows and rows["brief"] else []
+            briefs += [r["brief"] for r in conn.execute(
+                "select brief from rounds where id < %s and brief <> '{}'::jsonb order by id desc limit %s",
+                (rnd["id"], DEGRADED_WINDOWS - 1)).fetchall()]
+            values = [((b.get("slo") or {}).get("current") or {}).get(name, {}).get("value") for b in briefs]
+            values.reverse()  # oldest first
+            if len(values) < DEGRADED_WINDOWS or any(v is None for v in values):
+                return (f"trigger slo_degraded is not in the data: {name} needs {DEGRADED_WINDOWS} windows of numbers, "
+                        f"have {[v for v in values]}")
+            worse = (lambda a, b: b < a) if HIGHER_IS_BETTER[name] else (lambda a, b: b > a)
+            if all(worse(values[i], values[i + 1]) for i in range(len(values) - 1)):
+                return None
+            return f"trigger slo_degraded is not in the data: {name} over the last {DEGRADED_WINDOWS} windows was {values}"
+        if trigger == "big_move_disputed":
+            disputed = fetch_one(
+                conn,
+                """
+                select p.knob, p.value from tune_proposals p join rounds r on r.id = p.round_id
+                where p.committed_by is null and r.number <= %s - %s
+                  and exists (select 1 from tune_proposals q where q.knob = p.knob and q.committed_by is null
+                              and abs(q.value - p.value) > 1e-9)
+                order by p.id limit 1
+                """,
+                (rnd["number"], DISPUTE_AGE_ROUNDS),
+            )
+            if disputed:
+                return None
+            return (f"trigger big_move_disputed is not in the data: no pending proposal at least {DISPUTE_AGE_ROUNDS} "
+                    "rounds old with a conflicting proposal on the same knob")
+        return f"trigger {trigger} is not in the data"

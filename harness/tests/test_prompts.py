@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from harness.orchestrator.prompts import SOLVER_FILES, PromptAssembler, PromptContext
+from harness.orchestrator.prompts import BRIEF_HEADING, SOLVER_FILES, SUPERVISOR_FILES, PromptAssembler, PromptContext
 
 PROMPTS_DIR = Path(__file__).resolve().parents[1] / "prompts"
 
@@ -73,3 +73,38 @@ def test_missing_prompt_file_fails_loudly(tmp_path):
 def test_no_em_dashes_in_any_prompt_file():
     offenders = [p for p in PROMPTS_DIR.rglob("*.md") if chr(0x2014) in p.read_text()]
     assert offenders == []
+
+
+def sup_ctx(**overrides) -> PromptContext:
+    base = dict(agent_id="sup-001-r2", role="supervisor", generation=2, lineage_id="S-001", harness_version="v0.1")
+    base.update(overrides)
+    return PromptContext(**base)
+
+
+def test_supervisor_prompt_orders_policies_then_brief_then_identity(assembler):
+    prompt = assembler.supervisor_prompt(sup_ctx(), "## Round 2\n\nthe brief body")
+    positions = [prompt.index((PROMPTS_DIR / name).read_text().strip()[:40]) for name in SUPERVISOR_FILES]
+    assert positions == sorted(positions), "supervisor files must appear in SUPERVISOR_FILES order"
+    brief_at = prompt.index(BRIEF_HEADING)
+    assert max(positions) < brief_at < prompt.index("the brief body") < prompt.index("agent_id: sup-001-r2")
+    assert "role: supervisor" in prompt and "generation: 2" in prompt and "lineage_id: S-001" in prompt
+    assert prompt.rstrip().endswith("Begin.")
+
+
+def test_supervisor_prompt_puts_broadcasts_before_the_brief(assembler):
+    prompt = assembler.supervisor_prompt(sup_ctx(broadcasts=["Prefer breadth"]), "brief")
+    assert prompt.index("Operator broadcasts") < prompt.index("- Prefer breadth") < prompt.index(BRIEF_HEADING)
+
+
+def test_supervisor_prompt_names_its_tools_and_its_limits(assembler):
+    prompt = assembler.supervisor_prompt(sup_ctx(), "brief")
+    for needle in ("civ_tune", "civ_report", "task_reopen", "board_vote", "round done", "succession_failing",
+                   "never_asked", "no_chance", "handoff_success_rate", "## Diagnosis", "## For the operator", "min_sample"):
+        assert needle in prompt, needle
+    assert "Never call `task_claim`" in prompt
+
+
+def test_supervisor_files_are_no_longer_placeholders():
+    for name in SUPERVISOR_FILES + ("supervisor/human_ping_template.md", "supervisor/proposal_review.md"):
+        text = (PROMPTS_DIR / name).read_text()
+        assert "placeholder" not in text.lower(), name

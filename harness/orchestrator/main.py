@@ -5,11 +5,14 @@
 
 Each solver slot is a lineage: a session runs until its context nears the
 handoff threshold, hands off, and a successor continues in the same directory
-(M3). Supervisors (M4) and the governor (M5) hang off the same loop later.
+(M3). With --supervisors N, N supervisor sessions run every --supervisor-interval
+seconds alongside the solvers and once more after they finish (M4). The
+governor (M5) hangs off the same loop later.
 
 Cheap succession testing: --context-window 40000 makes the thresholds fire
 after a few turns, and --force-handoff-after-turns 3 fires the handoff at a
-turn count regardless of fill.
+turn count regardless of fill. --preset knob=value moves a knob before any
+spawn, which is how a fault is injected for the supervisors to find.
 """
 
 from __future__ import annotations
@@ -19,13 +22,14 @@ import asyncio
 import logging
 import os
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from harness.orchestrator.prompts import PromptAssembler
 from harness.orchestrator.spawner import SpawnResult, Spawner
 from harness.orchestrator.succession import LineageResult, LineageRunner
+from harness.orchestrator.supervisors import RoundResult, SupervisorCron, SupervisorRound, format_rounds
 
 log = logging.getLogger("civ.orchestrator")
 
@@ -45,11 +49,21 @@ class RunConfig:
     context_window: int = 1_000_000
     force_handoff_after_turns: int | None = None
     max_generations: int = 5
+    # Supervisors (M4). Zero means no rounds at all, so a plain solver demo is unchanged.
+    supervisors: int = 0
+    supervisor_interval_s: float = 600.0
+    supervisor_model: str | None = None
+    supervisor_max_turns: int = 15
+    presets: list[tuple[str, float]] = field(default_factory=list)
+
+    @property
+    def supervisor_model_id(self) -> str:
+        return self.supervisor_model or self.model
 
     @classmethod
     def from_args(cls, argv: list[str] | None = None) -> "RunConfig":
         env = os.environ
-        p = argparse.ArgumentParser(description="civ orchestrator (M3)")
+        p = argparse.ArgumentParser(description="civ orchestrator (M4)")
         p.add_argument("--solvers", type=int, default=int(env.get("CIV_SOLVERS", 3)))
         p.add_argument("--model", default=env.get("CIV_MODEL", "claude-opus-5-5"))
         p.add_argument("--max-turns", type=int, default=int(env.get("CIV_MAX_TURNS", 40)))
@@ -62,9 +76,31 @@ class RunConfig:
         p.add_argument("--force-handoff-after-turns", type=int, default=None,
                        help="test only: fire the handoff at this turn regardless of context fill")
         p.add_argument("--max-generations", type=int, default=int(env.get("CIV_MAX_GENERATIONS", 5)))
+        p.add_argument("--supervisors", type=int, default=int(env.get("CIV_SUPERVISORS", 0)),
+                       help="supervisor sessions per round; 0 runs no rounds")
+        p.add_argument("--supervisor-interval", type=float, default=float(env.get("CIV_SUPERVISOR_INTERVAL_S", 600)),
+                       help="seconds between supervisor rounds")
+        p.add_argument("--supervisor-model", default=env.get("CIV_SUPERVISOR_MODEL") or None,
+                       help="model for supervisor sessions; defaults to --model")
+        p.add_argument("--supervisor-max-turns", type=int, default=int(env.get("CIV_SUPERVISOR_MAX_TURNS", 15)))
+        p.add_argument("--preset", action="append", default=[], metavar="KNOB=VALUE",
+                       help="set a config knob before any spawn (repeatable); the operator's fault injection")
         a = p.parse_args(argv)
         return cls(a.solvers, a.model, a.max_turns, a.stagger, a.board_url, a.db_url, a.root,
-                   a.context_window, a.force_handoff_after_turns, a.max_generations)
+                   a.context_window, a.force_handoff_after_turns, a.max_generations,
+                   a.supervisors, a.supervisor_interval, a.supervisor_model, a.supervisor_max_turns,
+                   [parse_preset(text) for text in a.preset])
+
+
+def parse_preset(text: str) -> tuple[str, float]:
+    """'knob=value' into (knob, float); the bounds check belongs to the operator write."""
+    knob, sep, value = text.partition("=")
+    if not sep or not knob.strip():
+        raise argparse.ArgumentTypeError(f"preset must look like knob=value, got {text!r}")
+    try:
+        return knob.strip(), float(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"preset value for {knob.strip()} is not a number: {value!r}") from exc
 
 
 RunResult = SpawnResult | LineageResult
@@ -125,41 +161,87 @@ def format_summary(results: list[RunResult], tasks_summary: dict | None = None) 
     return "\n".join(rows)
 
 
-def build_spawner(cfg: RunConfig) -> tuple[Spawner, object]:
-    # Imported here so the unit tests of this module never need psycopg or
-    # the board package to import.
+def build_operator(cfg: RunConfig) -> tuple[Any, Any]:
+    """(operator, knobs) over the database. Imported here so the unit tests of this
+    module never need psycopg or the board package to import."""
     from harness.board_mcp.db import Db
     from harness.board_mcp.limits import Knobs
     from harness.board_mcp.operator import Operator
 
     db = Db(cfg.db_url)
-    operator = Operator(db)
+    return Operator(db), Knobs(db)
+
+
+def build_spawner(cfg: RunConfig, operator: Any = None, knobs: Any = None) -> tuple[Spawner, Any]:
+    if operator is None:
+        operator, knobs = build_operator(cfg)
     prompts = PromptAssembler(cfg.root / "harness" / "prompts")
     spawner = Spawner(
         operator, cfg.board_url, cfg.root, prompts, model=cfg.model, max_turns=cfg.max_turns,
-        knobs=Knobs(db), context_window=cfg.context_window, force_handoff_after_turns=cfg.force_handoff_after_turns,
+        knobs=knobs, context_window=cfg.context_window, force_handoff_after_turns=cfg.force_handoff_after_turns,
     )
     return spawner, operator
 
 
-def build_runner(cfg: RunConfig, spawner: Spawner, operator: Any) -> LineageRunner:
-    request = (cfg.root / "harness" / "prompts" / HANDOFF_REQUEST_FILE).read_text(encoding="utf-8")
-    return LineageRunner(spawner, operator, request, max_generations=cfg.max_generations)
+def build_supervisor_cron(cfg: RunConfig, operator: Any, knobs: Any) -> SupervisorCron:
+    """A second spawner for the supervisors, because they may run a different
+    model and always run a different turn budget, and the spawner owns both."""
+    prompts = PromptAssembler(cfg.root / "harness" / "prompts")
+    spawner = Spawner(operator, cfg.board_url, cfg.root, prompts, model=cfg.supervisor_model_id,
+                      max_turns=cfg.supervisor_max_turns, knobs=knobs, context_window=cfg.context_window)
+    return SupervisorCron(SupervisorRound(spawner, operator, cfg.supervisors), cfg.supervisor_interval_s)
 
 
-async def amain(cfg: RunConfig) -> list[RunResult]:
-    spawner, operator = build_spawner(cfg)
+def apply_presets(cfg: RunConfig, operator: Any) -> None:
+    for knob, value in cfg.presets:
+        operator.set_knob(knob, value, "preset from the command line")
+        log.info("preset %s = %s", knob, value)
+
+
+async def run_with_supervisors(population: Awaitable[list[Any]], cron: SupervisorCron | None) -> tuple[list[Any], list[RoundResult]]:
+    """Run the solver population and the supervisor cron together.
+
+    The cron is told when the population is done through an event. A population
+    that raises still sets it and still waits for the cron, because the final
+    round is the one that reads the window in which things went wrong, and an
+    unawaited cron would leave supervisor CLI processes behind.
+    """
+    done = asyncio.Event()
+    cron_task = asyncio.create_task(cron.run_until(done)) if cron is not None else None
+    try:
+        results = await population
+    except BaseException:
+        done.set()
+        if cron_task is not None:
+            try:
+                await cron_task
+            except Exception as exc:  # noqa: BLE001 - the population's failure is the one to report
+                log.warning("supervisor cron failed after the population did: %s", exc)
+        raise
+    done.set()
+    rounds = await cron_task if cron_task is not None else []
+    return results, rounds
+
+
+async def amain(cfg: RunConfig) -> tuple[list[RunResult], list[RoundResult]]:
+    operator, knobs = build_operator(cfg)
+    apply_presets(cfg, operator)
+    spawner, _ = build_spawner(cfg, operator, knobs)
     runner = build_runner(cfg, spawner, operator)
-    log.info("spawning %d solver lineages against %s with %s (window %d, max generations %d)",
-             cfg.solvers, cfg.board_url, cfg.model, cfg.context_window, cfg.max_generations)
-    results = await run_population(cfg.solvers, cfg.stagger_s, runner.run)
+    cron = build_supervisor_cron(cfg, operator, knobs) if cfg.supervisors > 0 else None
+    log.info("spawning %d solver lineages against %s with %s (window %d, max generations %d), %d supervisors every %.0fs",
+             cfg.solvers, cfg.board_url, cfg.model, cfg.context_window, cfg.max_generations,
+             cfg.supervisors, cfg.supervisor_interval_s)
+    results, rounds = await run_with_supervisors(run_population(cfg.solvers, cfg.stagger_s, runner.run), cron)
     summary = None
     try:
         summary = operator.tasks_summary()
     except Exception as exc:  # noqa: BLE001 - the summary is a nicety, the results are the output
         log.warning("tasks summary unavailable: %s", exc)
     print(format_summary(results, summary))
-    return results
+    if rounds:
+        print(format_rounds(rounds))
+    return results, rounds
 
 
 def _failed(r: RunResult) -> bool:
@@ -171,8 +253,8 @@ def _failed(r: RunResult) -> bool:
 def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=os.environ.get("CIV_LOG_LEVEL", "INFO"), format="%(asctime)s %(name)s %(levelname)s %(message)s")
     cfg = RunConfig.from_args(argv)
-    results = asyncio.run(amain(cfg))
-    return 1 if any(_failed(r) for r in results) else 0
+    results, rounds = asyncio.run(amain(cfg))
+    return 1 if any(_failed(r) for r in results) or any(r.failed for r in rounds) else 0
 
 
 if __name__ == "__main__":

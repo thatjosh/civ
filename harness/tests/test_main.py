@@ -1,6 +1,9 @@
 import asyncio
 
-from harness.orchestrator.main import RunConfig, format_summary, run_population
+import pytest
+
+from harness.orchestrator.main import RunConfig, format_summary, parse_preset, run_population, run_with_supervisors
+from harness.orchestrator.supervisors import RoundResult
 from harness.orchestrator.spawner import SpawnResult
 
 
@@ -72,3 +75,69 @@ def test_format_summary_marks_estimated_costs_with_a_tilde():
     assert " 0.2500 " in lines[1] and "~0.1234" in lines[2]
     # One estimated row makes the total an estimate too.
     assert lines[-1].startswith("total cost") and "~0.3734" in lines[-1]
+
+
+def test_supervisor_flags_default_to_no_rounds_and_parse_presets():
+    cfg = RunConfig.from_args([])
+    assert cfg.supervisors == 0 and cfg.supervisor_interval_s == 600 and cfg.supervisor_max_turns == 15
+    assert cfg.supervisor_model is None and cfg.supervisor_model_id == cfg.model and cfg.presets == []
+
+    cfg = RunConfig.from_args(["--supervisors", "2", "--supervisor-interval", "15", "--supervisor-model", "claude-opus-5-5",
+                               "--supervisor-max-turns", "9", "--model", "claude-haiku-5-5",
+                               "--preset", "kill_grace_turns=0", "--preset", "handoff_pct=85"])
+    assert cfg.supervisors == 2 and cfg.supervisor_interval_s == 15 and cfg.supervisor_max_turns == 9
+    assert cfg.supervisor_model_id == "claude-opus-5-5" and cfg.model == "claude-haiku-5-5"
+    assert cfg.presets == [("kill_grace_turns", 0.0), ("handoff_pct", 85.0)]
+
+
+def test_parse_preset_rejects_bad_shapes():
+    import argparse
+
+    assert parse_preset(" top_k = 15 ") == ("top_k", 15.0)
+    for bad in ("top_k", "=5", "top_k=many"):
+        with pytest.raises(argparse.ArgumentTypeError):
+            parse_preset(bad)
+
+
+async def test_run_with_supervisors_signals_the_cron_when_the_population_ends():
+    seen: list[str] = []
+
+    class FakeCron:
+        async def run_until(self, done: asyncio.Event) -> list[RoundResult]:
+            seen.append("cron started")
+            await done.wait()
+            seen.append("population done")
+            return [RoundResult(number=1, final=True)]
+
+    async def population() -> list[str]:
+        await asyncio.sleep(0)
+        seen.append("population finished")
+        return ["sol-001"]
+
+    results, rounds = await run_with_supervisors(population(), FakeCron())
+    assert results == ["sol-001"] and [r.number for r in rounds] == [1]
+    assert seen == ["cron started", "population finished", "population done"]
+
+
+async def test_run_with_supervisors_without_a_cron_returns_no_rounds():
+    async def population() -> list[str]:
+        return ["sol-001"]
+
+    assert await run_with_supervisors(population(), None) == (["sol-001"], [])
+
+
+async def test_run_with_supervisors_releases_the_cron_even_when_the_population_raises():
+    released = asyncio.Event()
+
+    class FakeCron:
+        async def run_until(self, done: asyncio.Event) -> list[RoundResult]:
+            await done.wait()
+            released.set()
+            return []
+
+    async def population() -> list[str]:
+        raise RuntimeError("boom")
+
+    with pytest.raises(RuntimeError):
+        await run_with_supervisors(population(), FakeCron())
+    assert released.is_set()

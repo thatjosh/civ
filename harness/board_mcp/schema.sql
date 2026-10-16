@@ -122,3 +122,31 @@ create table if not exists operator_acks (
   acked_at timestamptz default now(),
   primary key (message_id, agent_id)
 );
+
+-- ---- migration 0003 ----
+-- M4 supervisor rounds. Everything above this marker is applied by 0001_init.sql; this block by
+-- 0003_supervisor_rounds.sql (a test checks both embeddings).
+
+create table if not exists rounds (
+  id bigserial primary key,
+  number int not null,
+  started_at timestamptz not null default now(),
+  ended_at timestamptz,
+  window_start timestamptz not null,
+  final boolean not null default false,
+  brief jsonb not null default '{}',
+  tuned_knob text,
+  tuned_by text,
+  summary jsonb not null default '{}'
+);
+
+create table if not exists tune_proposals (
+  id bigserial primary key,
+  knob text not null,
+  value double precision not null,
+  proposed_by text not null,
+  round_id bigint not null references rounds(id),
+  created_at timestamptz not null default now(),
+  committed_by text,
+  committed_at timestamptz
+);

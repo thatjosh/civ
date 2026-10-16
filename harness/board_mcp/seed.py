@@ -25,6 +25,11 @@ CONFIG_SEEDS: dict[str, tuple[float, float, float, float]] = {
     # Assistant turns an agent is given after the handoff request before the kill threshold is
     # allowed to act. Two is the minimum that lets it read the lockout and make the call.
     "kill_grace_turns": (2, 0, 10, 1),
+    # M4 round rules. min_sample is the window sample below which no tune is accepted (3 for the
+    # eight-task demo pack; the design's 10 arrives with civ.toml in M5). big_move_steps is how far
+    # from its seed a knob may sit before a second supervisor has to agree.
+    "min_sample": (3, 1, 50, 1),
+    "big_move_steps": (2, 1, 5, 1),
 }
 
 SEED_SQL = """

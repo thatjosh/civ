@@ -8,6 +8,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 EXPECTED_TABLES = {
     "agents", "messages", "votes", "tasks", "config", "events", "handoffs",
     "session_reads", "broadcast_seen", "operator_pins", "operator_acks", "schema_migrations",
+    "rounds", "tune_proposals",
 }
 
 
@@ -24,13 +25,18 @@ def test_migration_is_recorded_and_idempotent(migrated_url):
 
     with psycopg.connect(migrated_url) as conn:
         names = [r[0] for r in conn.execute("select name from schema_migrations order by name")]
-    assert names == ["0001_init.sql", "0002_kill_grace_turns.sql"]
+    assert names == ["0001_init.sql", "0002_kill_grace_turns.sql", "0003_supervisor_rounds.sql"]
 
 
-def test_schema_sql_is_embedded_in_first_migration():
+def test_schema_sql_is_embedded_in_its_migrations():
+    # schema.sql stays the one canonical copy: the part before the marker is applied verbatim by
+    # 0001, and each later block by the migration its marker names.
     schema = (REPO_ROOT / "harness/board_mcp/schema.sql").read_text()
-    migration = (REPO_ROOT / "harness/board_mcp/migrations/0001_init.sql").read_text()
-    assert schema in migration
+    migrations = REPO_ROOT / "harness/board_mcp/migrations"
+    first, m4 = schema.split("-- ---- migration 0003 ----")
+    assert first.strip() in (migrations / "0001_init.sql").read_text()
+    body = m4.split("\n\n", 1)[1]  # drop the marker's own comment lines
+    assert body.strip() in (migrations / "0003_supervisor_rounds.sql").read_text()
 
 
 def test_config_seeds_match_python_copy(db):

@@ -38,7 +38,11 @@ log = logging.getLogger(__name__)
 # The built-in tools a solver gets. Bash is included because the task pack is
 # files and the solver will want grep and wc; the sandbox is out of scope.
 SOLVER_TOOLS = ["Read", "Write", "Edit", "Bash", "Glob", "Grep"]
+# A supervisor reads the board and the shared/ files it references, nothing
+# else: no shell, no writes, so its whole output is board actions.
+SUPERVISOR_TOOLS = ["Read", "Grep"]
 KICKOFF_PROMPT = "Begin your solver loop."
+SUPERVISOR_KICKOFF = "Begin your round."
 MCP_SERVER_NAME = "civ"
 TOKEN_HEADER = "X-Civ-Token"
 # The bundled CLI honours this switch; the handoff is our compaction, so the CLI's must stay off.
@@ -49,6 +53,32 @@ MAX_TURNS_SUBTYPE = "error_max_turns"
 # After an interrupt the CLI normally answers with a result that carries the real
 # cost and turn count; we wait this long for it before falling back to an estimate.
 DRAIN_AFTER_INTERRUPT_S = 10.0
+
+
+@dataclass(frozen=True)
+class RoleProfile:
+    """What differs between the two roles at spawn: tools, the extra directory the
+    session may read, and the first message. Everything else is shared."""
+
+    name: str
+    tools: tuple[str, ...]
+    # Relative to the repo root: the materials for a solver, shared/ for a supervisor.
+    extra_dir: str
+    kickoff: str
+
+    def kickoff_prompt(self, cwd: Path, extra: Path) -> str:
+        if self.name == "supervisor":
+            return f"{self.kickoff} Your directory is {cwd}. Files the board references as shared/... are under {extra}."
+        return (
+            f"{self.kickoff} Your directory is {cwd} (write only there, under work/). "
+            f"The read-only materials are at {extra}."
+        )
+
+
+ROLES: dict[str, RoleProfile] = {
+    "solver": RoleProfile("solver", tuple(SOLVER_TOOLS), "task/materials", KICKOFF_PROMPT),
+    "supervisor": RoleProfile("supervisor", tuple(SUPERVISOR_TOOLS), "shared", SUPERVISOR_KICKOFF),
+}
 
 
 class McpNotConnected(RuntimeError):
@@ -229,11 +259,12 @@ class Spawner:
         (cwd / "identity.json").write_text(json.dumps(identity, indent=2) + "\n", encoding="utf-8")
         return cwd
 
-    def build_options(self, cwd: Path, system_prompt: str, token: str) -> ClaudeAgentOptions:
+    def build_options(self, cwd: Path, system_prompt: str, token: str, role: str = "solver") -> ClaudeAgentOptions:
+        profile = self._profile(role)
         return ClaudeAgentOptions(
             cwd=str(cwd),
             system_prompt=system_prompt,
-            tools=list(SOLVER_TOOLS),
+            tools=list(profile.tools),
             mcp_servers={
                 MCP_SERVER_NAME: {
                     "type": "http",
@@ -249,9 +280,15 @@ class Spawner:
             setting_sources=[],
             model=self._model,
             max_turns=self._max_turns,
-            add_dirs=[str(self._root / "task" / "materials")],
+            add_dirs=[str(self._root / profile.extra_dir)],
             env=dict(SESSION_ENV),
         )
+
+    @staticmethod
+    def _profile(role: str) -> RoleProfile:
+        if role not in ROLES:
+            raise ValueError(f"unknown role {role!r}; expected one of {sorted(ROLES)}")
+        return ROLES[role]
 
     def prepare(
         self,
@@ -263,11 +300,20 @@ class Spawner:
         broadcasts: list[str] | None = None,
         token: str | None = None,
         cwd: Path | None = None,
+        role: str = "solver",
+        brief: str | None = None,
     ) -> Prepared:
-        """Register the agent (unless a token says it already is) and build its session options."""
+        """Register the agent (unless a token says it already is) and build its session options.
+
+        A supervisor is spawned with the round's brief (rendered markdown), which
+        becomes part of its prompt; a solver never has one.
+        """
+        profile = self._profile(role)
+        if role == "supervisor" and brief is None:
+            raise ValueError("a supervisor session needs the round's brief")
         ctx = PromptContext(
             agent_id=agent_id,
-            role="solver",
+            role=role,
             generation=generation,
             lineage_id=lineage_id,
             harness_version=self._harness_version,
@@ -277,11 +323,15 @@ class Spawner:
         )
         cwd = self.prepare_directory(agent_id, ctx, cwd)
         if token is None:
-            token = self._op.register_agent(agent_id, "solver", lineage_id=lineage_id, cwd=str(cwd), generation=generation)
-        options = self.build_options(cwd, self._prompts.solver_prompt(ctx), token)
+            token = self._op.register_agent(agent_id, role, lineage_id=lineage_id, cwd=str(cwd), generation=generation)
+        system_prompt = (
+            self._prompts.supervisor_prompt(ctx, brief or "") if role == "supervisor" else self._prompts.solver_prompt(ctx)
+        )
+        options = self.build_options(cwd, system_prompt, token, role)
         # register_agent already logged agent.spawned; this event carries what the spawner chose.
-        self._op.log_event(agent_id, "agent.options", {"generation": generation, "lineage_id": lineage_id, "model": self._model})
-        return Prepared(agent_id, cwd, token, options, self.kickoff_prompt(cwd))
+        self._op.log_event(agent_id, "agent.options",
+                           {"generation": generation, "lineage_id": lineage_id, "model": self._model, "role": role})
+        return Prepared(agent_id, cwd, token, options, self.kickoff_prompt(cwd, role))
 
     async def spawn(
         self,
@@ -295,8 +345,11 @@ class Spawner:
         handoff_is_stub: bool = False,
         on_message: MessageHook | None = None,
         monitor: Monitor | None = None,
+        role: str = "solver",
+        brief: str | None = None,
     ) -> SpawnResult:
-        prepared = self.prepare(agent_id, lineage_id, generation, handoff, handoff_is_stub, broadcasts, token, cwd)
+        prepared = self.prepare(agent_id, lineage_id, generation, handoff, handoff_is_stub, broadcasts, token, cwd,
+                                role=role, brief=brief)
         monitor = monitor or self.monitor_for(agent_id)
         result = await self.run_session(prepared, monitor, on_message)
         result.generation = generation
@@ -376,12 +429,9 @@ class Spawner:
             result.turns = totals.turns
         return result
 
-    def kickoff_prompt(self, cwd: Path) -> str:
-        materials = (self._root / "task" / "materials").resolve()
-        return (
-            f"{KICKOFF_PROMPT} Your directory is {cwd} (write only there, under work/). "
-            f"The read-only materials are at {materials}."
-        )
+    def kickoff_prompt(self, cwd: Path, role: str = "solver") -> str:
+        profile = self._profile(role)
+        return profile.kickoff_prompt(cwd, (self._root / profile.extra_dir).resolve())
 
     async def _next_message(self, agent_id: str, stream: AsyncIterator[Any], drain_until: float | None) -> Any | None:
         """The next message, or None when the stream ends or the drain deadline passes."""

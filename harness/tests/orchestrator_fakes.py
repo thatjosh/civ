@@ -27,6 +27,12 @@ class FakeOperator:
         self.succeeded: list[tuple[str, str, str]] = []
         self.stubs: list[tuple[str, list[str]]] = []
         self.posts: dict[str, list[dict[str, Any]]] = {}
+        # Supervisor rounds (M4), mirroring the rounds table and the reads the round makes.
+        self.rounds: list[dict[str, Any]] = []
+        self.brief_template: dict[str, Any] = {}
+        self.reports: dict[int, list[dict[str, Any]]] = {}
+        self.reopened: dict[int, list[str]] = {}
+        self.presets: list[tuple[str, float, str]] = []
 
     # --- M2 surface ---------------------------------------------------------
 
@@ -94,6 +100,42 @@ class FakeOperator:
         head = agents[-1] if agents else None
         return {"generation": head["generation"] if head else 0, "head_agent": head["id"] if head else None,
                 "status": "live" if head else "none", "lease": None}
+
+    # --- M4 surface ---------------------------------------------------------
+
+    def open_round(self, number: int, final: bool = False) -> int:
+        round_id = len(self.rounds) + 1
+        self.rounds.append({"id": round_id, "number": number, "final": final, "tuned_knob": None,
+                            "ended_at": None, "summary": None, "brief": None})
+        self.events.append((None, "round.opened", {"round_id": round_id, "number": number}))
+        return round_id
+
+    def round_brief(self, round_id: int) -> dict[str, Any]:
+        row = self.rounds[round_id - 1]
+        brief = {**self.brief_template, "round": {**self.brief_template.get("round", {}),
+                                                   "id": round_id, "number": row["number"], "final": row["final"]}}
+        row["brief"] = brief
+        return brief
+
+    def close_round(self, round_id: int, summary: dict[str, Any]) -> None:
+        row = self.rounds[round_id - 1]
+        row["ended_at"] = "closed"
+        row["summary"] = summary
+        self.events.append((None, "round.closed", {"round_id": round_id, **summary}))
+
+    def current_round(self) -> dict[str, Any] | None:
+        open_rounds = [r for r in self.rounds if r["ended_at"] is None]
+        return dict(open_rounds[-1]) if open_rounds else None
+
+    def set_knob(self, knob: str, value: float, reason: str) -> None:
+        self.presets.append((knob, float(value), reason))
+        self.events.append((None, "knob.preset", {"knob": knob, "value": value}))
+
+    def reports_for_round(self, round_id: int) -> list[dict[str, Any]]:
+        return list(self.reports.get(round_id, []))
+
+    def reopened_in_round(self, round_id: int) -> list[str]:
+        return list(self.reopened.get(round_id, []))
 
     def _lineage_of(self, agent_id: str) -> str:
         for a in self.registered:

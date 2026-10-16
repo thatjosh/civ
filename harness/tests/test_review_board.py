@@ -85,7 +85,7 @@ def test_pin_gates_every_other_write_tool(board, tasks, civ, solver, supervisor,
     result = _write(solver)
     assert tasks.complete(solver, "T-001", result, "done")["error"].startswith("acknowledge")
     assert tasks.release(solver, "T-001", "stuck")["error"].startswith("acknowledge")
-    assert civ.tune(supervisor, "top_k", 15, "lease_wait", "more context")["error"].startswith("acknowledge")
+    assert civ.tune(supervisor, "top_k", 15, "lease_wait_median_s", "more context")["error"].startswith("acknowledge")
     assert civ.report(supervisor, "round report")["error"].startswith("acknowledge")
     op.set_agent_status(solver.id, "handing_off")
     handoff = "\n".join(f"## {h}\nx" for h in ("State of work", "Open threads", "What to try next",

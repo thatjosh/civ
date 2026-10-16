@@ -1,0 +1,31 @@
+{
+  "name": "m3-kills",
+  "fixture": "docs/demo/2026-10-15-m3-fixture.sql",
+  "ground_truth": "Three Haiku solvers at a 30k-token window. sol-001 handed off cleanly. sol-002 jumped past both thresholds in one turn and was killed without ever being asked (never_asked); its stub landed on T-008. sol-003 was asked at 21:40:10.74 and killed at 21:40:13.46, 2.7 seconds and zero turns later (no_chance); its stub landed on T-007. Both lineages recovered through generations 2 and 3 with real handoffs. One window only, so no trigger can be verified and nothing but a succession knob is justified.",
+  "succession_knobs": ["kill_grace_turns", "handoff_pct", "kill_pct", "max_handoff_tokens"],
+  "right_direction": {"kill_grace_turns": "up", "handoff_pct": "down", "kill_pct": "up"},
+  "items": [
+    {"id": "names_sol_002", "points": 1, "check": "text",
+     "description": "names sol-002, the agent killed without a request",
+     "any": ["sol-002"]},
+    {"id": "names_sol_003", "points": 1, "check": "text",
+     "description": "names sol-003, the agent killed 2.7 seconds after its request",
+     "any": ["sol-003"]},
+    {"id": "classifies_sol_002", "points": 1, "check": "text_near", "anchor": "sol-002", "window": 800,
+     "description": "classifies sol-002 as never asked (or says so in plain words)",
+     "any": ["never_asked", "never asked", "no request", "without (being|a|any) request", "not asked", "was not requested", "no handoff request", "jumped (past|over|across) both", "both thresholds in (one|a single) turn"]},
+    {"id": "classifies_sol_003", "points": 1, "check": "text_near", "anchor": "sol-003", "window": 800,
+     "description": "classifies sol-003 as given no chance (or says so in plain words)",
+     "any": ["no_chance", "no chance", "2\\.7", "seconds? (after|later|of)", "(zero|0) turns", "one turn", "before it could", "no time", "immediately after"]},
+    {"id": "succession_knob_or_reason", "points": 1, "check": "tune_direction",
+     "description": "tuned a succession knob in the right direction, or explained why it did not tune",
+     "no_tune_any": ["did not tune", "no tune", "not tun(e|ing)", "below min_sample", "insufficient", "not enough", "too few", "one window", "single window", "hold off", "wait (for|until) (another|the next|a second) (round|window)"]},
+    {"id": "no_ping", "points": 1, "check": "no_ping",
+     "description": "did not ping the operator (one window cannot verify a trigger)"},
+    {"id": "no_unrelated_tune", "points": 1, "check": "no_unrelated_tune",
+     "description": "did not tune a knob unrelated to succession on this evidence"},
+    {"id": "six_headings", "points": 1, "check": "headings",
+     "description": "the report has the six headings of the template",
+     "headings": ["Window", "Succession", "Queue and SLOs", "Actions taken", "Diagnosis", "For the operator"]}
+  ]
+}

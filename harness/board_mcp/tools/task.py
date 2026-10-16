@@ -1,4 +1,4 @@
-"""The task tools: claim, heartbeat, complete, release.
+"""The task tools: claim, heartbeat, complete, release, and the supervisor-only reopen.
 
 claim is the one place the board uses SELECT ... FOR UPDATE SKIP LOCKED, so that a hundred agents
 calling it at once each get a different task or an honest empty result.
@@ -172,6 +172,33 @@ class TaskTools:
                            shared_dir=self.shared_dir, knobs=self.knobs)
             log_event(conn, identity.id, "task.released", {"task_id": task_id, "attempts": attempts, "status": status})
             return {"ok": True, "attempts": attempts, "next_attempt_at": row["next_attempt_at"].isoformat(), "status": status}
+
+    def reopen(self, identity: AgentIdentity, task_id: str, reason: str) -> dict[str, Any]:
+        """A supervisor's unblock (M4): a task that three releases parked as blocked goes back to
+        the queue with its attempts reset, and the reason goes in the thread so the next solver
+        knows what the supervisor saw that the releasers did not."""
+        if not identity.is_supervisor:
+            return refuse("supervisor only")
+        if not reason or not reason.strip():
+            return refuse("say why you are reopening the task")
+        with self.db.transaction() as conn:
+            blocked = pin_block(conn, identity)
+            if blocked:
+                return blocked
+            task = fetch_one(conn, "select status, thread_id from tasks where id = %s for update", (task_id,))
+            if task is None:
+                return refuse(f"unknown task {task_id}")
+            if task["status"] != "blocked":
+                return refuse(f"{task_id} is not blocked (it is {task['status']})")
+            conn.execute(
+                "update tasks set status = 'open', attempts = 0, next_attempt_at = now(), lease_owner = null, lease_expires = null where id = %s",
+                (task_id,),
+            )
+            insert_message(conn, identity, "blocker", f"[{task_id} reopened] {reason.strip()}",
+                           thread_id=int(task["thread_id"]), parent_id=None, refs=None,
+                           shared_dir=self.shared_dir, knobs=self.knobs)
+            log_event(conn, identity.id, "task.reopened", {"task_id": task_id, "reason": reason.strip()})
+            return {"ok": True, "task_id": task_id, "status": "open"}
 
     # helpers
 

@@ -32,21 +32,35 @@ def test_handoff_size_ceiling_follows_the_knob(civ, solver, op, db):
     assert not refused["ok"] and "ceiling is 1000" in refused["error"]
 
 
-def test_tune_cooldown_applies_across_supervisors(civ, make_agent):
+def _round_with_sample(op, number: int) -> int:
+    """M4 made tunes round-bound and sample-bound: an open round whose brief shows three claims."""
+    for i in range(3):
+        op.log_event("sol-001", "task.claimed", {"task_id": f"T-{i}"})
+    rid = op.open_round(number)
+    op.round_brief(rid)
+    return rid
+
+
+def test_tune_cooldown_applies_across_supervisors_and_rounds(civ, make_agent, op):
     first, second = make_agent("supervisor")[0], make_agent("supervisor")[0]
-    assert civ.tune(first, "top_k", 15, "lease_wait", "wider reads")["ok"]
-    assert "cooldown" in civ.tune(second, "top_k", 20, "lease_wait", "wider still")["error"]
+    r1 = _round_with_sample(op, 1)
+    assert civ.tune(first, "top_k", 15, "blocked_failed_rate", "wider reads")["ok"]
+    op.close_round(r1, {})
+    _round_with_sample(op, 2)
+    assert "cooldown" in civ.tune(second, "top_k", 20, "blocked_failed_rate", "wider still")["error"]
 
 
-def test_tune_reverts_to_the_seed_after_its_ttl(civ, supervisor, knobs):
-    assert civ.tune(supervisor, "top_k", 15, "lease_wait", "briefly wider", ttl_s=1)["ok"]
+def test_tune_reverts_to_the_seed_after_its_ttl(civ, supervisor, knobs, op):
+    _round_with_sample(op, 1)
+    assert civ.tune(supervisor, "top_k", 15, "blocked_failed_rate", "briefly wider", ttl_s=1)["ok"]
     time.sleep(1.2)
     assert knobs.get("top_k") == 10
 
 
-def test_tune_rejects_a_two_step_move_and_accepts_one_step_down(civ, supervisor):
-    assert "one step" in civ.tune(supervisor, "vote_rate_per_h", 30, "duplicate_rate", "x")["error"]
-    assert civ.tune(supervisor, "vote_rate_per_h", 15, "duplicate_rate", "fewer reflex votes")["ok"]
+def test_tune_rejects_a_two_step_move_and_accepts_one_step_down(civ, supervisor, op):
+    _round_with_sample(op, 1)
+    assert "one step" in civ.tune(supervisor, "vote_rate_per_h", 30, "blocked_failed_rate", "x")["error"]
+    assert civ.tune(supervisor, "vote_rate_per_h", 15, "blocked_failed_rate", "fewer reflex votes")["ok"]
 
 
 def test_status_reflects_monitor_usage_writes(civ, solver, op):

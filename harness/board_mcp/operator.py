@@ -14,6 +14,13 @@ from typing import Any
 from .auth import OPERATOR_ID
 from .db import Db, fetch_all, fetch_one
 from .limits import vote_weight_for
+from .seed import CONFIG_SEEDS
+from .slo import SLO_NAMES, compute_slos, compute_succession, status_snapshot
+
+PING_PREFIX = "[ping: "
+BRIEF_HISTORY_ROUNDS = 5
+BRIEF_TOP_BLOCKERS = 10
+BRIEF_LOWEST_SCORES = 3
 
 
 class Operator:
@@ -200,6 +207,249 @@ class Operator:
             "status": head["status"],
             "lease": lease["id"] if lease else None,
         }
+
+    # Supervisor rounds (M4)
+
+    def open_round(self, number: int, final: bool = False) -> int:
+        """Open round `number`. Its window starts where the previous round started, so consecutive
+        rounds partition the timeline; the first round's window starts at the earliest event."""
+        with self.db.transaction() as conn:
+            previous = fetch_one(conn, "select started_at from rounds order by id desc limit 1")
+            if previous is not None:
+                window_start = previous["started_at"]
+            else:
+                first = fetch_one(conn, "select min(ts) as ts from events")
+                window_start = first["ts"] if first and first["ts"] else None
+            row = fetch_one(
+                conn,
+                "insert into rounds (number, final, window_start) values (%s, %s, coalesce(%s, now())) returning id, window_start",
+                (number, final, window_start),
+            )
+            round_id = int(row["id"])
+            self._event(conn, OPERATOR_ID, "round.opened",
+                        {"round_id": round_id, "number": number, "final": final, "window_start": row["window_start"].isoformat()})
+        return round_id
+
+    def current_round(self) -> dict[str, Any] | None:
+        row = self.db.fetch_one(
+            "select id, number, started_at, window_start, tuned_knob, final from rounds where ended_at is null order by id desc limit 1"
+        )
+        if row is None:
+            return None
+        out = {"id": int(row["id"]), "number": int(row["number"]), "started_at": row["started_at"].isoformat(),
+               "window_start": row["window_start"].isoformat(), "tuned_knob": row["tuned_knob"], "final": bool(row["final"]),
+               "tuned_from": None, "tuned_to": None}
+        if row["tuned_knob"] is not None:
+            # The rounds row records which knob moved; the from and to live on the tune event, and
+            # the round summary line wants both, so they are read back here rather than denormalised.
+            tune = self.db.fetch_one(
+                "select payload from events where type = 'tool.civ_tune' and (payload->>'round_id')::bigint = %s "
+                "order by seq desc limit 1",
+                (int(row["id"]),),
+            )
+            if tune is not None:
+                out["tuned_from"] = tune["payload"].get("from")
+                out["tuned_to"] = tune["payload"].get("to")
+        return out
+
+    def reopened_in_round(self, round_id: int) -> list[str]:
+        """Task ids reopened by supervisors while the round was open, for the round summary."""
+        rows = self.db.fetch_all(
+            """
+            select e.payload->>'task_id' as task_id from events e, rounds r
+            where r.id = %s and e.type = 'task.reopened'
+              and e.ts >= r.started_at and (r.ended_at is null or e.ts <= r.ended_at)
+            order by e.seq
+            """,
+            (int(round_id),),
+        )
+        return [r["task_id"] for r in rows if r["task_id"]]
+
+    def close_round(self, round_id: int, summary: dict[str, Any]) -> None:
+        with self.db.transaction() as conn:
+            conn.execute("update rounds set ended_at = now(), summary = %s where id = %s", (json.dumps(summary, default=str), round_id))
+            self._event(conn, OPERATOR_ID, "round.closed", {"round_id": round_id, **summary})
+
+    def round_brief(self, round_id: int, supervisors: int | None = None) -> dict[str, Any]:
+        """Build the round's brief from the database, store it on the round, return it.
+
+        Stored as built because two of the ping triggers are claims about history ("degraded for
+        three windows", "kills in two consecutive windows") and the only honest way to verify them
+        is against what each round's supervisors were actually shown. `supervisors` is the number
+        the orchestrator is about to spawn; when omitted it is counted from the agents table."""
+        with self.db.transaction() as conn:
+            rnd = fetch_one(conn, "select id, number, started_at, window_start, final, tuned_knob from rounds where id = %s", (round_id,))
+            if rnd is None:
+                raise ValueError(f"unknown round {round_id}")
+            window_start, window_end = rnd["window_start"], rnd["started_at"]
+            previous = fetch_one(conn, "select id, started_at, window_start, brief from rounds where id < %s order by id desc limit 1", (round_id,))
+            if supervisors is None:
+                counted = fetch_one(conn, "select count(*) as n from agents where role = 'supervisor' and generation = %s", (rnd["number"],))
+                supervisors = int(counted["n"])
+            current_slos = compute_slos(conn, window_start, window_end)
+            brief = {
+                "round": {
+                    "id": int(rnd["id"]), "number": int(rnd["number"]), "final": bool(rnd["final"]),
+                    "window_start": window_start.isoformat(), "window_end": window_end.isoformat(),
+                    "supervisors": supervisors,
+                },
+                "status": status_snapshot(conn),
+                "slo": {
+                    "current": current_slos,
+                    "previous": compute_slos(conn, previous["window_start"], previous["started_at"]) if previous else None,
+                    "min_sample": int(self._knob_value(conn, "min_sample")),
+                    "history": self._slo_history(conn, round_id, int(rnd["number"]), current_slos),
+                },
+                "succession": compute_succession(conn, window_start, window_end),
+                "blockers": self._blockers(conn, window_start, window_end),
+                "blocked_tasks": self._blocked_tasks(conn),
+                "alerts": self._alerts(conn, window_start),
+                "previous_reports": self._reports(conn, int(previous["id"])) if previous else [],
+                "tunes": {
+                    "active": self._active_tunes(conn),
+                    "pending": self._pending_tunes(conn),
+                    "round_tuned": rnd["tuned_knob"] is not None,
+                },
+                "verifier": self._verifier_progress(conn),
+            }
+            conn.execute("update rounds set brief = %s where id = %s", (json.dumps(brief, default=str), round_id))
+        return brief
+
+    def set_knob(self, knob: str, value: float, reason: str) -> None:
+        """An operator preset: bounds only, no step, cooldown or TTL, because the operator owns the
+        box the supervisors move inside. Used for launch values and for fault injection."""
+        with self.db.transaction() as conn:
+            row = fetch_one(conn, "select value, min, max from config where knob = %s for update", (knob,))
+            if row is None:
+                raise ValueError(f"unknown knob {knob}")
+            value = float(value)
+            if value < row["min"] or value > row["max"]:
+                raise ValueError(f"{knob} must stay within [{row['min']}, {row['max']}]")
+            conn.execute(
+                "update config set value = %s, set_by = %s, reason = %s, set_at = now(), ttl_s = null, expires_at = null where knob = %s",
+                (value, OPERATOR_ID, reason, knob),
+            )
+            self._event(conn, OPERATOR_ID, "knob.preset", {"knob": knob, "from": float(row["value"]), "to": value, "reason": reason})
+
+    def reports_for_round(self, round_id: int) -> list[dict[str, Any]]:
+        with self.db.transaction() as conn:
+            return self._reports(conn, round_id)
+
+    def pings_since(self, ts: Any) -> list[dict[str, Any]]:
+        """Reports that carried a verified trigger, newest last, for the operator's inbox (M5)."""
+        rows = self.db.fetch_all(
+            "select id, author_id, body, created_at from messages where kind = 'report' and body like %s and created_at > %s order by id",
+            (PING_PREFIX + "%", ts),
+        )
+        return [self._shape_report(r) for r in rows]
+
+    # brief helpers
+
+    @staticmethod
+    def _knob_value(conn, knob: str) -> float:
+        row = fetch_one(conn, "select value from config where knob = %s", (knob,))
+        return float(row["value"]) if row else float(CONFIG_SEEDS[knob][0])
+
+    @staticmethod
+    def _slo_history(conn, round_id: int, number: int, current: dict[str, Any]) -> list[dict[str, Any]]:
+        """One row per round, oldest first, this round last, up to the last few. Earlier rows come
+        from the briefs stored on those rounds, so the history is what was shown, not a recomputation."""
+        rows = fetch_all(
+            conn,
+            "select number, brief from rounds where id < %s and brief <> '{}'::jsonb order by id desc limit %s",
+            (round_id, BRIEF_HISTORY_ROUNDS - 1),
+        )
+        history = []
+        for r in reversed(rows):
+            slos = (r["brief"].get("slo") or {}).get("current") or {}
+            history.append({"round": int(r["number"]), **{name: (slos.get(name) or {}).get("value") for name in SLO_NAMES}})
+        history.append({"round": number, **{name: current[name]["value"] for name in SLO_NAMES}})
+        return history
+
+    @staticmethod
+    def _blockers(conn, window_start, window_end) -> list[dict[str, Any]]:
+        rows = fetch_all(
+            conn,
+            """
+            select m.id, m.thread_id, t.id as task_id, m.author_id, m.body, m.created_at,
+                   coalesce((select sum(v.value * v.weight) from votes v where v.message_id = m.id), 0) as score
+            from messages m left join tasks t on t.thread_id = m.thread_id
+            where m.kind = 'blocker' and m.created_at >= %s and m.created_at < %s
+            order by score desc, m.id desc limit %s
+            """,
+            (window_start, window_end, BRIEF_TOP_BLOCKERS),
+        )
+        return [{"id": int(r["id"]), "thread_id": int(r["thread_id"]) if r["thread_id"] is not None else None,
+                 "task_id": r["task_id"], "author_id": r["author_id"], "body": r["body"],
+                 "score": float(r["score"]), "created_at": r["created_at"].isoformat()} for r in rows]
+
+    @staticmethod
+    def _blocked_tasks(conn) -> list[dict[str, Any]]:
+        rows = fetch_all(
+            conn,
+            """
+            select t.id, t.title, t.attempts,
+                   (select body from messages m where m.thread_id = t.thread_id and m.kind = 'blocker' order by m.id desc limit 1) as last_release_reason
+            from tasks t where t.status = 'blocked' order by t.id
+            """,
+        )
+        return [{"id": r["id"], "title": r["title"], "attempts": int(r["attempts"]), "last_release_reason": r["last_release_reason"]} for r in rows]
+
+    @staticmethod
+    def _alerts(conn, window_start) -> list[dict[str, Any]]:
+        rows = fetch_all(conn, "select id, author_id, body, created_at from messages where kind = 'alert' and created_at >= %s order by id",
+                         (window_start,))
+        return [{"id": int(r["id"]), "author_id": r["author_id"], "body": r["body"], "created_at": r["created_at"].isoformat()} for r in rows]
+
+    def _reports(self, conn, round_id: int) -> list[dict[str, Any]]:
+        """A round's reports are the report messages written while it was open; the supervisors of
+        a round are the only supervisors alive then, so time is identity enough."""
+        rnd = fetch_one(conn, "select started_at, ended_at from rounds where id = %s", (round_id,))
+        if rnd is None:
+            return []
+        rows = fetch_all(
+            conn,
+            "select id, author_id, body, created_at from messages where kind = 'report' and created_at >= %s "
+            "and created_at <= coalesce(%s, now()) order by id",
+            (rnd["started_at"], rnd["ended_at"]),
+        )
+        return [self._shape_report(r) for r in rows]
+
+    @staticmethod
+    def _shape_report(r) -> dict[str, Any]:
+        body = r["body"]
+        trigger = body[len(PING_PREFIX):body.index("]")] if body.startswith(PING_PREFIX) and "]" in body else None
+        return {"id": int(r["id"]), "author_id": r["author_id"], "body": body, "created_at": r["created_at"].isoformat(),
+                "ping": trigger is not None, "trigger": trigger}
+
+    @staticmethod
+    def _active_tunes(conn) -> list[dict[str, Any]]:
+        rows = fetch_all(
+            conn,
+            "select knob, value, set_by, reason, expires_at from config where set_by is not null "
+            "and (expires_at is null or expires_at > now()) order by knob",
+        )
+        return [{"knob": r["knob"], "value": float(r["value"]), "seed": float(CONFIG_SEEDS[r["knob"]][0]) if r["knob"] in CONFIG_SEEDS else None,
+                 "set_by": r["set_by"], "reason": r["reason"],
+                 "expires_at": r["expires_at"].isoformat() if r["expires_at"] else None} for r in rows]
+
+    @staticmethod
+    def _pending_tunes(conn) -> list[dict[str, Any]]:
+        rows = fetch_all(
+            conn,
+            "select p.knob, p.value, p.proposed_by, r.number from tune_proposals p join rounds r on r.id = p.round_id "
+            "where p.committed_by is null order by p.id",
+        )
+        return [{"knob": r["knob"], "value": float(r["value"]), "proposed_by": r["proposed_by"], "round_number": int(r["number"])} for r in rows]
+
+    @staticmethod
+    def _verifier_progress(conn) -> dict[str, Any]:
+        totals = fetch_one(conn, "select count(*) as total, count(*) filter (where status = 'done') as done, avg(score) as mean from tasks")
+        lowest = fetch_all(conn, "select id, score, notes from tasks where status = 'done' and score is not null order by score asc, id limit %s",
+                           (BRIEF_LOWEST_SCORES,))
+        return {"done": int(totals["done"]), "total": int(totals["total"]),
+                "mean_score": float(totals["mean"]) if totals["mean"] is not None else None,
+                "lowest": [{"id": r["id"], "score": float(r["score"]), "notes": r["notes"]} for r in lowest]}
 
     # Board writes
 
