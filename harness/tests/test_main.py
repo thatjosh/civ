@@ -141,3 +141,27 @@ async def test_run_with_supervisors_releases_the_cron_even_when_the_population_r
     with pytest.raises(RuntimeError):
         await run_with_supervisors(population(), FakeCron())
     assert released.is_set()
+
+
+async def test_amain_wires_the_builders_together(monkeypatch, tmp_path):
+    # The M4 refactor of main.py dropped build_runner and no test called amain, so the first live
+    # run was the one that found it. This runs amain end to end with fakes in place of the database
+    # and the model, which is enough to catch a name that does not resolve.
+    from harness.orchestrator import main as m
+    from harness.orchestrator.monitor import StaticKnobs
+    from harness.orchestrator.prompts import PromptAssembler
+    from harness.orchestrator.spawner import Spawner
+    from harness.tests.orchestrator_fakes import FakeClient, FakeOperator, assistant, client_factory, init_message, result
+
+    op = FakeOperator()
+    cfg = m.RunConfig(solvers=1, stagger_s=0, root=m.DEFAULT_ROOT, supervisors=0)
+    clients = [FakeClient([init_message(), assistant(100), result(num_turns=1, text="done")])]
+    spawner = Spawner(op, cfg.board_url, tmp_path, PromptAssembler(m.DEFAULT_ROOT / "harness" / "prompts"),
+                      client_factory=client_factory(clients), knobs=StaticKnobs())
+    monkeypatch.setattr(m, "build_operator", lambda cfg: (op, StaticKnobs()))
+    monkeypatch.setattr(m, "build_spawner", lambda cfg, operator=None, knobs=None: (spawner, op))
+
+    results, rounds = await m.amain(cfg)
+
+    assert len(results) == 1 and results[0].ended_by == "natural" and rounds == []
+    assert [a["id"] for a in op.registered] == ["sol-001"]

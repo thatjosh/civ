@@ -1,0 +1,9 @@
+1 | 19:14:49.921265 | operator | task.created | {"task_id": "T-001", "thread_id": 1}
+2 | 19:14:49.925906 | operator | task.created | {"task_id": "T-002", "thread_id": 2}
+3 | 19:14:49.928668 | operator | task.created | {"task_id": "T-003", "thread_id": 3}
+4 | 19:14:49.929345 | operator | task.created | {"task_id": "T-004", "thread_id": 4}
+5 | 19:14:49.93 | operator | task.created | {"task_id": "T-005", "thread_id": 5}
+6 | 19:14:49.930618 | operator | task.created | {"task_id": "T-006", "thread_id": 6}
+7 | 19:14:49.931205 | operator | task.created | {"task_id": "T-007", "thread_id": 7}
+8 | 19:14:49.931949 | operator | task.created | {"task_id": "T-008", "thread_id": 8}
+9 | 19:14:50.470927 | operator | knob.preset | {"to": 0.0, "from": 2.0, "knob": "kill_grace_turns", "reason": "preset from the command line"}

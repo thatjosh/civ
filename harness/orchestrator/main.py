@@ -183,6 +183,11 @@ def build_spawner(cfg: RunConfig, operator: Any = None, knobs: Any = None) -> tu
     return spawner, operator
 
 
+def build_runner(cfg: RunConfig, spawner: Spawner, operator: Any) -> LineageRunner:
+    request = (cfg.root / "harness" / "prompts" / HANDOFF_REQUEST_FILE).read_text(encoding="utf-8")
+    return LineageRunner(spawner, operator, request, max_generations=cfg.max_generations)
+
+
 def build_supervisor_cron(cfg: RunConfig, operator: Any, knobs: Any) -> SupervisorCron:
     """A second spawner for the supervisors, because they may run a different
     model and always run a different turn budget, and the spawner owns both."""

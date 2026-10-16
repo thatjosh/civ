@@ -4,15 +4,15 @@
   "control": false,
   "fixture": "docs/demo/2026-10-15-m3-fixture.sql",
   "agent_id": "sup-001-r3",
-  "round_id": 3,
-  "brief_markdown": "## Round 3 (final round: the solvers have finished, write the post-mortem)\n\nWindow: 2026-10-15T21:38:40.531786+01:00 to 2026-10-16T02:06:23.311674+01:00. Supervisors this round: 1.\n\n## Status\n\n- Live agents: 0 solvers, 0 supervisors\n- Tasks: open 0, leased 0, done 8, blocked 0\n- Tokens per minute (last minute): 195797\n\n## SLOs (this window against the previous one)\n\n| SLO | this window | n | previous | n |\n|---|---|---|---|---|\n| completions_per_mtok | 2.47 | 8 | 2.53 | 8 |\n| blocked_failed_rate | 0 | 8 | 0 | 8 |\n| duplicate_rate | 0 | 7 | 0 | 7 |\n| lease_wait_median_s | 15.4 | 8 | 15.4 | 8 |\n| handoff_success_rate | 0.6 | 5 | 0.6 | 5 |\n\nmin_sample is 3: a tune naming an SLO with n below that is refused.\n\nHistory (older rounds first): round 1: completions_per_mtok=2.73, blocked_failed_rate=0, duplicate_rate=0, lease_wait_median_s=15.4, handoff_success_rate=0.6; round 2: completions_per_mtok=2.53, blocked_failed_rate=0, duplicate_rate=0, lease_wait_median_s=15.4, handoff_success_rate=0.6; round 3: completions_per_mtok=2.47, blocked_failed_rate=0, duplicate_rate=0, lease_wait_median_s=15.4, handoff_success_rate=0.6\n\n## Succession\n\n- Handoff requests: 4, real handoffs: 3, stubs: 2, kills: 2\n- Handoff success rate: 0.6\n- Median turns from request to handoff: none; median seconds: 5.64\n- Lineage generations: L-001 at 2, L-002 at 3, L-003 at 3, S-001 at 2\n\n### Kill: sol-003 (lineage L-003, generation 1)\n- Classification (heuristic, confirm or override): **no_chance**\n- Reason: kill threshold reached; task held: T-007\n- Requested: yes; turns since request: none; seconds since request: 2.72; grace turns: 2; context at request: 87%\n- Tool calls after the request: none\n- Handoff refusals: none\n\n### Kill: sol-002 (lineage L-002, generation 1)\n- Classification (heuristic, confirm or override): **never_asked**\n- Reason: kill threshold reached; task held: T-008\n- Requested: no; turns since request: none; seconds since request: none; grace turns: 2; context at request: none\n- Tool calls after the request: none\n- Handoff refusals: none\n\n## Blockers\n\nNo blockers this window.\n\nBlocked tasks (attempts exhausted, waiting for a supervisor):\n- none\n\n## Alerts since the window opened\n\nNone.\n\n## Previous round's reports\n\n### Report seq 29 by sup-001-r2\n## Window This is round 2, the final round, so this report is the run's post-mortem. The window runs from 2026-10-15T21:38:40 to 2026-10-16T02:05:49 (+01:00). It starts at the same moment as round 1's window, and the board has nothing new since round 1's report (seq 28). Every board event in this window is one round 1 already counted, in seqs 1\u201327, roughly 21:39\u201321:41. 0 solvers and 0 supervisors are live; I am the only supervisor. No knob was tuned in either round. ## Succession - 4 handoff requests, 3 real handoffs (seqs 22, 23, 24), 2 stubs, 2 kills. - Handoff success rate is 0.6 (n=5), ...\n\n## Knobs\n\nEvery knob is at its seed.\n\n## Verifier progress\n\n- Done 8 of 8, mean score 0.946\n- Lowest scores: T-005 0.667 (years_between: expected 2, got 1); T-007 0.9 (9/10 keyword groups, missing: michaelmas); T-001 1 (all fields correct)\n",
+  "round_id": 1,
+  "brief_markdown": "## Round 1 (final round: the solvers have finished, write the post-mortem)\n\nWindow: 2026-10-15T21:38:40.531786+01:00 to 2026-10-16T18:52:35.710419+01:00. Supervisors this round: 1.\n\n## Status\n\n- Live agents: 0 solvers, 0 supervisors\n- Tasks: open 0, leased 0, done 8, blocked 0\n- Tokens per minute (last minute): 0\n\n## SLOs (this window against the previous one)\n\n| SLO | this window | n | previous | n |\n|---|---|---|---|---|\n| completions_per_mtok | 2.73 | 8 | none |  |\n| blocked_failed_rate | 0 | 8 | none |  |\n| duplicate_rate | 0 | 7 | none |  |\n| lease_wait_median_s | 15.4 | 8 | none |  |\n| handoff_success_rate | 0.6 | 5 | none |  |\n\nNo previous window: this is the first round, so nothing can be compared yet.\n\nmin_sample is 3: a tune naming an SLO with n below that is refused.\n\nHistory (older rounds first): round 1: completions_per_mtok=2.73, blocked_failed_rate=0, duplicate_rate=0, lease_wait_median_s=15.4, handoff_success_rate=0.6\n\n## Succession\n\n- Handoff requests: 4, real handoffs: 3, stubs: 2, kills: 2\n- Handoff success rate: 0.6\n- Median turns from request to handoff: none; median seconds: 5.64\n- Lineage generations: L-001 at 2, L-002 at 3, L-003 at 3\n\n### Kill: sol-003 (lineage L-003, generation 1)\n- Classification (heuristic, confirm or override): **no_chance**\n- Reason: kill threshold reached; task held: T-007\n- Requested: yes; turns since request: none; seconds since request: 2.72; grace turns: 2; context at request: 87%\n- Tool calls after the request: none\n- Handoff refusals: none\n\n### Kill: sol-002 (lineage L-002, generation 1)\n- Classification (heuristic, confirm or override): **never_asked**\n- Reason: kill threshold reached; task held: T-008\n- Requested: no; turns since request: none; seconds since request: none; grace turns: 2; context at request: none\n- Tool calls after the request: none\n- Handoff refusals: none\n\n## Blockers\n\nNo blockers this window.\n\nBlocked tasks (attempts exhausted, waiting for a supervisor):\n- none\n\n## Alerts since the window opened\n\nNone.\n\n## Previous round's reports\n\nNone (first round, or nobody reported).\n\n## Knobs\n\nEvery knob is at its seed.\n\n## Verifier progress\n\n- Done 8 of 8, mean score 0.946\n- Lowest scores: T-005 0.667 (years_between: expected 2, got 1); T-007 0.9 (9/10 keyword groups, missing: michaelmas); T-001 1 (all fields correct)\n",
   "brief": {
     "round": {
-      "id": 3,
-      "number": 3,
+      "id": 1,
+      "number": 1,
       "final": true,
       "window_start": "2026-10-15T21:38:40.531786+01:00",
-      "window_end": "2026-10-16T02:06:23.311674+01:00",
+      "window_end": "2026-10-16T18:52:35.710419+01:00",
       "supervisors": 1
     },
     "status": {
@@ -20,7 +20,7 @@
         "solver": 0,
         "supervisor": 0
       },
-      "tokens_per_min": 195797,
+      "tokens_per_min": 0,
       "tasks": {
         "open": 0,
         "leased": 0,
@@ -31,7 +31,7 @@
     "slo": {
       "current": {
         "completions_per_mtok": {
-          "value": 2.465430048045068,
+          "value": 2.728619983389526,
           "n": 8
         },
         "blocked_failed_rate": {
@@ -51,49 +51,12 @@
           "n": 5
         }
       },
-      "previous": {
-        "completions_per_mtok": {
-          "value": 2.5306845501708213,
-          "n": 8
-        },
-        "blocked_failed_rate": {
-          "value": 0.0,
-          "n": 8
-        },
-        "duplicate_rate": {
-          "value": 0.0,
-          "n": 7
-        },
-        "lease_wait_median_s": {
-          "value": 15.413754,
-          "n": 8
-        },
-        "handoff_success_rate": {
-          "value": 0.6,
-          "n": 5
-        }
-      },
+      "previous": null,
       "min_sample": 3,
       "history": [
         {
           "round": 1,
           "completions_per_mtok": 2.728619983389526,
-          "blocked_failed_rate": 0.0,
-          "duplicate_rate": 0.0,
-          "lease_wait_median_s": 15.413754,
-          "handoff_success_rate": 0.6
-        },
-        {
-          "round": 2,
-          "completions_per_mtok": 2.5306845501708213,
-          "blocked_failed_rate": 0.0,
-          "duplicate_rate": 0.0,
-          "lease_wait_median_s": 15.413754,
-          "handoff_success_rate": 0.6
-        },
-        {
-          "round": 3,
-          "completions_per_mtok": 2.465430048045068,
           "blocked_failed_rate": 0.0,
           "duplicate_rate": 0.0,
           "lease_wait_median_s": 15.413754,
@@ -113,8 +76,7 @@
       "generations": {
         "L-001": 2,
         "L-002": 3,
-        "L-003": 3,
-        "S-001": 2
+        "L-003": 3
       },
       "incidents": [
         {
@@ -152,16 +114,7 @@
     "blockers": [],
     "blocked_tasks": [],
     "alerts": [],
-    "previous_reports": [
-      {
-        "id": 29,
-        "author_id": "sup-001-r2",
-        "body": "## Window\nThis is round 2, the final round, so this report is the run's post-mortem. The window runs from 2026-10-15T21:38:40 to 2026-10-16T02:05:49 (+01:00). It starts at the same moment as round 1's window, and the board has nothing new since round 1's report (seq 28). Every board event in this window is one round 1 already counted, in seqs 1\u201327, roughly 21:39\u201321:41. 0 solvers and 0 supervisors are live; I am the only supervisor. No knob was tuned in either round.\n\n## Succession\n- 4 handoff requests, 3 real handoffs (seqs 22, 23, 24), 2 stubs, 2 kills.\n- Handoff success rate is 0.6 (n=5), the same as last window (0.6, n=5). These are the same 5 successions counted twice, not a second bad window.\n- No earlier tune to judge.\n- Lineages L-002 and L-003 reached generation 3 and L-001 reached generation 2, all within about 2 minutes on an 8-task pack. That is churn.\n- Stub successors (sol-002-g2/g3, sol-003-g2/g3) did not redo work: duplicate_rate is 0 (n=7), and seq 26 builds on seqs 12\u201320.\n\n## Queue and SLOs\n- Tasks: 8 done, 0 open, 0 leased, 0 blocked. Verifier mean score 0.946.\n- SLOs, this window against the previous one:\n  - completions_per_mtok 2.53 against 2.73 (n=8). The dip probably comes from tokens counted after the work ended, since the token rate was still 229k/min with no agents live. It is not a change in solver output.\n  - blocked_failed_rate 0 against 0 (n=8).\n  - duplicate_rate 0 against 0 (n=7).\n  - lease_wait_median_s 15.4 against 15.4 (n=8).\n  - handoff_success_rate 0.6 against 0.6 (n=5).\n- Lowest scores: T-005 at 0.667 (years_between) and T-007 at 0.9 (missing the \"michaelmas\" keyword).\n\n## Actions taken\n- No tune. No agents are live, so a tune would expire at its TTL without affecting anyone, and the second window holds no new observations.\n- No replies or reopens: there are no blockers, no blocked tasks and no alerts.\n- No new votes. Nothing has been posted since seq 28, and round 1 already voted on seqs 17, 21 and 22. Those votes carried zero weight because no solvers were live.\n- No ping. The succession_failing trigger (kills in this window and the previous one) may pass the server's check as written, but both windows hold the same two kills. Pinging on that would be double counting, not a sign that succession failed again after a tune.\n\n## Diagnosis\n**Incidents.** I agree with round 1's reading of both kills.\n- sol-002, T-008: I confirm never_asked. No request was ever sent, and a single turn took the context from under 80% to over kill_pct.\n- sol-003, T-007: I confirm no_chance, but it has the same root cause as sol-002. The request landed with context already at 87%, and the kill followed 2.72 s later with no turns and no tool calls in between.\n- Together they show one thing: on this workload a single turn can add more context than the gap between handoff_pct and kill_pct.\n\n**Next run: knobs**\n1. Seed handoff_pct at 70 instead of 80. This addresses both kills.\n2. Optionally set kill_grace_turns to 3. It only helps if the request lands early enough to use the extra turns.\n3. Leave the other knobs at their seeds. The queue, duplicate and lease SLOs were all healthy.\n\n**Next run: prompts**\n- Tell solvers to read large materials files in parts (offset/limit), so that no single turn jumps past the gap.\n- The handoff prompt is fine: seq 22 is a model handoff.\n\n**Next run: pack**\n- T-005: state the years_between convention, i.e. calendar-year difference 1855\u22121853=2 (see seqs 17, 20, 21).\n- T-007: either ask for the reopening date \"as the source names it\" or drop the \"michaelmas\" keyword group.\n\n**Next run: harness**\n- A final round's window should start where the previous window ended. Otherwise the same incidents are counted twice, SLO history shows flat lines that are really duplicates, and succession_failing can be met by a single incident set.\n\n## For the operator\n- The run succeeded: 8 of 8 tasks done, mean score 0.946, no blocked tasks, no duplicates. The one weak point was succession, at 0.6 (2 kills).\n- Recommendations at leisure: seed handoff_pct at 70, fix the T-005 and T-007 task text, and stop round windows from overlapping.\n- Votes cast after the solvers have exited carry zero weight.\n- No ping sent this round.",
-        "created_at": "2026-10-16T02:06:15.101908+01:00",
-        "ping": false,
-        "trigger": null
-      }
-    ],
+    "previous_reports": [],
     "tunes": {
       "active": [],
       "pending": [],
@@ -190,13 +143,24 @@
       ]
     }
   },
-  "report": "## Window\nThis is round 3, the final round, so this report is the post-mortem. The window runs from 2026-10-15T21:38:40 to 2026-10-16T02:06:23 (+01:00). Like rounds 1 and 2, it starts at the same instant as the earlier windows. The board holds nothing new after round 2's report (seq 29): all solver activity is in seqs 1\u201327, roughly 21:39\u201321:41. 0 solvers and 0 supervisors are live; I am the only supervisor. No knob was tuned this round or in any earlier round, and every knob is at its seed.\n\n## Succession\n- 4 handoff requests, 3 real handoffs (seqs 22\u201324), 2 stubs, 2 kills.\n- Handoff success rate is 0.6 (n=5) this window and 0.6 (n=5) last window. These are the same 5 successions counted for the third time, not three bad windows.\n- No earlier tune exists to judge.\n- Lineages L-002 and L-003 reached generation 3 within about 2 minutes on an 8-task pack. That is churn.\n- The stub successors did not redo work: duplicate_rate is 0 (n=7).\n\n## Queue and SLOs\n- Tasks: 8 done, 0 open, 0 leased, 0 blocked. Verifier mean score 0.946.\n- SLOs, this window against the last one:\n  - completions_per_mtok: 2.47 against 2.53 (n=8). Round 1 was 2.73.\n  - blocked_failed_rate: 0 against 0 (n=8).\n  - duplicate_rate: 0 against 0 (n=7).\n  - lease_wait_median_s: 15.4 against 15.4 (n=8).\n  - handoff_success_rate: 0.6 against 0.6 (n=5).\n- The fall in completions_per_mtok is an artifact. Completions stayed at 8 while the denominator kept growing after the work ended: the token rate is still about 196k/min with 0 agents live, which looks like the supervisor rounds themselves being counted. Solver efficiency did not change.\n\n## Actions taken\n- No tune. No agents are live, so any tune would expire at its TTL without touching a solver, and this window holds no new observations.\n- No replies or reopens: there are no blockers, no blocked tasks and no alerts.\n- No votes. Nothing new has been posted since seq 28, and round 1 already voted on seqs 17, 21 and 22, with zero weight because no solvers were live.\n- No ping, although two triggers would probably pass the server's check:\n  - succession_failing: both windows contain \"kills\", but they are the same 2 kills.\n  - slo_degraded on completions_per_mtok: 2.73 \u2192 2.53 \u2192 2.47 over three windows, but this is the post-run token artifact above.\n  - Pinging on either would be ping inflation.\n\n## Diagnosis\n**Incidents.** I agree with rounds 1 and 2 (seqs 28, 29).\n- sol-002 (T-008): I confirm never_asked. No request was sent; a single turn crossed from under 80% to over kill_pct.\n- sol-003 (T-007): I confirm no_chance. The request landed at 87% context and the kill followed 2.72 s later, with 0 turns and 0 tool calls in between. The root cause is the same as sol-002's: one turn adds more context than the gap between handoff_pct and kill_pct.\n\n**What the next run should change**\n1. Knobs: seed handoff_pct at 70 instead of 80. That addresses both kills. kill_grace_turns 3 is optional. Leave everything else at its seed, since the queue, duplicate and lease SLOs were healthy.\n2. Solver prompt: tell solvers to read large materials files with offset/limit, so that no single turn can jump past the threshold gap. The handoff prompt is fine; seq 22 is a model handoff.\n3. Pack:\n   - T-005: state the years_between convention (calendar-year difference, 1855\u22121853=2; see seqs 17, 20, 21).\n   - T-007: ask for the reopening date \"as the source names it\", or drop the \"michaelmas\" keyword group.\n4. Harness:\n   - Each round's window should start where the previous one ended. Overlapping windows triple-count incidents and leave SLO history as flat duplicates.\n   - Overlapping windows also let succession_failing and slo_degraded pass on stale data.\n   - Exclude supervisor tokens, or tokens spent after the queue drains, from completions_per_mtok.\n   - Stop scheduling extra supervisor rounds once the queue is empty and no agents are live. This round and round 2 added no information.\n\n## For the operator\n- The run succeeded: 8 of 8 tasks done, mean score 0.946, no blocked tasks, no duplicates. The one weak point was succession, at 0.6 (2 kills, one root cause).\n- Items to consider at leisure:\n  - Seed handoff_pct at 70.\n  - Fix the T-005 and T-007 task text.\n  - Make round windows stop overlapping.\n  - Keep supervisor tokens out of completions_per_mtok.\n  - Stop running supervisor rounds once the run has finished.\n- No ping sent. The triggers that would pass are artifacts of the window overlap, not real failures.",
-  "tunes": [],
+  "report": "## Window\nRound 1, which is also the final round, so this report is the post-mortem. Span: 2026-10-15T21:38 to 2026-10-16T18:52. 0 solvers live (the pack is finished), 1 supervisor. There is no previous window, so nothing can be compared against an earlier one.\n\n## Succession\n- 4 handoff requests, 3 real handoffs, 2 stubs, 2 kills.\n- handoff_success_rate is 0.6 (n=5), with no previous value to compare.\n- No earlier round tuned a succession knob.\n- Lineages L-002 and L-003 reached generation 3 and L-001 reached generation 2. Three generations in a run of about one minute of solver activity (seqs 9\u201327) is churn.\n- Stub successors sol-002-g3 (T-008, seq 25) and sol-003-g3 (T-007, seqs 26/27) did not post duplicate findings (duplicate_rate 0). sol-003-g3 did post the completion twice (seqs 26 and 27), but these are not substantive repeats.\n\n## Queue and SLOs\n- Tasks: 8 done, 0 open, 0 leased, 0 blocked.\n- Verifier mean score 0.946. Lowest scores: T-005 0.667 (years_between expected 2, got 1) and T-007 0.9 (missing \"michaelmas\").\n- completions_per_mtok 2.73 (n=8)\n- blocked_failed_rate 0 (n=8)\n- duplicate_rate 0 (n=7)\n- lease_wait_median_s 15.4 (n=8)\n- handoff_success_rate 0.6 (n=5)\n\nThroughput and the queue were healthy. Succession was the only weak SLO.\n\n## Actions taken\n- Voted +1 on seq 21: it corrects the T-005 years_between convention (calendar-year difference, 2) after the verifier result at seq 20.\n- Tuned handoff_pct from 80 to 75 (slo handoff_success_rate). The server accepted it; it expires at 2026-10-16T20:13. With no live agents the tune changes nothing in this run. It records the decision for the next run, which should apply it from the start.\n- No refusals. No blockers or alerts to answer. No ping: there is no previous window, so neither succession_failing nor slo_degraded can be met.\n\n## Diagnosis\n- sol-002 (T-008): I confirm never_asked. No request was made before the kill, so one turn carried the context from under 80% to past kill_pct.\n- sol-003 (T-007): classified no_chance; I override it to effectively never_asked. The request arrived with context already at 87%, and the kill came 2.72s and zero turns later. Grace turns never applied, because the next turn crossed kill_pct. A single turn jumped past both thresholds, which is the same cause as sol-002. Raising kill_grace_turns would not have helped, since no turn ever happened inside the grace.\n- The pattern is that per-turn context growth on this pack (multi-file reading tasks) is larger than the gap between handoff_pct and kill_pct.\n\nChanges for the next run:\n1. Knobs: seed handoff_pct at 75, or 70 if kills persist, and keep kill_grace_turns at 2. Consider also widening kill_pct, or measuring context growth per turn and asking early when the last turn's growth exceeds the remaining gap.\n2. Prompts: no prompt fault was seen (no refusals, no ignored requests).\n3. Pack: T-005's task text should state the years_between convention (calendar-year difference). T-007 should either name the keywords the verifier expects (e.g. \"michaelmas\") or the verifier should stop requiring them; sol-003-g3 reasonably judged the keyword unrequired (seq 27).\n\n## For the operator\nThe run completed 8/8 tasks with mean score 0.946, no blocked tasks and no duplicates. The one systemic issue is succession: 2 of 5 successions were kills, both because a single turn crossed both the handoff and kill thresholds. The recommendation is to seed handoff_pct at 75 next run; it was tuned here but will expire. I did not ping.",
+  "tunes": [
+    {
+      "n": 5,
+      "to": 75.0,
+      "slo": "handoff_success_rate",
+      "from": 80.0,
+      "knob": "handoff_pct",
+      "reason": "2 kills of 5 successions (rate 0.6, n=5). sol-002 never asked (one turn went from under 80% to past kill_pct). sol-003 was asked at 87%, 2.72s and 0 turns before the kill, so it too crossed both thresholds in roughly one turn. Two incidents with one cause: the gap between handoff_pct and kill_pct is too small for this workload's per-turn context growth.",
+      "big_move": false,
+      "round_id": 1
+    }
+  ],
   "refusals": [],
   "pings": [],
-  "cost_usd": 0.1978455,
+  "cost_usd": 0.1521651,
   "cost_estimated": false,
-  "turns": 3,
+  "turns": 6,
   "error": null,
-  "written_at": "2026-10-16T01:06:52+00:00"
+  "written_at": "2026-10-16T18:13:35+00:00"
 }

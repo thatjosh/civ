@@ -4,15 +4,15 @@
   "control": true,
   "fixture": "docs/demo/2026-10-15-m3-fixture.sql",
   "agent_id": "sup-001-r2",
-  "round_id": 2,
-  "brief_markdown": "## Round 2 (final round: the solvers have finished, write the post-mortem)\n\nWindow: 2026-10-15T21:38:40.531786+01:00 to 2026-10-16T02:07:28.122319+01:00. Supervisors this round: 1.\n\n## Status\n\n- Live agents: 0 solvers, 0 supervisors\n- Tasks: open 0, leased 0, done 8, blocked 0\n- Tokens per minute (last minute): 217090\n\n## SLOs (this window against the previous one)\n\n| SLO | this window | n | previous | n |\n|---|---|---|---|---|\n| completions_per_mtok | 2.54 | 8 | 2.73 | 8 |\n| blocked_failed_rate | 0 | 8 | 0 | 8 |\n| duplicate_rate | 0 | 7 | 0 | 7 |\n| lease_wait_median_s | 15.4 | 8 | 15.4 | 8 |\n| handoff_success_rate | 0.6 | 5 | 0.6 | 5 |\n\nmin_sample is 3: a tune naming an SLO with n below that is refused.\n\nHistory (older rounds first): round 1: completions_per_mtok=2.73, blocked_failed_rate=0, duplicate_rate=0, lease_wait_median_s=15.4, handoff_success_rate=0.6; round 2: completions_per_mtok=2.54, blocked_failed_rate=0, duplicate_rate=0, lease_wait_median_s=15.4, handoff_success_rate=0.6\n\n## Succession\n\n- Handoff requests: 0, real handoffs: 0, stubs: 0, kills: 0\n- Handoff success rate: none\n- Median turns from request to handoff: none; median seconds: none\n\nNo kills this window.\n\n## Blockers\n\nNo blockers this window.\n\nBlocked tasks (attempts exhausted, waiting for a supervisor):\n- none\n\n## Alerts since the window opened\n\nNone.\n\n## Previous round's reports\n\n### Report seq 28 by sup-001-r1\n## Window Round 1 and also the final round, so this is the run's post-mortem. Window: 2026-10-15T21:38:40 to 2026-10-16T02:06:53 (+01:00). All solver activity fell between seq 2 and seq 27, about 21:39:40 to 21:40:51. Live at round start: 0 solvers and 0 supervisors (me only). There was no previous window to compare against. ## Succession The brief contradicts itself. Its Succession section says 0 requests, 0 handoffs, 0 stubs and 0 kills, but the SLO table gives handoff_success_rate 0.6 with n=5. The board agrees with the SLO table: - 3 real handoffs: seq 22 (sol-001), seq 23 (sol-002-g2),...\n\n## Knobs\n\nEvery knob is at its seed.\n\n## Verifier progress\n\n- Done 8 of 8, mean score 0.946\n- Lowest scores: T-005 0.667 (years_between: expected 2, got 1); T-007 0.9 (9/10 keyword groups, missing: michaelmas); T-001 1 (all fields correct)\n",
+  "round_id": 1,
+  "brief_markdown": "## Round 1 (final round: the solvers have finished, write the post-mortem)\n\nWindow: 2026-10-15T21:38:40.531786+01:00 to 2026-10-16T19:13:36.661212+01:00. Supervisors this round: 1.\n\n## Status\n\n- Live agents: 0 solvers, 0 supervisors\n- Tasks: open 0, leased 0, done 8, blocked 0\n- Tokens per minute (last minute): 0\n\n## SLOs (this window against the previous one)\n\n| SLO | this window | n | previous | n |\n|---|---|---|---|---|\n| completions_per_mtok | 2.73 | 8 | none |  |\n| blocked_failed_rate | 0 | 8 | none |  |\n| duplicate_rate | 0 | 7 | none |  |\n| lease_wait_median_s | 15.4 | 8 | none |  |\n| handoff_success_rate | 0.6 | 5 | none |  |\n\nNo previous window: this is the first round, so nothing can be compared yet.\n\nmin_sample is 3: a tune naming an SLO with n below that is refused.\n\nHistory (older rounds first): round 1: completions_per_mtok=2.73, blocked_failed_rate=0, duplicate_rate=0, lease_wait_median_s=15.4, handoff_success_rate=0.6\n\n## Succession\n\n- Handoff requests: 0, real handoffs: 0, stubs: 0, kills: 0\n- Handoff success rate: none\n- Median turns from request to handoff: none; median seconds: none\n\nNo kills this window.\n\n## Blockers\n\nNo blockers this window.\n\nBlocked tasks (attempts exhausted, waiting for a supervisor):\n- none\n\n## Alerts since the window opened\n\nNone.\n\n## Previous round's reports\n\nNone (first round, or nobody reported).\n\n## Knobs\n\nEvery knob is at its seed.\n\n## Verifier progress\n\n- Done 8 of 8, mean score 0.946\n- Lowest scores: T-005 0.667 (years_between: expected 2, got 1); T-007 0.9 (9/10 keyword groups, missing: michaelmas); T-001 1 (all fields correct)\n",
   "brief": {
     "round": {
-      "id": 2,
-      "number": 2,
+      "id": 1,
+      "number": 1,
       "final": true,
       "window_start": "2026-10-15T21:38:40.531786+01:00",
-      "window_end": "2026-10-16T02:07:28.122319+01:00",
+      "window_end": "2026-10-16T19:13:36.661212+01:00",
       "supervisors": 1
     },
     "status": {
@@ -20,7 +20,7 @@
         "solver": 0,
         "supervisor": 0
       },
-      "tokens_per_min": 217090,
+      "tokens_per_min": 0,
       "tasks": {
         "open": 0,
         "leased": 0,
@@ -30,28 +30,6 @@
     },
     "slo": {
       "current": {
-        "completions_per_mtok": {
-          "value": 2.5405092133154437,
-          "n": 8
-        },
-        "blocked_failed_rate": {
-          "value": 0.0,
-          "n": 8
-        },
-        "duplicate_rate": {
-          "value": 0.0,
-          "n": 7
-        },
-        "lease_wait_median_s": {
-          "value": 15.413754,
-          "n": 8
-        },
-        "handoff_success_rate": {
-          "value": 0.6,
-          "n": 5
-        }
-      },
-      "previous": {
         "completions_per_mtok": {
           "value": 2.728619983389526,
           "n": 8
@@ -73,19 +51,12 @@
           "n": 5
         }
       },
+      "previous": null,
       "min_sample": 3,
       "history": [
         {
           "round": 1,
           "completions_per_mtok": 2.728619983389526,
-          "blocked_failed_rate": 0.0,
-          "duplicate_rate": 0.0,
-          "lease_wait_median_s": 15.413754,
-          "handoff_success_rate": 0.6
-        },
-        {
-          "round": 2,
-          "completions_per_mtok": 2.5405092133154437,
           "blocked_failed_rate": 0.0,
           "duplicate_rate": 0.0,
           "lease_wait_median_s": 15.413754,
@@ -97,16 +68,7 @@
     "blockers": [],
     "blocked_tasks": [],
     "alerts": [],
-    "previous_reports": [
-      {
-        "id": 28,
-        "author_id": "sup-001-r1",
-        "body": "## Window\nRound 1 and also the final round, so this is the run's post-mortem. Window: 2026-10-15T21:38:40 to 2026-10-16T02:06:53 (+01:00). All solver activity fell between seq 2 and seq 27, about 21:39:40 to 21:40:51. Live at round start: 0 solvers and 0 supervisors (me only). There was no previous window to compare against.\n\n## Succession\nThe brief contradicts itself. Its Succession section says 0 requests, 0 handoffs, 0 stubs and 0 kills, but the SLO table gives handoff_success_rate 0.6 with n=5. The board agrees with the SLO table:\n- 3 real handoffs: seq 22 (sol-001), seq 23 (sol-002-g2), seq 24 (sol-003-g2).\n- By the formula real/(real+stubs), 0.6 with n=5 means 2 stubs. The likely successions are sol-002\u2192g2 and sol-003\u2192g2.\n- Two lineages reached generation 3 (sol-002-g3, sol-003-g3) in about 1 minute of wall time. That is heavy churn.\n- No packets, kills or medians were supplied, so I could not classify the incidents.\n- No earlier tune exists to evaluate.\n\n## Queue and SLOs\nTasks: 8 done, 0 open, 0 leased, 0 blocked. Verifier mean score 0.946.\n\n| SLO | value | n |\n|---|---|---|\n| completions_per_mtok | 2.73 | 8 |\n| blocked_failed_rate | 0 | 8 |\n| duplicate_rate | 0 | 7 |\n| lease_wait_median_s | 15.4 | 8 |\n| handoff_success_rate | 0.6 | 5 |\n\nThroughput and queue health were good. Succession is the weak SLO. completions_per_mtok of 2.73 is low for an 8-task pack, which suggests context spent on handoffs and successors starting over.\n\n## Actions taken\n- Voted +1 on seq 21, sol-002's correction of T-005 to years_between=2.\n- Voted \u22121 on seq 17, the superseded years_between=1 answer.\n- Both votes returned weight 0 because no agents are live. They are on record but did not move the ranking.\n- No tune. This is the final round, there is no previous window, and hysteresis means one window cannot justify a move.\n- No reopens, because nothing is blocked. No blocker replies, because there are no blockers. No ping, because no trigger is met: there is a single window and no kills in the brief.\n\n## Diagnosis\n**Succession.** I could not confirm or override any incident classification because the brief had no packets.\n- Gen-3 lineages inside one minute on a small pack point to a handoff threshold that fires too early relative to the context budget. They could also mean the context budget is too small for agents that read the full materials.\n- 2 stubs out of 5 successions means 2 successors started with no written account.\n- Even so, seq 25 and seq 27 show the gen-3 agents finished their tasks without repeating findings (duplicate_rate 0). The handoffs at seq 23 and 24 were used well.\n\n**Low scores.**\n- T-005 (0.667): the solver chose complete elapsed years (1) over the calendar-year difference (2). The task text says \"integer years from the fire to the reopening\", which is ambiguous. Seq 21 recorded the correction, but only after the task was scored.\n- T-007 (0.9): the result lacks \"michaelmas\". The facts were on the board at seq 17, but the chronicle prompt never asked for named feast days.\n\n**What the next run should change:**\n- **Pack:** make T-005 say \"calendar-year difference (reopening year minus fire year)\". Make T-007 require the dates as the sources name them, including Michaelmas.\n- **Knobs:** start handoff_pct one step lower (for example 70 to 75) if the stubs prove to be never_asked or silent. Otherwise, if lineage churn is the cause, check the context budget per solver. Do not raise handoff_pct.\n- **Harness:** fix the brief's Succession section so it agrees with the SLO table (stubs and handoffs are counted in one and missing from the other), and include incident packets. Without them a supervisor cannot classify stubs.\n- **Board:** when an earlier answer is corrected, the correction should replace it (seq 17 stayed visible as the thread's main answer).\n\n## For the operator\n- No ping sent; no trigger applies.\n- The brief's Succession section reported zero activity while handoff_success_rate was 0.6 (n=5) and the board shows 3 handoffs. The orchestrator's succession counter seems to be broken. Please check it before the next run, since the succession policy depends on it entirely.\n- The run finished 8 of 8 tasks with a mean score of 0.946.",
-        "created_at": "2026-10-16T02:07:21.748017+01:00",
-        "ping": false,
-        "trigger": null
-      }
-    ],
+    "previous_reports": [],
     "tunes": {
       "active": [],
       "pending": [],
@@ -135,13 +97,13 @@
       ]
     }
   },
-  "report": "## Window\nRound 2 and the final round, so this report is the post-mortem. The window ran from 2026-10-15T21:38:40 to 2026-10-16T02:07:28 (+01:00). Live agents: 0 solvers and 0 supervisors, apart from me. The only thing posted since the previous round is the round-1 report (seq 28). All solver work happened between seq 9 and seq 27, about 21:39:47 to 21:40:51, so this window contains no new solver activity.\n\n## Succession\n- **Brief's Succession section:** 0 requests, 0 handoffs, 0 stubs, 0 kills, success rate \"none\".\n- **SLO table:** handoff_success_rate 0.6 with n=5, the same as last window.\n- **Board:** 3 real handoffs (seq 22, 23, 24). If 0.6 = real/(real+stubs), that means 2 stubs.\n- **Lineages:** sol-002 and sol-003 each reached generation 3 within about one minute.\n- **Earlier tunes:** none to evaluate. Every knob is at its seed.\n\nThe two sources still disagree, as sup-001-r1 reported at seq 28. The SLO number is carried over from the same five successions, not new evidence. There were no packets this round either, so I could not classify any incident.\n\n## Queue and SLOs\nTasks: 8 done, 0 open, 0 leased, 0 blocked. Verifier mean score 0.946.\n\n| SLO | this window (n) | last window (n) |\n|---|---|---|\n| completions_per_mtok | 2.54 (8) | 2.73 (8) |\n| blocked_failed_rate | 0 (8) | 0 (8) |\n| duplicate_rate | 0 (7) | 0 (7) |\n| lease_wait_median_s | 15.4 (8) | 15.4 (8) |\n| handoff_success_rate | 0.6 (5) | 0.6 (5) |\n\ncompletions_per_mtok fell, but completions did not change. The drop comes only from tokens spent after the solvers finished, most likely supervisor tokens, so it says nothing about how the solvers performed. The other SLOs are identical to last window.\n\n## Actions taken\n- **No tune.** The solvers have finished, so a tune would change nothing. Hysteresis also means one bad succession window does not justify raising a knob. On a live run, the 2 stubs out of 5 successions together with gen-3 churn would point to lowering handoff_pct one step (slo handoff_success_rate). I would want packets first.\n- **No votes.** With no live agents, votes carry weight 0, as round 1 found (seq 28).\n- **No replies or reopens.** There are no blockers and no blocked tasks.\n- **No ping.** succession_failing needs kills in two windows, and the brief records 0 kills. slo_degraded needs three windows of decline, and there are only two.\n\n## Diagnosis\nI agree with seq 28's post-mortem and add one point. Changes for the next run:\n- **Pack:**\n  - T-005 should say \"calendar-year difference (reopening year \u2212 fire year)\". Seq 17 used complete elapsed years and scored 0.667. The correction at seq 21 came too late.\n  - T-007 should ask for dates as the sources name them, so \"Michaelmas\" appears. It scored 0.9 without it.\n- **Knobs:** start handoff_pct one step lower. Two lineages reaching gen 3 inside a minute on an 8-task pack is churn. Even so, the gen-3 agents finished without duplicating work (duplicate_rate 0), so the handoffs that did happen were good. Check the per-solver context budget as well.\n- **Harness, succession counter:** fix the brief's Succession counter. Two rounds running it has reported 0 activity while the SLO table and the board show 5 successions. Without incident packets, the succession policy cannot be applied.\n- **Harness, token accounting:** count only solver tokens in completions_per_mtok, or freeze it once the queue drains, so supervisor rounds after the run do not lower it.\n- **Board:** a superseded finding such as seq 17 should be marked as replaced by its correction (seq 21).\n\n## For the operator\n- No ping was sent; no trigger is met.\n- The run completed 8 of 8 tasks with a mean score of 0.946, 0 blocked and 0 duplicates.\n- Please fix the orchestrator's succession counter and incident packets before the next run. It was wrong in both rounds.\n- When the run has ended, consider skipping further supervisor rounds. They add tokens and lower completions_per_mtok without adding information.",
+  "report": "## Window\nRound 1, which is also the final round: 2026-10-15T21:38 to 2026-10-16T19:13 (+01:00). One supervisor (me, sup-001-r2). No agents were live at report time: 0 solvers, 0 supervisors. The solvers have finished, so this report is the post-mortem.\n\n## Succession\n- **Succession counters:** 0 requests, 0 real handoffs, 0 stubs, 0 kills. The success rate shows as \"none\". No previous round tuned anything, so there is no earlier tune to judge.\n- **The data disagree.** The SLO table gives handoff_success_rate = 0.6 with n=5, which means about 3 real handoffs and 2 stubs. The counters above say there were none. The board also has a third-generation solver, sol-003-g3 (seqs 26, 27), so successions did happen. The lineage reached generation 3 in a run under two minutes of solver activity (seq 2 to seq 27, 21:39 to 21:40), which is churn.\n- **No incident packets.** Without packets I could not classify any of these successions. The 0.6 figure (2 stubs out of 5) is a warning sign, but it is a single window with nothing to compare against.\n\n## Queue and SLOs\n- **Tasks:** 0 open, 0 leased, 8 done, 0 blocked. The verifier's mean score is 0.946.\n- **SLOs (first window, so nothing to compare):**\n  - completions_per_mtok: 2.73 (n=8)\n  - blocked_failed_rate: 0 (n=8)\n  - duplicate_rate: 0 (n=7)\n  - lease_wait_median_s: 15.4 (n=8)\n  - handoff_success_rate: 0.6 (n=5)\n- **Lowest scores:**\n  - T-005 scored 0.667: years_between came out as 1, and the verifier expected 2.\n  - T-007 scored 0.9: it was missing the keyword \"michaelmas\".\n- The queue itself was healthy. Nothing was blocked and nothing was duplicated.\n\n## Actions taken\n- Voted +1 on seq 21: sol-002's correction that years_between is the calendar-year difference, 2.\n- Voted -1 on seq 17: the claim of \"complete years = 1\", which failed verification.\n- **No tune.** This is the final round, there is no previous window, and the hysteresis rule needs two windows. If the run had continued, I would have weighed lowering handoff_pct by one step (slo handoff_success_rate, 2 stubs out of 5) once incident packets confirmed `never_asked` or `silent`.\n- No reopens, blocker replies or pings. Nothing triggered: a ping needs kills in two windows, or a trend over three windows.\n\n## Diagnosis\nPost-mortem: changes for the next run.\n1. **Harness or telemetry.** The succession counters (all 0) contradict handoff_success_rate (0.6, n=5) and the gen-3 agent sol-003-g3. Either the brief's succession block is not counting handoffs and stubs, or the SLO is calculated from different events. Fix this before trusting either number. Also have the orchestrator emit incident packets for stubs.\n2. **Pack: T-005.** The task said \"integer years from the fire to the reopening\" but did not say how to count them. The solver reasonably counted complete years (seq 17) and got 1, while the verifier wanted the calendar-year difference, 2. Change the format line to \"years_between: <reopening year minus fire year>\".\n3. **Pack or behaviour: T-007.** The chronicle (seq 26) left out \"michaelmas\" even though seq 17 had the 29 Sep = Michaelmas fact on the board. Either list the required keywords in the task, or accept that 0.9 is fine.\n4. **Knobs.** Leave them all at their seeds. The only possible concern is handoff_pct: two stubs and a gen-3 lineage in a very short run suggest the context gap is tight. Re-examine it once the telemetry in item 1 is fixed.\n5. **Board practice.** sol-002 posted the T-002 fire year early (seq 12), and the dependent tasks used it. That pattern worked; keep the task wording that asks for it.\n\n## For the operator\nNo ping. The one thing worth a human look is the counter mismatch in Diagnosis item 1: the brief reports zero successions, while the SLO table and the agent IDs show at least five. Nothing needs action now.",
   "tunes": [],
   "refusals": [],
   "pings": [],
-  "cost_usd": 0.22796929999999999,
+  "cost_usd": 0.20121269999999997,
   "cost_estimated": false,
-  "turns": 3,
+  "turns": 7,
   "error": null,
-  "written_at": "2026-10-16T01:07:54+00:00"
+  "written_at": "2026-10-16T18:14:09+00:00"
 }
