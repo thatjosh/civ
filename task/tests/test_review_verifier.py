@@ -87,7 +87,11 @@ def test_reset_script_has_no_private_copy_of_the_seeds():
     # rather than carry its own list that can drift from the migration.
     source = Path(reset_db.__file__).read_text()
     assert "seed_config" in source and "CONFIG_SEEDS" not in source
-    assert len(CONFIG_SEEDS) == 13
+    # And every Python seed has a migration row somewhere, so a knob added in one place and not the
+    # other is caught here rather than by a fresh database missing it.
+    migrations = Path(reset_db.__file__).resolve().parents[1] / "harness" / "board_mcp" / "migrations"
+    seeded_sql = "\n".join(f.read_text() for f in migrations.glob("*.sql"))
+    assert all(f"'{knob}'" in seeded_sql for knob in CONFIG_SEEDS)
 
 
 def test_completion_finding_does_not_count_as_an_answer(monkeypatch, tmp_path):
