@@ -17,12 +17,13 @@ REQUEST = "HANDOFF REQUEST TEXT"
 HANDOFF_BODY = "## State of work\nhalf done\n## Open threads\nseq 9\n## What to try next\nx\n## What not to retry\ny\n## Files worth reading\nwork/a.txt"
 
 
-def make(tmp_path: Path, clients: list[FakeClient], window: int = 1000, max_generations: int = 5, force_after=None, **runner_kw):
+def make(tmp_path: Path, clients: list[FakeClient], window: int = 1000, max_generations: int = 5, force_after=None,
+         knobs: StaticKnobs | None = None, **runner_kw):
     op = FakeOperator()
     factory = client_factory(clients)
     spawner = Spawner(
         op, "http://127.0.0.1:8765", tmp_path, PromptAssembler(PROMPTS_DIR),
-        client_factory=factory, knobs=StaticKnobs(), context_window=window, force_handoff_after_turns=force_after,
+        client_factory=factory, knobs=knobs or StaticKnobs(), context_window=window, force_handoff_after_turns=force_after,
     )
     runner = LineageRunner(spawner, op, REQUEST, max_generations=max_generations, poll_s=0, **runner_kw)
     return runner, op, factory
@@ -83,6 +84,76 @@ async def test_kill_without_handoff_writes_a_stub_and_spawns_a_successor(tmp_pat
     assert outcome.stubs == 1 and outcome.handoffs == 0 and outcome.generations == 2
     kill = [e for e in op.events if e[1] == "agent.killed"]
     assert kill and kill[0][2]["reason"] == "kill threshold reached"
+    # Requested at turn 1 (850), kill threshold at turn 3 (950): two turns of grace were given.
+    assert kill[0][2]["requested"] is True and kill[0][2]["turns_since_request"] == 2 and kill[0][2]["grace_turns"] == 2
+
+
+async def test_jumping_both_thresholds_in_one_turn_still_asks_for_the_handoff(tmp_path):
+    # One big file read takes the context from 10 to 95 percent. The old rule killed on the spot
+    # and never sent the request (seen live: sol-002 in the 30k-window demo). Now the request
+    # goes out first and a well-behaved agent hands off.
+    first = FakeClient([init_message(), assistant(100), assistant(950), assistant(955), assistant(960)])
+    second = FakeClient([init_message(), result()])
+    runner, op, _ = make(tmp_path, [first, second])
+    first.on_query = handoff_on_request(op, "sol-010")
+    outcome = await runner.run("L-010", "sol-010")
+    assert op.handoff_requests == ["sol-010"] and first.sent == [REQUEST]
+    assert outcome.handoffs == 1 and outcome.stubs == 0
+    sent = [e for e in op.events if e[1] == "agent.handoff_sent"][0][2]
+    assert sent["kill_due"] is True and sent["turn"] == 2
+    done = [e for e in op.events if e[1] == "agent.handed_off"][0][2]
+    assert done["turns_since_request"] == 0
+
+
+async def test_kill_waits_for_the_grace_turns_after_the_request(tmp_path):
+    # Same jump, but the agent ignores the request: it is killed only once it has had two turns.
+    first = FakeClient([init_message(), assistant(100), assistant(950), assistant(955), assistant(960), assistant(965)])
+    second = FakeClient([init_message(), result()])
+    runner, op, _ = make(tmp_path, [first, second])
+    outcome = await runner.run("L-011", "sol-011")
+    assert op.handoff_requests == ["sol-011"]
+    # Request at turn 2, kill at turn 4; the fifth assistant message was never read.
+    assert first.turns_yielded == 4
+    kill = [e for e in op.events if e[1] == "agent.killed"][0][2]
+    assert kill["reason"] == "kill threshold reached" and kill["turns_since_request"] == 2
+    assert outcome.stubs == 1
+
+
+async def test_zero_grace_restores_the_immediate_kill(tmp_path):
+    first = FakeClient([init_message(), assistant(100), assistant(950), assistant(955), assistant(960)])
+    second = FakeClient([init_message(), result()])
+    runner, op, _ = make(tmp_path, [first, second], knobs=StaticKnobs({"kill_grace_turns": 0}))
+    await runner.run("L-012", "sol-012")
+    # Still asked (the request costs nothing), but killed in the same turn.
+    assert op.handoff_requests == ["sol-012"] and first.turns_yielded == 2
+    kill = [e for e in op.events if e[1] == "agent.killed"][0][2]
+    assert kill["turns_since_request"] == 0 and kill["grace_turns"] == 0
+
+
+async def test_handoff_landing_in_the_kill_turn_is_honoured(tmp_path):
+    # The agent writes its handoff during the turn in which the kill threshold also fires. The
+    # handoff must win: a stub when a real handoff exists is the worst of both paths.
+    first = FakeClient([init_message(), assistant(850), assistant(860), assistant(960)])
+    second = FakeClient([init_message(), result()])
+    runner, op, _ = make(tmp_path, [first, second])
+
+    def on_query(client: FakeClient, text: str) -> None:
+        pass  # ignores the request at first
+
+    first.on_query = on_query
+    turns = {"n": 0}
+    real_receive = first.receive_messages
+
+    async def receive():
+        async for m in real_receive():
+            turns["n"] += 1
+            if turns["n"] == 4:  # the 960 message: the handoff lands just before the runner sees it
+                op.write_handoff("sol-013", HANDOFF_BODY)
+            yield m
+
+    first.receive_messages = receive
+    outcome = await runner.run("L-013", "sol-013")
+    assert outcome.handoffs == 1 and outcome.stubs == 0
 
 
 async def test_natural_end_stops_the_lineage(tmp_path):

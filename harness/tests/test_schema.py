@@ -24,7 +24,7 @@ def test_migration_is_recorded_and_idempotent(migrated_url):
 
     with psycopg.connect(migrated_url) as conn:
         names = [r[0] for r in conn.execute("select name from schema_migrations order by name")]
-    assert names == ["0001_init.sql"]
+    assert names == ["0001_init.sql", "0002_kill_grace_turns.sql"]
 
 
 def test_schema_sql_is_embedded_in_first_migration():

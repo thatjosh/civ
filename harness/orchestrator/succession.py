@@ -4,7 +4,8 @@ A lineage is one slot in the population. Its first agent runs until its
 context nears the handoff threshold; the runner then asks it to hand off,
 waits for the handoff row, cuts the session, and starts generation N+1 in the
 same directory with the handoff in its prompt. An agent that reaches the kill
-threshold without handing off is cut anyway and its successor gets a stub
+threshold without handing off is cut anyway, once it has had kill_grace_turns
+assistant turns since the request to act on it, and its successor gets a stub
 built from its board posts. The lineage ends when a session ends on its own
 (no tasks left, or an error) or when the generation cap is reached.
 
@@ -96,8 +97,14 @@ class _SessionState:
     kill_due: bool = False
     compaction_checked: bool = False
     requested_at: float | None = None
+    # The monitor's turn count when the request went out, so the grace rule can count from it.
+    turns_at_request: int | None = None
     watcher: asyncio.Task[None] | None = None
     stop_reason: str | None = None
+    # The session's monitor, kept here so the watcher task can read the turn count too.
+    monitor: Any = None
+    # How long the agent had between the request and its end, for the events and the supervisors.
+    end_detail: dict[str, Any] = field(default_factory=dict)
 
 
 class LineageRunner:
@@ -181,6 +188,7 @@ class LineageRunner:
 
     async def _run_one(self, state: _SessionState, lineage_id: str, token: str | None, handoff: str | None, stub: bool) -> SpawnResult:
         monitor = self._spawner.monitor_for(state.agent_id)
+        state.monitor = monitor
         # The thresholds only raise flags; the hook below does the work, because
         # the monitor fires synchronously and the work needs the session.
         monitor.on_threshold(monitor.handoff_pct, lambda _agent, _pct: setattr(state, "handoff_due", True))
@@ -211,26 +219,51 @@ class LineageRunner:
             if monitor.note_compaction_state(await control.context_usage()):
                 log.warning("auto-compaction is still on for %s; the handoff may be pre-empted", state.agent_id)
 
-        if state.kill_due and state.phase in (PHASE_RUNNING, PHASE_HANDING_OFF):
-            self._kill(state, control, "kill threshold reached")
-            return
-
-        if state.handoff_due and state.phase == PHASE_RUNNING:
-            state.phase = PHASE_HANDING_OFF
-            state.requested_at = self._clock()
-            # Two channels on purpose: the status flip makes the board refuse
-            # other writes, the message tells the agent why. A nearly full
-            # context may miss one of them.
-            self._op.request_handoff(state.agent_id)
-            await control.send(self._handoff_request)
-            self._op.log_event(state.agent_id, "agent.handoff_sent", {"generation": state.generation})
-            state.watcher = asyncio.create_task(self._watch_handoff(state, lineage_id, control))
+        if (state.handoff_due or state.kill_due) and state.phase == PHASE_RUNNING:
+            # A context that jumps past both thresholds in one turn (one large file read
+            # does it) is still asked first: a kill with no request behind it buys a stub
+            # for nothing. The grace rule below is what bounds the wait.
+            await self._request_handoff(state, lineage_id, control, monitor)
 
         if state.phase == PHASE_HANDING_OFF and self._latest_handoff_from(lineage_id, state.agent_id):
+            # Checked before the kill, so a handoff that lands in the same turn the kill
+            # threshold fires is honoured rather than thrown away for a stub.
             self._handed_off(state, control)
+            return
+
+        if state.kill_due and state.phase == PHASE_HANDING_OFF:
+            # The kill rule is kill_pct and at least kill_grace_turns since the request. The
+            # request reaches the agent through its next tool result and the injected message,
+            # and acting on it takes a turn of its own, so fewer turns than that is no chance.
+            since = monitor.totals.turns - (state.turns_at_request or 0)
+            if since >= monitor.kill_grace_turns:
+                self._kill(state, control, "kill threshold reached")
+                return
 
         if isinstance(message, ResultMessage) and state.watcher is not None:
             state.watcher.cancel()
+
+    async def _request_handoff(self, state: _SessionState, lineage_id: str, control: SessionControl, monitor: Any) -> None:
+        state.phase = PHASE_HANDING_OFF
+        state.requested_at = self._clock()
+        state.turns_at_request = monitor.totals.turns
+        # Two channels on purpose: the status flip makes the board refuse other writes,
+        # the message tells the agent why. A nearly full context may miss one of them.
+        self._op.request_handoff(state.agent_id)
+        await control.send(self._handoff_request)
+        self._op.log_event(
+            state.agent_id,
+            "agent.handoff_sent",
+            {
+                "generation": state.generation,
+                "turn": state.turns_at_request,
+                "context_pct": round(float(monitor.totals.context_pct), 3),
+                # True when both thresholds fired in the same turn: the request is already late.
+                "kill_due": state.kill_due,
+                "grace_turns": monitor.kill_grace_turns,
+            },
+        )
+        state.watcher = asyncio.create_task(self._watch_handoff(state, lineage_id, control))
 
     async def _watch_handoff(self, state: _SessionState, lineage_id: str, control: SessionControl) -> None:
         """Poll for the handoff row, because the agent may be inside a long tool call
@@ -248,14 +281,28 @@ class LineageRunner:
                 await control.interrupt()
                 return
 
+    def _since_request(self, state: _SessionState) -> dict[str, Any]:
+        """How long the agent had since the handoff request, in turns and seconds. The supervisors'
+        succession brief reads these off the events, so they are stamped on every end."""
+        monitor = state.monitor
+        turns = None
+        if monitor is not None and state.turns_at_request is not None:
+            turns = int(monitor.totals.turns) - int(state.turns_at_request)
+        seconds = round(self._clock() - state.requested_at, 3) if state.requested_at is not None else None
+        grace = int(monitor.kill_grace_turns) if monitor is not None else None
+        return {"requested": state.requested_at is not None, "turns_since_request": turns,
+                "seconds_since_request": seconds, "grace_turns": grace}
+
     def _handed_off(self, state: _SessionState, control: SessionControl) -> None:
         state.phase = PHASE_HANDED_OFF
         state.stop_reason = "handoff written"
+        state.end_detail = self._since_request(state)
         control.request_stop(state.stop_reason)
 
     def _kill(self, state: _SessionState, control: SessionControl, reason: str) -> None:
         state.phase = PHASE_KILLED
         state.stop_reason = reason
+        state.end_detail = self._since_request(state)
         control.request_stop(reason)
 
     # --- after the session -----------------------------------------------------
@@ -264,11 +311,12 @@ class LineageRunner:
         """Record how the session ended and return the handoff row the successor starts from."""
         if state.phase == PHASE_HANDED_OFF:
             outcome.handoffs += 1
-            self._op.log_event(state.agent_id, "agent.handed_off", {"generation": state.generation})
+            self._op.log_event(state.agent_id, "agent.handed_off", {"generation": state.generation, **state.end_detail})
             return self._latest_handoff_from(lineage_id, state.agent_id)
         # Killed: no usable handoff, so build a stub from what the board and the directory hold.
         self._op.set_agent_status(state.agent_id, "dead")
-        self._op.log_event(state.agent_id, "agent.killed", {"generation": state.generation, "reason": state.stop_reason})
+        self._op.log_event(state.agent_id, "agent.killed",
+                           {"generation": state.generation, "reason": state.stop_reason, **state.end_detail})
         self._op.write_stub_handoff(state.agent_id, self._listing(state.cwd))
         outcome.stubs += 1
         return self._latest_handoff_from(lineage_id, state.agent_id)

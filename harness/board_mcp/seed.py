@@ -22,6 +22,9 @@ CONFIG_SEEDS: dict[str, tuple[float, float, float, float]] = {
     "handoff_pct": (80, 50, 90, 5),
     "kill_pct": (90, 60, 95, 5),
     "max_handoff_tokens": (4000, 1000, 8000, 500),
+    # Assistant turns an agent is given after the handoff request before the kill threshold is
+    # allowed to act. Two is the minimum that lets it read the lockout and make the call.
+    "kill_grace_turns": (2, 0, 10, 1),
 }
 
 SEED_SQL = """

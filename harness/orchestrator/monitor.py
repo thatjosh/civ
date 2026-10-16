@@ -21,6 +21,7 @@ ThresholdCallback = Callable[[str, float], None]
 # Seeds for the two succession knobs; the real values come from the config table.
 DEFAULT_HANDOFF_PCT = 80.0
 DEFAULT_KILL_PCT = 90.0
+DEFAULT_KILL_GRACE_TURNS = 2
 # The usage probe is asked every this many turns, and once more when the
 # arithmetic first crosses this percentage, because the arithmetic can drift
 # from the CLI's own count (system prompt, tool schemas) and the handoff
@@ -70,7 +71,8 @@ class StaticKnobs:
     """A KnobReader over a dict, for tests and for running without a database."""
 
     def __init__(self, values: dict[str, float] | None = None) -> None:
-        self._values = {"handoff_pct": DEFAULT_HANDOFF_PCT, "kill_pct": DEFAULT_KILL_PCT, **(values or {})}
+        self._values = {"handoff_pct": DEFAULT_HANDOFF_PCT, "kill_pct": DEFAULT_KILL_PCT,
+                        "kill_grace_turns": DEFAULT_KILL_GRACE_TURNS, **(values or {})}
 
     def get(self, knob: str) -> float:
         return float(self._values[knob])
@@ -129,6 +131,15 @@ class Monitor:
     @property
     def kill_pct(self) -> float:
         return self._knobs.get("kill_pct")
+
+    @property
+    def kill_grace_turns(self) -> int:
+        """Assistant turns the agent gets after the handoff request before kill_pct may act.
+
+        With a small window the gap between the two thresholds is a few thousand tokens and one
+        file read jumps it, so without this an agent can be killed seconds after being asked, or
+        before being asked at all, and its successor starts from a stub for no reason."""
+        return int(self._knobs.get("kill_grace_turns"))
 
     def on_threshold(self, pct: float, callback: ThresholdCallback) -> None:
         """Register a callback for when context fill first crosses pct."""
