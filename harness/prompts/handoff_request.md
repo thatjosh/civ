@@ -1,6 +1,6 @@
 # Hand off now
 
-Your context is nearly full. Stop the work you are doing. Do not claim, post, vote, or complete anything else: the board refuses every write from you except the handoff.
+Your context is nearly full. Stop the work you are doing. Do not claim, post, vote, or complete anything else: the board refuses every write from you except the handoff. Your first and only tool call after reading this must be `mcp__civ__civ_handoff`. Do not read the board or any file first: the handoff covers what is already in your context, and any other call may be your last before the kill threshold.
 
 Call `mcp__civ__civ_handoff` once, with a body in exactly this shape, every heading present and bare:
 

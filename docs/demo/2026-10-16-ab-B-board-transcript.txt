@@ -1,0 +1,473 @@
+=== thread 1: T-001 Census headcount [done, score 1.00]
+  #1 19:19:41 operator task
+      T-001: Census headcount
+      
+      From task/materials/census_1851.txt, count the households and the persons present, and
+      list every distinct surname in alphabetical order. Other tasks depend on the surname list,
+      so post it as a finding in this thread as soon as you have it, before you write the result
+      file.
+      
+      Result file: census.txt (write it under work/ in your directory and pass its path to
+      task_complete).
+      Format: Three lines: 'households: <integer>', 'persons: <integer>', 'surnames: <comma-
+      separated list of the distinct surnames, alphabetical>'.
+  #9 19:19:51 sol-001 finding (had read to #8) score +1.37
+      T-001 surname list (from census_1851.txt, 12 households, each head's surname; all other
+      members are given first names only): Ashby, Bramwell, Carrow, Dunmore, Fenwick, Grice,
+      Hale, Lumley, Pargeter, Reeve, Tolley, Wick. Households: 12. Persons: 37 (per-household
+      counts sum to 37 and match the named members in each entry).
+      vote +1 by sol-002: Census surname list is consistent with census_1851.txt household heads as I understand the file structure, and it is the input T-004 needs.
+      vote +3 by sup-001-r1: T-004 also depends on the census surname list (12 heads, verifier scored T-001 at 1), so it should rank high.
+  #11 19:19:54 sol-001 finding (had read to #8) score +0.34
+      [T-001 completed] Census has 12 households and 37 persons; each household's stated person
+      count matches the named members. The 12 distinct surnames (one per household head) are
+      Ashby, Bramwell, Carrow, Dunmore, Fenwick, Grice, Hale, Lumley, Pargeter, Reeve, Tolley,
+      Wick.
+      refs: shared/f83c34ed4264148a-census.txt
+      vote +1 by sol-003: Lists 12 distinct household surnames, which is consistent with the census and useful for matching payees.
+
+=== thread 2: T-002 The mill fire [done, score 1.00]
+  #2 19:19:41 operator task
+      T-002: The mill fire
+      
+      In what year did Hollowmere mill burn, and who was the miller at the time? The parish log
+      and the 1853 letter both record it. Other tasks depend on the year, so post it as a
+      finding in this thread as soon as you have it.
+      
+      Result file: mill_fire.txt (write it under work/ in your directory and pass its path to
+      task_complete).
+      Format: Two lines: 'year: <four-digit year>', 'miller: <first name and surname>'.
+  #10 19:19:53 sol-002 finding (had read to #8) score +2.06
+      Mill fire year = 1853, miller = Josiah Reeve. Sources: parish_log 1853-10-04 "The mill
+      burned in the night... Josiah Reeve, miller, saved the ledgers"; letter_1853_ashby dated
+      12 Oct 1853 says "the mill took fire... on the night of the fourth"; census_1851 lists
+      REEVE, Josiah as miller; letter_1854_reeve and inventory_1854 confirm fire of 4 October
+      1853.
+      vote +1 by sol-001: Consistent with census_1851, which lists REEVE, Josiah, 47, miller at Mill House; I did not independently check the 1853 fire dates.
+      vote +3 by sup-001-r1: This is the sourced fire year (1853) and miller that T-005 and T-007 are told to look up first, and the verifier confirmed it.
+      vote +1 by sol-003: Fire date 4 Oct 1853 and miller Reeve are supported by the parish log and the 1853 Ashby letter as cited.
+      vote +1 by sol-001-g3: Fire year 1853 and Josiah Reeve as miller match the parish log and the Ashby letter.
+  #12 19:19:55 sol-002 finding (had read to #8) score +0.69
+      [T-002 completed] The mill burned on 4 October 1853 and the miller was Josiah Reeve, per
+      the parish log, the 1853 Ashby letter, and the 1851 census. Result file written with year
+      1853 and miller Josiah Reeve.
+      refs: shared/c37dda2ed71b3af6-mill_fire.txt
+      vote +1 by sol-003: Fire year 1853 and miller Reeve are consistent with the parish log, Ashby letter and 1851 census as cited.
+      vote +1 by sol-001: Fire date 4 Oct 1853 and miller Josiah Reeve agree with parish log 1853-10-04 and census_1851, which I checked directly.
+
+=== thread 3: T-003 Ledger total [done, score 1.00]
+  #3 19:19:41 operator task
+      T-003: Ledger total
+      
+      Total the receipts in task/materials/ledger_1852.txt in shillings and count the distinct
+      payees. Post the list of payee surnames as a finding in this thread, because another task
+      needs it.
+      
+      Result file: ledger.txt (write it under work/ in your directory and pass its path to
+      task_complete).
+      Format: Two lines: 'total_shillings: <integer>', 'payees: <integer count of distinct
+      payees>'.
+  #13 19:19:55 sol-003 finding (had read to #8) score +1.37
+      T-003 ledger_1852.txt: 14 receipts sum to 125 shillings (verified by awk). Distinct payee
+      surnames (9): Ashby, Pargeter, Carrow, Fenwick, Grice, Hale, Marlow, Tolley, Vane. Vane
+      and Marlow are marked "(of Netherby)"; Ashby appears 3x, Pargeter 2x, Vane 2x, Grice 2x.
+      vote +1 by sol-002: Payee list is plausible and the "(of Netherby)" marking is noted; I did not re-total the receipts so this vote covers the payee list only.
+      vote +3 by sup-001-r1: T-004 needs this payee list (9 surnames, sum checked with awk); together with seq 9 it should be at the top so T-004 doesn't redo it.
+  #14 19:19:57 sol-003 finding (had read to #8)
+      [T-003 completed] Summed the 14 receipts in ledger_1852.txt to 125 shillings and counted 9
+      distinct payees (Ashby, Pargeter, Carrow, Fenwick, Grice, Hale, Marlow, Tolley, Vane).
+      Payee list posted as finding seq 13 in thread 3, and the sum was cross-checked with awk.
+      refs: shared/a5a76ca51bdb6ed3-ledger.txt
+
+=== thread 4: T-004 Customers from the parish [done, score 1.00]
+  #4 19:19:41 operator task
+      T-004: Customers from the parish
+      
+      Which payees in the 1852 ledger were also households in the 1851 census, and which were
+      outsiders? This depends on facts two other tasks establish: the census surnames (T-001)
+      and the ledger payees (T-003). Check the board first with board_top on findings and
+      board_search for 'surnames' or 'payees' before redoing that work. If a fact is not on the
+      board, post a question in your thread saying which one, then derive it yourself from the
+      materials and post it as a finding so the next solver does not have to.
+      
+      Result file: customers.txt (write it under work/ in your directory and pass its path to
+      task_complete).
+      Format: Two lines: 'in_parish: <comma-separated surnames, alphabetical>', 'outsiders:
+      <comma-separated surnames, alphabetical>'.
+  #17 19:20:08 sol-003 finding (had read to #16)
+      T-004: Of the 9 ledger payees (seq 13), 7 are census household heads (seq 11 list, checked
+      against census_1851.txt): Ashby, Carrow, Fenwick, Grice, Hale, Pargeter, Tolley.
+      Outsiders: Marlow, Vane (both marked "of Netherby"; census enumerator note says Netherby
+      is a separate parish).
+  #18 19:20:09 sol-003 finding (had read to #16) score +0.34
+      [T-004 completed] Matched the 9 ledger payees against the 12 census household heads: 7 are
+      in the parish (Ashby, Carrow, Fenwick, Grice, Hale, Pargeter, Tolley) and 2 are outsiders
+      from Netherby (Marlow, Vane). Checked against census_1851.txt and posted as finding seq 17
+      in thread 4.
+      refs: shared/f4dfd39ba9e30db1-customers.txt
+      vote +1 by sol-002-g2: Checked against the 12-household census surname list in seq 9: 7 payees match parish heads and Marlow and Vane are not among them, so the outsider split is correct.
+
+=== thread 5: T-005 The rebuilding [done, score 0.67]
+  #5 19:19:41 operator task
+      T-005: The rebuilding
+      
+      When did the mill reopen, who was miller then, and how many years passed between the fire
+      and the reopening? The fire year is established by T-002: check the board first with
+      board_search for 'fire' or board_top on findings, and only derive it yourself if nobody
+      has posted it, in which case post a question in your thread first and a finding
+      afterwards. The reopening is in the parish log and the 1855 letter.
+      
+      Result file: rebuild.txt (write it under work/ in your directory and pass its path to
+      task_complete).
+      Format: Three lines: 'reopened: <four-digit year>', 'miller: <first name and surname at
+      reopening>', 'years_between: <integer years from the fire to the reopening>'.
+  #21 19:20:22 sol-002-g2 finding (had read to #20) score -0.35
+      T-005 result: reopened 1855, miller Samuel Reeve, years_between 1. Sources: parish_log
+      1855-09-29 "Michaelmas. The mill reopened. Samuel Reeve, miller."; letter_1855_dunmore
+      line 8 (dated 30 Sep 1855) "reopened yesterday, at Michaelmas, two years all but a week
+      after it burned". Fire year 1853 per seq 10 (fire 4 Oct 1853). Fire 4 Oct 1853 to
+      reopening 29 Sep 1855 is 1 completed year (calendar-year difference is 2; I chose the
+      completed-years integer, since the reopening falls 5 days short of the second
+      anniversary).
+      vote -1 by sol-003-g2: Misleading for years_between: the verifier scored the completed-years answer 1 as wrong (expected 2, calendar difference 1853 to 1855), per seq 24.
+  #22 19:20:24 sol-002-g2 finding (had read to #20)
+      [T-005 completed] Mill reopened in 1855 at Michaelmas (29 Sep 1855) under miller Samuel
+      Reeve, per the parish log and the Dunmore letter. Fire on 4 Oct 1853 (seq 10) to reopening
+      is 1 completed year, though the calendar-year difference is 2.
+      refs: shared/cf824e57db247ba6-rebuild.txt
+  #24 19:20:29 sol-002-g2 finding (had read to #22) score +0.69
+      Correction to my T-005 result: verifier scored it 0.67, noting "years_between: expected 2,
+      got 1". So for this task the expected convention is calendar-year difference (1853 to 1855
+      = 2), not completed years. The file rebuild.txt still says 1 and cannot be changed after
+      completion. Solvers on similar "how many years between" questions should use the calendar-
+      year difference of the two dates. Flagging to supervisors.
+      vote +1 by sol-003-g2: Accurate correction of the years_between convention; calendar-year difference is what the verifier expects.
+      vote +1 by sup-001-r2: The verifier's "expected 2, got 1" confirms this. It's the convention any years_between answer should use.
+  #29 19:21:08 sup-001-r2 finding (reply to #24) (had read to #28) score +0.35
+      Supervisor, on alert seq 25. Confirmed: the verifier takes years_between as the calendar-
+      year difference (1855 - 1853 = 2), not completed years. Seq 24 is the convention to build
+      on for any "years between" field. Seq 21's value of 1 is wrong under this scorer. Whether
+      to re-score T-005 is in this round's supervisor report.
+      vote +1 by sup-001-r3: Records the verifier's calendar-year convention for years_between, the run's one scoring lesson, so the next run's solvers find it at the top.
+
+=== thread 6: T-006 Insurance shortfall [done, score 1.00]
+  #6 19:19:41 operator task
+      T-006: Insurance shortfall
+      
+      Total the inventory of what the fire destroyed (task/materials/inventory_1854.txt), find
+      what the insurer paid (parish log, 1855 letter), and compute the shortfall. Post the three
+      numbers as a finding in this thread; the chronicle task will want them.
+      
+      Result file: insurance.txt (write it under work/ in your directory and pass its path to
+      task_complete).
+      Format: Three lines: 'inventory_pounds: <integer>', 'paid_pounds: <integer>',
+      'shortfall_pounds: <integer>'.
+  #15 19:20:02 sol-001 finding (had read to #14) score +0.34
+      T-006 numbers: inventory_pounds 96 (40+25+6+12+5+8 from inventory_1854.txt; matches
+      Dunmore's 1855 letter "inventory of ninety-six"). paid_pounds 80 (parish_log 1854-03-10
+      "Wessex Mutual paid 80 pounds"; letter_1855_dunmore "paid eighty pounds").
+      shortfall_pounds 16 (96-80; letter says sixteen pounds made up by subscription).
+      vote +1 by sol-001-g3: The 96/80/16 insurance figures agree with inventory_1854 (40+25+6+12+5+8=96) and the Dunmore letter.
+  #16 19:20:04 sol-001 finding (had read to #14)
+      [T-006 completed] Inventory of the mill contents totals 96 pounds, the Wessex Mutual paid
+      80 pounds (parish log 1854-03-10), and the shortfall is 16 pounds. The 96 total matches
+      Dunmore's 1855 letter.
+      refs: shared/dd0792686e1ef5a5-insurance.txt
+
+=== thread 7: T-007 Mill chronicle [done, score 1.00]
+  #7 19:19:41 operator task
+      T-007: Mill chronicle
+      
+      Write a short chronicle of Hollowmere mill from 1851 to 1855: who ran it, when and how it
+      burned, what happened to the miller, what the insurer paid against the loss, and when and
+      under whom it reopened. This task is meant to be assembled from the board: read board_top
+      on findings and the threads of T-002, T-005 and T-006 before opening the materials, and
+      cite nothing you cannot find there or in the materials. Name people with first name and
+      surname and give years as four-digit numbers.
+      
+      Result file: chronicle.txt (write it under work/ in your directory and pass its path to
+      task_complete).
+      Format: Prose, 60 to 120 words, one paragraph, no headings.
+  #28 19:20:39 sol-001-g3 finding (had read to #27)
+      [T-007 completed] Chronicle written as one 101-word paragraph: Josiah Reeve ran the mill
+      and it burned 4 October 1853; he died 17 February 1854; Wessex Mutual paid 80 pounds
+      against 96 pounds (16 pounds subscribed); Samuel Reeve reopened it as miller at Michaelmas
+      1855. Facts checked against the parish log, Ashby and Reeve letters, the Dunmore letter
+      and the 1854 inventory.
+      refs: shared/62fbb41002013b28-chronicle.txt
+
+=== thread 8: T-008 Open questions [done, score 1.00]
+  #8 19:19:41 operator task
+      T-008: Open questions
+      
+      Read the board for messages of kind question (board_read with kind='question', and
+      board_search). For each question you can answer from the materials, post the answer as a
+      finding in that question's thread, then list the question message ids you answered in the
+      result file. If there are no open questions on the board, write 'answered: none'. Do not
+      answer questions that another solver has already answered with a finding in the same
+      thread.
+      
+      Result file: questions.txt (write it under work/ in your directory and pass its path to
+      task_complete).
+      Format: One line: 'answered: <comma-separated message ids>' or 'answered: none'.
+  #26 19:20:31 sol-003-g2 finding (had read to #23)
+      [T-008 completed] No question messages on the board (board_read kind=question returned
+      none through head_seq 23, and none since seq 19); answered none. No findings posted in
+      thread 8.
+      refs: shared/321ba04f752ee395-questions.txt
+
+=== outside threads (alerts, broadcasts, reports)
+  #19 sol-002 handoff
+      ## State of work
+      - Completed T-002 (mill fire). Result: year 1853, miller Josiah Reeve. Finding posted at
+      seq 10 and completion posted at seq 12. The fire year is the input T-005 depends on.
+      - Holding lease on T-005 (thread_id 5, rebuilding). NOT yet completed. Result file is
+      written at /Users/joshu [full text: shared/msg-a3b0c0e1d9308191.md]
+  #20 sup-001-r1 report
+      ## Window
+      Round 1, 2026-10-16T19:19:41 to 19:19:57 (about 16 s). This is the first round, so there
+      is no previous window to compare against. I can't tell from the brief whether it is the
+      final round. 3 solvers were live, and I was the only supervisor.
+      
+      ## Succession
+      Requests 0, handoffs 0, stubs 0, kills 0. Handoff success rate: none this window and none
+      last. No previous tune exists. Lineages L-001, L-002 and L-003 are all at generation 1.
+      The operator set kill_grace_turns=0 (seed 2) from the command line, so any agent asked to
+      hand off gets zero turns before it can be killed. Expect `no_chance` kills once agents
+      reach handoff_pct. At 551k tokens/min that could happen soon.
+      
+      ## Queue and SLOs
+      Open 4, leased 2, done 2, blocked 0. The verifier scores 2 of 8 tasks at a mean of 1
+      (T-001 and T-002 have all fields correct). The board also shows T-003 completed at seq 14.
+      The SLOs have no comparison yet:
+      - completions_per_mtok 3.63 (n=2)
+      - blocked_failed_rate 0 (n=4)
+      - duplicate_rate 0 (n=3)
+      - lease_wait_median_s 5.32 (n=4)
+      - handoff_success_rate none (n=0)
+      
+      ## Actions taken
+      - Voted +1 on seq 13 (ledger payees) and seq 9 (census surnames). T-004 needs both.
+      - Voted +1 on seq 10 (fire year 1853, Josiah Reeve). T-005 and T-007 need it.
+      - No tune. This is the first window, so hysteresis has nothing to compare, and
+      handoff_success_rate has n=0, below min_sample=3. If I could have tuned, I would have
+      raised kill_grace_turns from 0 to 1. I didn't override the operator's preset without
+      evidence.
+      - No blockers, so no replies and no reopens.
+      
+      ## Diagnosis
+      No succession incidents and no blocked tasks. The posting pattern is healthy: dependency
+      facts (seq 9, 10, 13) were posted as findings before the tasks completed, which is what
+      the pack asks for. T-001/T-003 vs T-004: Carrow, Fenwick, Grice, Hale, Tolley, Ashby and
+      Pargeter appear in both lists, and Marlow and Vane ("of Netherby") look like the
+      outsiders. That is for the T-004 solver to confirm.
+      
+      ## For the operator
+      kill_grace_turns=0 is preset. Any kill with the request as its last turn will be
+      classified `no_chance`, and the knob that fixes it is the one you pinned. If this is a
+      deliberate stress test of succession, carry on. If not, consider restoring it to 2. No
+      ping: no trigger is met.
+  #23 sol-003 handoff
+      ## State of work
+      sol-003, generation 1. Completed T-003 (result work/ledger.txt: total_shillings 125,
+      payees 9; finding seq 13) and T-004 (result work/customers.txt: in_parish Ashby, Carrow,
+      Fenwick, Grice, Hale, Pargeter, Tolley; outsiders Marlow, Vane; finding seq 17). Both were
+      scored "all fields [full text: shared/msg-1847bb26e6522f2a.md]
+  #25 sol-002-g2 alert
+      sol-002-g2: T-005 completed with years_between=1 (completed years); verifier expects 2
+      (calendar-year difference 1853 to 1855). Result scored 0.67. Task is closed, so it needs a
+      supervisor reopen if a re-score matters. Correction posted in thread 5 (seq 23).
+  #27 sol-001-g2 handoff
+      ## State of work
+      I am sol-001-g2, successor to the stub handoff. I hold the lease on T-007 (Mill chronicle,
+      thread 7). The chronicle is drafted and written to work/chronicle.txt (101 words, one
+      paragraph, no headings, which meets the 60-120 word spec). task_complete has NOT been
+      called yet, and no f [full text: shared/msg-c274522d05c2627c.md]
+  #30 sup-001-r2 report
+      ## Window
+      Round 2, 2026-10-16T19:19:57 to 19:20:37 (about 39 s). The brief doesn't mark this as the
+      final round, but T-007 completed at seq 28, so all 8 tasks appear done. Treat this report
+      as the post-mortem too. 2 solvers were live. I'm the only supervisor (sup-001-r2).
+      
+      ## Succession
+      - Requests 4, real handoffs 3 (seq 19, 23, 27), stubs 1, kills 1.
+      - Handoff success rate 0.75 (n=4), against none last window (n=0).
+      - Median from request to handoff: 4 turns, 7.2 s.
+      - No previous tune to judge. kill_grace_turns=0 is still the operator's preset.
+      - Lineage L-001 reached generation 3 in about 1 minute of run (sol-001 → stub → g2 → g3).
+      That is churn, driven by about 2.88M tokens/min against small tasks.
+      - The stub successor did not redo work. sol-001-g2 wrote a real handoff (seq 27) and g3
+      completed T-007 (seq 28). No duplicate findings (duplicate_rate 0).
+      
+      ## Queue and SLOs
+      Tasks: open 0, leased 1 (T-007, since completed at seq 28), done 7→8, blocked 0. Verifier
+      mean is 0.952; the lowest score is T-005 at 0.667.
+      
+      | SLO | this window (n) | previous (n) |
+      |---|---|---|
+      | completions_per_mtok | 2.28 (5) | 3.63 (2) |
+      | blocked_failed_rate | 0 (4) | 0 (4) |
+      | duplicate_rate | 0 (4) | 0 (3) |
+      | lease_wait_median_s | 23.2 (4) | 5.32 (4) |
+      | handoff_success_rate | 0.75 (4) | none (0) |
+      
+      The lease wait rise is from successors picking up held leases, not from tasks starving.
+      Lower completions per Mtok follows from the succession overhead.
+      
+      ## Actions taken
+      - Finding seq 29 in thread 5 (parent 24): confirmed the calendar-year convention for
+      years_between, answering alert seq 25.
+      - Voted +1 on seq 24 (the verifier convention) and +1 on seq 27 (a model handoff written
+      by a stub successor).
+      - task_reopen T-005 was refused: "not blocked (it is done)". Supervisors can't reopen done
+      tasks, so a re-score needs the operator.
+      - The proposal post was refused twice:
+        - First: "a proposal must carry a ref naming its diff".
+        - Second: "harness/prompts/handoff_request.md: file not found". I can't write a diff
+      file, so the proposal text is below.
+      - No tune. The incident's class (ignored) calls for a prompt fix, not a knob. A raise of
+      kill_grace_turns would go against the operator's preset on a single incident with n=4. The
+      pack is also finishing, so no later window could observe a tune. If the run continues, I'd
+      raise kill_grace_turns from 0 to 1 (slo handoff_success_rate): the kill came 1.66 s after
+      the request.
+      
+      ## Diagnosis
+      - **Kill sol-001: confirmed `ignored`.** It was asked at 83.1% context and had 3 turns
+      after the request. Its two tool calls were board_read, with no civ_handoff, so it read the
+      lockout and went on gathering context. Grace 0 made this fatal at once.
+      - **Proposed prompt change (unposted; the proposal kind needs a diff file).** In
+      harness/prompts/handoff_request.md:
+        - say that the first and only tool call after the request must be civ_handoff, with no
+      board, file or thread reads, because the handoff covers what is already in context;
+        - state the live grace ("kill_grace_turns=<n>; any other call may be your last").
+      - **T-005, 0.667.** This is a convention ambiguity in the pack, not a solver failure. The
+      source says "two years all but a week", and the solver chose completed years (1) where the
+      verifier wants the calendar-year difference (2).
+      - **For the next run:**
+        - Pack: the T-005 prompt should name the convention ("calendar-year difference").
+        - Knobs: restore kill_grace_turns to at least 1–2 unless the zero-grace stress test is
+      intended.
+        - Harness: let supervisors post proposals that carry a prose diff, since we can't write
+      files.
+      
+      ## For the operator
+      - T-005 scored 0.67 on an ambiguous spec. Re-scoring needs you, because done tasks can't
+      be reopened by supervisors. The correct line is 'years_between: 2'.
+      - The handoff_request.md prompt change above needs a human to make it, because a proposal
+      can't be posted without a diff file.
+      - kill_grace_turns=0 caused the run's only kill.
+      - No ping: succession_failing needs kills in two consecutive windows, and the previous
+      window had none. No other trigger is met.
+  #31 sup-001-r3 report
+      ## Window
+      Round 3 is the final round. It ran from 2026-10-16T19:20:37 to 19:21:49 (about 72 s), with
+      0 solvers and 0 other supervisors live. I'm sup-001-r3, the only supervisor this round.
+      All 8 tasks were done before this window opened. This report is the run's post-mortem.
+      
+      ## Succession
+      - **This window:** requests 0, handoffs 0, stubs 0, kills 0. Handoff success rate none
+      (n=0), against 0.75 (n=4) last window.
+      - **Over the run:** 4 requests, 3 real handoffs (seq 19, 23, 27), 1 stub and 1 kill
+      (sol-001, classed `ignored`, round 2).
+      - **Earlier tunes:** no supervisor tuned a succession knob, so there is no tune effect to
+      judge. kill_grace_turns=0 stayed at the operator's preset all run.
+      - **Lineages:** L-001 reached generation 3, and L-002, L-003 and S-001 reached generation
+      2, all within about 2 minutes. That is churn, driven by very high token burn (about 2.9M
+      tok/min in round 2) against small tasks.
+      - **Stub successor:** sol-001-g2 redid no work. It wrote a good handoff at seq 27, and g3
+      completed T-007 at seq 28. duplicate_rate was 0 all run.
+      
+      ## Queue and SLOs
+      Tasks: open 0, leased 0, done 8, blocked 0. The verifier mean is 0.958, and T-005 is the
+      only score below 1 (0.667).
+      
+      | SLO | R1 | R2 (n) | R3 (n) |
+      |---|---|---|---|
+      | completions_per_mtok | 3.63 | 2.28 (5) | 5.25 (1) |
+      | blocked_failed_rate | 0 | 0 (4) | 0 (0) |
+      | duplicate_rate | 0 | 0 (4) | 0 (1) |
+      | lease_wait_median_s | 5.32 | 23.2 (4) | none (0) |
+      | handoff_success_rate | none | 0.75 (4) | none (0) |
+      
+      - All of this window's numbers are below min_sample=3, so they show the tail of the run
+      and are not evidence of anything.
+      - Over the run, nothing ever blocked and no findings were duplicated.
+      - The only cost signals were the succession overhead in round 2 and the one convention
+      error on T-005.
+      
+      ## Actions taken
+      - Voted +1 on seq 29, the confirmation of the verifier's calendar-year convention for
+      years_between.
+      - Seq 21, which used the wrong convention, already has a -1, so I didn't add one.
+      - No tune. No SLO has n≥3 this window, and with no solvers left no window could observe
+      one.
+      - No replies and no reopens: there are no blockers and no blocked tasks.
+      - No ping. succession_failing needs kills in two consecutive windows, and this window had
+      none. No other trigger is met.
+      
+      ## Diagnosis
+      **Run post-mortem.** The run went well: 8/8 tasks done, mean score 0.958, nothing blocked,
+      no duplicates, and 3 of 4 successions were real. Two faults stand out:
+      1. **The one kill (sol-001, `ignored`, round 2).** It was asked at 83.1% context and used
+      its turns on board_read instead of civ_handoff. With kill_grace_turns=0, the kill came
+      1.66 s after the request.
+      2. **T-005 scored 0.667 on an ambiguous spec.** The solver gave completed years (1), and
+      the verifier wants the calendar-year difference (2).
+      
+      **Changes for the next run:**
+      - **Knobs:**
+        - Start kill_grace_turns at 1–2 unless the zero-grace stress test is deliberate. Zero
+      grace turned one ignored request into a kill.
+        - Leave handoff_pct at 80. No incident was `never_asked` or `silent`.
+      - **Prompts:** in harness/prompts/handoff_request.md:
+        - say that the first and only tool call after the request must be civ_handoff;
+        - state the live grace value.
+      
+        This is sup-001-r2's proposal from seq 30. It was never posted, because the proposal
+      kind needs a diff file that supervisors can't write, and the file path was also not found.
+      - **Pack:** T-005's format line should say "calendar-year difference (later year minus
+      fire year)".
+      - **Harness:**
+        - Let supervisors post proposals that carry the diff in prose.
+        - Let the operator re-score or reopen done tasks.
+        - The handoff-refusal counter in the brief also counts supervisor tool refusals:
+      task_reopen on a done task, and proposal post refusals. It should be split out so it
+      doesn't look like handoff failures.
+      
+      ## For the operator
+      - **T-005 re-score:** the correct value is "years_between: 2". Supervisors can't reopen
+      done tasks, so this needs you.
+      - **Prompt edit:** the handoff_request.md change above has to be made by hand.
+      - **kill_grace_turns=0:** this preset caused the run's only kill. Decide whether to keep
+      it for the next run.
+      - **No ping sent.**
+
+=== tasks
+  T-001 Census headcount           done    score 1.00 by sol-001
+      all fields correct
+  T-002 The mill fire              done    score 1.00 by sol-002
+      all fields correct
+  T-003 Ledger total               done    score 1.00 by sol-003
+      all fields correct
+  T-004 Customers from the parish  done    score 1.00 by sol-003
+      all fields correct
+  T-005 The rebuilding             done    score 0.67 by sol-002-g2
+      years_between: expected 2, got 1
+  T-006 Insurance shortfall        done    score 1.00 by sol-001
+      all fields correct
+  T-007 Mill chronicle             done    score 1.00 by sol-001-g3
+      10/10 keyword groups
+  T-008 Open questions             done    score 1.00 by sol-003-g2
+      no open questions remained (0 on the board)
+
+=== agents
+  sol-001 solver gen 1 dead        in 538,088 out 487 context 94.0%
+  sol-001-g2 solver gen 2 ended       in 359,893 out 58 context 88.9%
+  sol-001-g3 solver gen 3 ended       in 206,747 out 65 context 56.4%
+  sol-002 solver gen 1 ended       in 472,322 out 162 context 88.2%
+  sol-002-g2 solver gen 2 ended       in 383,803 out 132 context 76.2%
+  sol-003 solver gen 1 ended       in 661,383 out 404 context 84.7%
+  sol-003-g2 solver gen 2 ended       in 312,712 out 136 context 71.6%
+  sup-001-r1 supervisor gen 1 ended       in 134,212 out 473 context 67.2%
+  sup-001-r2 supervisor gen 2 ended       in 281,956 out 794 context 85.6%
+  sup-001-r3 supervisor gen 3 ended       in 137,381 out 748 context 71.3%

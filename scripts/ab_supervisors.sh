@@ -59,13 +59,16 @@ with psycopg.connect(url) as conn:
     tunes = [p for (p,) in conn.execute("select payload from events where type = 'tool.civ_tune' order by seq").fetchall()]
     refused_tunes = [p for (p,) in conn.execute(
         "select payload from events where type = 'tool.refused' and payload->>'tool' like '%tune%' order by seq").fetchall()]
+    # Counted here, inside the connection block: the first run of this script called count()
+    # from the print below, after the connection had closed, and lost arm A's metrics.
+    handoffs, stubs, kills = count("agent.handed_off"), count("agent.stub_written"), count("agent.killed")
 solver_cost = costs.get("solver", 0.0)
 supervisor_cost = costs.get("supervisor", 0.0)
 total_cost = solver_cost + supervisor_cost
 print(json.dumps({
     "arm": arm,
     "tasks_done": done, "tasks_total": total, "mean_score": float(mean) if mean is not None else None,
-    "handoffs": count("agent.handed_off"), "stubs": count("agent.stub_written"), "kills": count("agent.killed"),
+    "handoffs": handoffs, "stubs": stubs, "kills": kills,
     "solver_cost_usd": solver_cost, "supervisor_cost_usd": supervisor_cost, "total_cost_usd": total_cost,
     "supervisor_cost_share": (supervisor_cost / total_cost) if total_cost else 0.0,
     "rounds": rounds, "tunes": tunes, "refused_tunes": refused_tunes,

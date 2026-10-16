@@ -1,0 +1,59 @@
+{
+  "arm": "B",
+  "tasks_done": 8,
+  "tasks_total": 8,
+  "mean_score": 0.9583333358168602,
+  "handoffs": 3,
+  "stubs": 1,
+  "kills": 1,
+  "solver_cost_usd": 0.04441026000000001,
+  "supervisor_cost_usd": 0.6829375,
+  "total_cost_usd": 0.72734776,
+  "supervisor_cost_share": 0.9389421918340685,
+  "rounds": [
+    {
+      "number": 1,
+      "tuned_knob": null,
+      "summary": {
+        "pings": 0,
+        "tuned": null,
+        "turns": 6,
+        "errors": [],
+        "reports": 1,
+        "cost_usd": 0.17728909999999998,
+        "reopened": [],
+        "sessions": 1
+      }
+    },
+    {
+      "number": 2,
+      "tuned_knob": null,
+      "summary": {
+        "pings": 0,
+        "tuned": null,
+        "turns": 10,
+        "errors": [],
+        "reports": 1,
+        "cost_usd": 0.2977469,
+        "reopened": [],
+        "sessions": 1
+      }
+    },
+    {
+      "number": 3,
+      "tuned_knob": null,
+      "summary": {
+        "pings": 0,
+        "tuned": null,
+        "turns": 5,
+        "errors": [],
+        "reports": 1,
+        "cost_usd": 0.20790150000000002,
+        "reopened": [],
+        "sessions": 1
+      }
+    }
+  ],
+  "tunes": [],
+  "refused_tunes": []
+}

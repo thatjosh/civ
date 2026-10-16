@@ -46,13 +46,30 @@ def _snippet(text: str, start: int, end: int, pad: int = 40) -> str:
     return re.sub(r"\s+", " ", text[lo:hi]).strip()
 
 
+def _scoped_report(item: dict, record: dict) -> str:
+    """The report text a text check may look at. An item with "sections" sees only those headed
+    sections, because a control-arm supervisor named sol-002 while praising its T-005 correction
+    and that must not count as naming it in a diagnosis."""
+    report = record.get("report") or ""
+    sections = item.get("sections")
+    if not sections:
+        return report
+    parts = []
+    for name in sections:
+        m = re.search(rf"^##\s+{re.escape(name)}\s*$\n(.*?)(?=^##\s|\Z)", report, re.M | re.S)
+        if m:
+            parts.append(m.group(1))
+    return "\n".join(parts)
+
+
 def check_text(item: dict, record: dict) -> tuple[bool, str]:
-    hit = _first_match(item["any"], record.get("report") or "")
-    return (hit is not None, hit or "no match in the report")
+    hit = _first_match(item["any"], _scoped_report(item, record))
+    where = " in " + "/".join(item["sections"]) if item.get("sections") else " in the report"
+    return (hit is not None, hit or f"no match{where}")
 
 
 def check_text_near(item: dict, record: dict) -> tuple[bool, str]:
-    report = record.get("report") or ""
+    report = _scoped_report(item, record)
     window = int(item.get("window", 600))
     anchors = [m.start() for m in re.finditer(re.escape(item["anchor"]), report, FLAGS)]
     if not anchors:

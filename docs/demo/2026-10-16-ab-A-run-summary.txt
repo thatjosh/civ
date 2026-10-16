@@ -1,0 +1,6 @@
+agent     gens hoffs turns   cost $     tok in  tok out  ctx %  note
+sol-001      3     2    38   0.0192    1119118      411  79.52  T-008 is complete and no open tasks remain, so I'm stopping 
+sol-002      3     2    52   0.0192    1476190      683  72.07  T-007 is complete and the queue is empty, so I'm done.  - **
+sol-003      2     1    37   0.0139    1051827      600  77.81  T-006 and T-005 are both complete and scored 1, and I've cas
+total cost                   0.0523
+tasks: counts={'open': 0, 'leased': 0, 'done': 8, 'blocked': 0}, mean_score=1.0, scored=8

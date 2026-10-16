@@ -1,0 +1,9 @@
+agent     gens hoffs turns   cost $     tok in  tok out  ctx %  note
+sol-001      3     1    43   0.0173    1104728      610  56.36  T-007 is submitted and I've cast two votes. The claim came b
+sol-002      2     1    29   0.0142     856125      294  76.21  T-005 is completed, but the verifier scored it 0.67 because 
+sol-003      2     1    38   0.0129     974095      540  71.62  T-008 is complete with "answered: none", since no question m
+total cost                   0.0444
+tasks: counts={'open': 0, 'leased': 0, 'done': 8, 'blocked': 0}, mean_score=0.9583333358168602, scored=8
+round 1: reports 1, pings 0, tuned none, reopened [], turns 6, cost $0.1773
+round 2: reports 1, pings 0, tuned none, reopened [], turns 10, cost $0.2977
+round 3 (final): reports 1, pings 0, tuned none, reopened [], turns 5, cost $0.2079

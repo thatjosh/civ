@@ -1,0 +1,16 @@
+{
+  "arm": "A",
+  "tasks_done": 8,
+  "tasks_total": 8,
+  "mean_score": 1.0,
+  "handoffs": 5,
+  "stubs": 0,
+  "kills": 0,
+  "solver_cost_usd": 0.05230384000000001,
+  "supervisor_cost_usd": 0.0,
+  "total_cost_usd": 0.05230384000000001,
+  "supervisor_cost_share": 0.0,
+  "rounds": [],
+  "tunes": [],
+  "refused_tunes": []
+}

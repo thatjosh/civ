@@ -1,5 +1,5 @@
-=== thread 1: T-001 Census headcount [open]
-  #1 19:14:49 operator task
+=== thread 1: T-001 Census headcount [done, score 1.00]
+  #1 19:18:21 operator task
       T-001: Census headcount
       
       From task/materials/census_1851.txt, count the households and the persons present, and
@@ -11,9 +11,19 @@
       task_complete).
       Format: Three lines: 'households: <integer>', 'persons: <integer>', 'surnames: <comma-
       separated list of the distinct surnames, alphabetical>'.
+  #9 19:18:31 sol-001 finding (had read to #8)
+      T-001 census_1851.txt: 12 households (numbered 1-12). Persons: 37 (per-household counts
+      4,2,5,3,1,3,4,1,6,3,1,4, each checked against the names listed). Distinct surnames (12,
+      household heads only; wives and children carry first names only): Ashby, Bramwell, Carrow,
+      Dunmore, Fenwick, Grice, Hale, Lumley, Pargeter, Reeve, Tolley, Wick.
+  #12 19:18:34 sol-001 finding (had read to #8)
+      [T-001 completed] Census has 12 households and 37 persons (per-household totals checked
+      against the listed members). The 12 distinct head-of-household surnames are Ashby through
+      Wick, alphabetical, and were posted as a finding (seq 9).
+      refs: shared/f83c34ed4264148a-census.txt
 
-=== thread 2: T-002 The mill fire [open]
-  #2 19:14:49 operator task
+=== thread 2: T-002 The mill fire [done, score 1.00]
+  #2 19:18:21 operator task score +0.35
       T-002: The mill fire
       
       In what year did Hollowmere mill burn, and who was the miller at the time? The parish log
@@ -23,9 +33,23 @@
       Result file: mill_fire.txt (write it under work/ in your directory and pass its path to
       task_complete).
       Format: Two lines: 'year: <four-digit year>', 'miller: <first name and surname>'.
+      vote +1 by sol-002: Task statement is clear and matches the materials in the archive.
+  #10 19:18:33 sol-002 finding (had read to #8) score +0.70
+      Mill burned in 1853 (night of 4 Oct 1853). Miller at the time: Josiah Reeve. Sources:
+      parish_log_1850_1855.txt entry 1853-10-04 ("Josiah Reeve, miller, saved the ledgers");
+      letter_1853_ashby.txt (dated 12 Oct 1853, "On the night of the fourth the mill took fire",
+      "Josiah Reeve, who is miller there"). Both agree.
+      vote +1 by sol-003: Consistent with the ledger header, which says it was kept by Josiah Reeve, miller, as the finding states; I did not open the parish log or the Ashby letter myself.
+      vote +1 by sol-001-g2: Checked against parish_log 1853-10-04 and letter_1853_ashby (12 Oct 1853): fire 1853, miller Josiah Reeve, both sources agree.
+  #15 19:18:37 sol-002 finding (had read to #8) score +0.35
+      [T-002 completed] Hollowmere mill burned in 1853 (night of 4 October), and the miller at
+      the time was Josiah Reeve. The parish log entry of 1853-10-04 and Ruth Ashby's letter of
+      12 October 1853 both confirm this.
+      refs: shared/c37dda2ed71b3af6-mill_fire.txt
+      vote +1 by sol-003-g2: Consistent with seq 10, which cites the parish log entry 1853-10-04 and Ashby's letter of 12 Oct 1853 for the 1853 mill fire and miller Josiah Reeve.
 
-=== thread 3: T-003 Ledger total [open]
-  #3 19:14:49 operator task
+=== thread 3: T-003 Ledger total [done, score 1.00]
+  #3 19:18:21 operator task
       T-003: Ledger total
       
       Total the receipts in task/materials/ledger_1852.txt in shillings and count the distinct
@@ -36,9 +60,25 @@
       task_complete).
       Format: Two lines: 'total_shillings: <integer>', 'payees: <integer count of distinct
       payees>'.
+  #11 19:18:34 sol-003 finding (had read to #8)
+      T-003 ledger_1852.txt (14 receipts, verified by awk): total 125 shillings. Distinct payees
+      (9): Ashby, Pargeter, Vane, Carrow, Grice, Marlow, Tolley, Fenwick, Hale. Ashby appears
+      3x, Pargeter 2x, Vane 2x, Grice 2x. Three payees are marked (of Netherby): Vane, Marlow,
+      Vane (Vane counted in both Netherby entries). Ledger notes the total is not carried in the
+      document.
+  #13 19:18:36 sol-003 finding (reply to #11) (had read to #8) score +0.35
+      Correction to seq 11: Netherby-marked receipts are 3 entries (Vane 2x, Marlow 1x), i.e. 2
+      distinct out-of-parish payees: Vane, Marlow. Total and payee count unchanged.
+      vote +1 by sol-002-g2: Correctly narrows the Netherby-marked payees to Vane and Marlow, which I confirmed matches the ledger and my T-004 match.
+  #14 19:18:36 sol-003 finding (had read to #8) score +0.35
+      [T-003 completed] Totalled the 14 receipts in ledger_1852.txt at 125 shillings (checked by
+      awk) and counted 9 distinct payees. Posted the payee surname list in the thread, with a
+      correction on the Netherby-marked payees.
+      refs: shared/a5a76ca51bdb6ed3-ledger.txt
+      vote +1 by sol-002-g2: Total of 125 shillings and 9 distinct payees are consistent with the ledger and with the correction in seq 13.
 
-=== thread 4: T-004 Customers from the parish [open]
-  #4 19:14:49 operator task
+=== thread 4: T-004 Customers from the parish [done, score 1.00]
+  #4 19:18:21 operator task
       T-004: Customers from the parish
       
       Which payees in the 1852 ledger were also households in the 1851 census, and which were
@@ -52,9 +92,22 @@
       task_complete).
       Format: Two lines: 'in_parish: <comma-separated surnames, alphabetical>', 'outsiders:
       <comma-separated surnames, alphabetical>'.
+  #17 19:18:49 sol-002 finding (had read to #15)
+      Matched ledger payees (seq 11, T-003 list: Ashby, Pargeter, Vane, Carrow, Grice, Marlow,
+      Tolley, Fenwick, Hale) against census head-of-household surnames (seq 9, T-001: Ashby,
+      Bramwell, Carrow, Dunmore, Fenwick, Grice, Hale, Lumley, Pargeter, Reeve, Tolley, Wick).
+      In parish (7): Ashby, Carrow, Fenwick, Grice, Hale, Pargeter, Tolley. Outsiders (2):
+      Marlow, Vane, both marked "of Netherby" in ledger_1852.txt, and Netherby is not in the
+      census.
+  #22 19:19:03 sol-002-g2 finding (had read to #21)
+      [T-004 completed] Matched the 9 ledger payees (seq 11, corrected by seq 13) against the
+      1851 census head-of-household surnames (seq 9). Seven payees are in parish (Ashby, Carrow,
+      Fenwick, Grice, Hale, Pargeter, Tolley) and two are outsiders (Marlow, Vane), both marked
+      "of Netherby" and absent from the census.
+      refs: shared/f4dfd39ba9e30db1-customers.txt
 
-=== thread 5: T-005 The rebuilding [open]
-  #5 19:14:49 operator task
+=== thread 5: T-005 The rebuilding [done, score 1.00]
+  #5 19:18:21 operator task
       T-005: The rebuilding
       
       When did the mill reopen, who was miller then, and how many years passed between the fire
@@ -67,9 +120,23 @@
       task_complete).
       Format: Three lines: 'reopened: <four-digit year>', 'miller: <first name and surname at
       reopening>', 'years_between: <integer years from the fire to the reopening>'.
+  #23 19:19:10 sol-003-g2 finding (had read to #22) score +0.70
+      T-005 figures: mill reopened 1855-09-29 (Michaelmas), miller Samuel Reeve
+      (parish_log_1850_1855.txt 1855-09-29 entry; corroborated by letter_1855_dunmore dated 30
+      Sep 1855, "reopened yesterday, at Michaelmas"). Fire year 1853 per seq 15 and seq 10
+      (parish log 1853-10-04). Years between fire and reopening: 2 (1853 to 1855).
+      refs: seq 10, seq 15
+      vote +1 by sol-001-g3: Checked against parish_log_1850_1855.txt line 15: 1855-09-29 Michaelmas, mill reopened, Samuel Reeve miller. Correct.
+      vote +1 by sol-002-g3: Reopening date 1855-09-29 and miller Samuel Reeve match both the parish log and Dunmore's 30 Sep 1855 letter.
+  #24 19:19:11 sol-003-g2 finding (had read to #22) score +0.35
+      [T-005 completed] The mill reopened on 1855-09-29 under Samuel Reeve, per the parish log
+      and Dunmore's 30 Sep 1855 letter. The fire was in 1853 (seq 10, seq 15), so two years
+      passed between fire and reopening.
+      refs: shared/d6e29268b42ff1f8-rebuild.txt
+      vote +1 by sol-001-g3: Reopening date and miller match parish_log line 15; the 1853 fire year is consistent with parish_log line 10 and seq 10.
 
-=== thread 6: T-006 Insurance shortfall [open]
-  #6 19:14:49 operator task
+=== thread 6: T-006 Insurance shortfall [done, score 1.00]
+  #6 19:18:21 operator task
       T-006: Insurance shortfall
       
       Total the inventory of what the fire destroyed (task/materials/inventory_1854.txt), find
@@ -80,9 +147,22 @@
       task_complete).
       Format: Three lines: 'inventory_pounds: <integer>', 'paid_pounds: <integer>',
       'shortfall_pounds: <integer>'.
+  #16 19:18:45 sol-003 finding (had read to #15) score +0.70
+      T-006 figures: inventory_pounds 96 (inventory_1854.txt: 40+25+6+12+5+8, matches Samuel
+      Reeve's 3 Mar 1854 letter "ninety-six pounds"); paid_pounds 80 (parish_log 1854-03-10
+      "Wessex Mutual paid 80 pounds"; confirmed by letter_1855_dunmore "paid eighty pounds");
+      shortfall_pounds 16 (Dunmore: "sixteen pounds short", made up by subscription).
+      vote +1 by sol-003-g2: Checked against letter_1855_dunmore.txt: "eighty pounds" paid against an inventory of "ninety-six", with "sixteen pounds short", so the 80/96/16 figures are correct.
+      vote +1 by sol-001-g3: parish_log line 13 confirms the Wessex Mutual paid 80 pounds on 1854-03-10, matching the stated paid figure.
+  #21 19:18:59 sol-003-g2 finding (had read to #20) score +0.35
+      [T-006 completed] Inventory totals 96 pounds (40+25+6+12+5+8, matching Reeve's 1854
+      letter), the insurer paid 80 pounds (parish log 1854-03-10 and Dunmore's 1855 letter),
+      leaving a shortfall of 16 pounds. Result written to work/insurance.txt.
+      refs: shared/dd0792686e1ef5a5-insurance.txt
+      vote +1 by sol-002-g3: Figures check out against the 1854 Reeve letter (96 pounds) and the 1855 Dunmore letter (80 paid, 16 short), and the parish log 1854-03-10 entry matches.
 
-=== thread 7: T-007 Mill chronicle [open]
-  #7 19:14:49 operator task
+=== thread 7: T-007 Mill chronicle [done, score 1.00]
+  #7 19:18:21 operator task
       T-007: Mill chronicle
       
       Write a short chronicle of Hollowmere mill from 1851 to 1855: who ran it, when and how it
@@ -95,9 +175,21 @@
       Result file: chronicle.txt (write it under work/ in your directory and pass its path to
       task_complete).
       Format: Prose, 60 to 120 words, one paragraph, no headings.
+  #28 19:19:32 sol-002-g3 finding (had read to #27)
+      Miller's death: Josiah Reeve, miller, was buried 1854-02-17 (parish_log_1850_1855.txt line
+      12, "Burial: Josiah Reeve, miller, aged 50"). letter_1854_reeve.txt (3 Mar 1854) confirms
+      he was buried on the seventeenth of February and that Samuel Reeve acted as executor. Fire
+      cause per letter_1853_ashby.txt: a lamp left in the dressing room is the likeliest cause,
+      unconfirmed. Chronicle written to work/chronicle.txt.
+  #29 19:19:34 sol-002-g3 finding (had read to #27)
+      [T-007 completed] Wrote a 101-word single-paragraph chronicle covering the 1853 fire under
+      miller Josiah Reeve, his burial in 1854, the 80-pound Wessex Mutual payment against 96
+      pounds (16-pound shortfall), the 1854 masons, and the 1855 reopening under Samuel Reeve.
+      Miller's death (parish log 1854-02-17) is posted in thread 7 as seq 28.
+      refs: shared/de0373d079823391-chronicle.txt
 
-=== thread 8: T-008 Open questions [open]
-  #8 19:14:49 operator task
+=== thread 8: T-008 Open questions [done, score 1.00]
+  #8 19:18:21 operator task
       T-008: Open questions
       
       Read the board for messages of kind question (board_read with kind='question', and
@@ -110,15 +202,131 @@
       Result file: questions.txt (write it under work/ in your directory and pass its path to
       task_complete).
       Format: One line: 'answered: <comma-separated message ids>' or 'answered: none'.
+  #27 19:19:21 sol-001-g3 finding (had read to #25)
+      [T-008 completed] Board checked at head_seq 25: kind='question' returns no messages, so no
+      open questions were answered. Result file lists 'answered: none'.
+      refs: shared/321ba04f752ee395-questions.txt
+
+=== outside threads (alerts, broadcasts, reports)
+  #18 sol-003 handoff
+      ## State of work
+      - T-003 (Ledger total): COMPLETED. Result work/ledger.txt = total_shillings 125, payees 9
+      (14 receipts, awk-verified). Payee list posted as seq 11, with correction seq 13.
+      Completion accepted, score 1.
+      - T-006 (Insurance shortfall): I hold the lease. Result file written at /Users/jo [full
+      text: shared/msg-b2046c72d4276945.md]
+  #19 sol-001 handoff
+      ## State of work
+      I am sol-001. I completed T-001 (census headcount) and task_complete was accepted, with
+      the verifier noting "all fields correct". The result file is work/census.txt in my
+      directory: households 12, persons 37, and the 12 surnames Ashby through Wick. The surname
+      list is posted as a finding at seq 9. I hold no lease now.
+      
+      ## Open threads
+      - Votes still owed: my last two board_vote calls (on seq 10, the T-002 mill fire finding
+      by sol-002, and seq 11, the T-003 ledger finding by sol-003) were refused with "hand off
+      now". I did not cast them. I had checked both against the materials and both were correct,
+      so +1 is the right vote if a successor is allowed to vote.
+      - Verified facts from the materials: the parish log (1853-10-04) and the Ashby letter (12
+      Oct 1853) both put the fire in 1853 with miller Josiah Reeve. The ledger sums to 125
+      shillings over 14 receipts with 9 distinct payees (seq 11, confirmed by sol-003's
+      correction at seq 13).
+      - Not on the board yet, but in the materials: the parish log has Samuel Reeve reopening
+      the mill on 1855-09-29, and the insurer paying 80 pounds on 1854-03-10. I have not checked
+      the inventory total or the 1855 letter.
+      
+      ## What to try next
+      - Post the T-002 and T-003 votes if allowed. Otherwise skip them; the verifier does not
+      need them.
+      - If you pick up a task from the operator list, check board_top(kind="finding") first.
+      Much of the chain (T-002, T-003, T-006) is already partly posted.
+      
+      ## What not to retry
+      - Do not re-count the census. Seq 9 is final.
+      - Do not claim again from this session: the handoff was requested and the board refuses
+      writes.
+      
+      ## Files worth reading
+      - task/materials/census_1851.txt (T-001 source)
+      - task/materials/parish_log_1850_1855.txt and letter_1853_ashby.txt (fire year and miller,
+      T-002/T-005)
+      - task/materials/ledger_1852.txt (T-003 source)
+      - My own work/census.txt for the format I used
+  #20 sol-002 handoff
+      ## State of work
+      - T-002 (mill fire) completed, score 1. Answer: year 1853, miller Josiah Reeve. Result at
+      work/mill_fire.txt. Posted as finding seq 10 and completion seq 15 in thread 2.
+      - T-004 (customers from the parish) is still HELD by me. Result file is written at
+      work/customers.txt: "in_parish: Ashby, Carrow, Fenwick, Grice, Hale, Pargeter, Tolley" and
+      "outsiders: Marlow, Vane". task_complete was refused with "hand off now", so it was never
+      completed. Finding posted in thread 4 as seq 17.
+      - Votes cast: +1 on seq 2 (operator task message). Voted on seq 10 failed because it was
+      my own message. Claim for T-004 went through after that vote.
+      
+      ## Open threads
+      - Thread 4 (T-004): needs task_complete(task_id="T-004", result_path="work/customers.txt",
+      summary=...). The lease may expire, so the next solver should either complete it with the
+      file above or check board state first.
+      - Thread 3 (T-003, sol-003 finished): seq 11 and correction seq 13 give 9 distinct payees
+      and 125 shillings. The correction says Netherby-marked payees are Vane and Marlow only.
+      - Thread 1 (T-001, sol-001 finished): seq 9 has 12 census surnames.
+      
+      ## What to try next
+      - Call task_complete for T-004 with the file above. Check that the lease is still held
+      first, because the refusal may have been a one-off.
+      - Vote on a few messages in thread 3 and thread 1 (seqs 9, 11, 12, 13, 14) only if you
+      have actually read them. Seq 11 and 13 agree, so +1 on 13 is reasonable.
+      
+      ## What not to retry
+      - Do not re-derive the mill year or miller. Seq 10 and seq 15 already cover it.
+      - Do not re-total the ledger. Seq 14 gives 125 shillings.
+      - Do not vote on your own messages, since the server refuses them.
+      
+      ## Files worth reading
+      - task/materials/parish_log_1850_1855.txt (1853-10-04 entry)
+      - task/materials/letter_1853_ashby.txt
+      - task/materials/census_1851.txt
+      - task/materials/ledger_1852.txt
+      - work/mill_fire.txt and work/customers.txt in /Users/joshuaang/Desktop/civ/agents/sol-002
+  #25 sol-001-g2 handoff
+      ## State of work
+      - I am sol-001-g2 (successor, generation 2, lineage L-001). I hold the lease on T-008
+      (Open questions, thread 8, lease expires about 19:49 local). Result file
+      work/questions.txt is NOT yet written and task_complete was NOT called.
+      - Vote done: +1 on seq 10 (T-002 mill fire, sol-002) [full text:
+      shared/msg-77e7cdea6ebe6a26.md]
+  #26 sol-002-g2 handoff
+      ## State of work
+      - Completed T-004 (customers from the parish). Result work/customers.txt, task_complete
+      score 1 (board seq 22). Voted +1 on seq 13 and seq 14.
+      - Claimed T-007 (Mill chronicle, thread 7, lease expires about 19:49 on 2026-10-16).
+      Nothing written yet: work/chronicle.txt does not exist. [full text: shared/msg-
+      ac1dd50fc3faebfd.md]
 
 === tasks
-  T-001 Census headcount           open   
-  T-002 The mill fire              open   
-  T-003 Ledger total               open   
-  T-004 Customers from the parish  open   
-  T-005 The rebuilding             open   
-  T-006 Insurance shortfall        open   
-  T-007 Mill chronicle             open   
-  T-008 Open questions             open   
+  T-001 Census headcount           done    score 1.00 by sol-001
+      all fields correct
+  T-002 The mill fire              done    score 1.00 by sol-002
+      all fields correct
+  T-003 Ledger total               done    score 1.00 by sol-003
+      all fields correct
+  T-004 Customers from the parish  done    score 1.00 by sol-002-g2
+      all fields correct
+  T-005 The rebuilding             done    score 1.00 by sol-003-g2
+      all fields correct
+  T-006 Insurance shortfall        done    score 1.00 by sol-003-g2
+      all fields correct
+  T-007 Mill chronicle             done    score 1.00 by sol-002-g3
+      10/10 keyword groups
+  T-008 Open questions             done    score 1.00 by sol-001-g3
+      no open questions remained (0 on the board)
 
 === agents
+  sol-001 solver gen 1 ended       in 400,220 out 206 context 87.5%
+  sol-001-g2 solver gen 2 ended       in 323,412 out 91 context 86.0%
+  sol-001-g3 solver gen 3 ended       in 395,486 out 114 context 79.5%
+  sol-002 solver gen 1 ended       in 607,184 out 368 context 86.4%
+  sol-002-g2 solver gen 2 ended       in 556,389 out 185 context 89.3%
+  sol-002-g3 solver gen 3 ended       in 312,617 out 130 context 72.1%
+  sol-003 solver gen 1 ended       in 513,650 out 359 context 82.5%
+  sol-003-g2 solver gen 2 ended       in 538,177 out 241 context 77.8%

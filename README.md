@@ -70,7 +70,35 @@ Three measurements, cheapest first. Each has a script and leaves a record under 
 
 3. **Closed loop, deferred.** Showing a tune move an SLO needs runs long enough for the window after the tune to differ from the window before it, which the eight-task pack cannot give. The protocol is in the next steps.
 
-<!-- integrator: results -->
+### Results (16 October 2026)
+
+**Replay eval.** Six Opus supervisor sessions over the recorded 30k-window run, three with the succession packet in the brief and three without it. Every trial is an independent round 1 over a fresh load of the fixture (the first batch ran its trials as rounds 2 and 3 of one database and the later supervisors simply agreed with the first report, so that batch was discarded). Scores against `docs/eval/m3-kills.rubric.json`, out of 8; the name and classification checks look only inside the report's Succession and Diagnosis sections.
+
+| arm | trial 1 | trial 2 | trial 3 | cost for three |
+|---|---|---|---|---|
+| with the packet | 8 | 8 | 8 | $0.58 |
+| without the packet (control) | 6 | 6 | 6 | $0.68 |
+
+The two points of difference are the two classification items, which is what the packet exists for. All three packet-arm supervisors confirmed sol-002 as `never_asked`, and all three overrode the heuristic on sol-003 from `no_chance` to the same root cause: the request landed at 87 percent, one turn had carried the context across both thresholds, and no grace could have helped. Two of the three lowered `handoff_pct` by one step naming `handoff_success_rate` with n=5; the third explained that with no solvers live a tune would expire unused and said what it would have tuned. None pinged on a single window. The control-arm supervisors could see `handoff_success_rate` at 0.6 in the SLO table and the generation-3 lineages on the board, said the succession counters disagreed with the SLO and asked for the packets, and left the knobs alone: the right behaviour given what they were shown, and no diagnosis.
+
+Three things the replayed supervisors said about the harness were taken: `completions_per_mtok` no longer counts supervisor tokens (every post-run round had been lowering it), a supervisor vote cast with no solvers live now weighs one instead of zero, and the record of each one's reasoning is kept whole (a 3,600-character report had been cut to a 300-character preview by the long-body rule, and scored 3 of 8 on text that the full report passed). A fourth suggestion is a next step: ask for the handoff early when the last turn's context growth exceeds the remaining gap to `kill_pct`.
+
+The replay records are `docs/demo/2026-10-16-replay-opus-{1,2,3}.json` and the `-control` files beside them, each with the brief as rendered, the report, the tune events, the refusals and the cost.
+
+**Live A/B under the injected fault.** Three Haiku solvers at a 30k window with `kill_grace_turns` preset to 0, once without supervisors and once with one Opus supervisor on a fifteen-second round. Records: `docs/demo/2026-10-16-ab-{A,B}-{run-summary,board-transcript,events}.txt` and `-metrics.json`.
+
+| | A: no supervisors | B: one supervisor |
+|---|---|---|
+| tasks done, mean score | 8 of 8, 1.000 | 8 of 8, 0.958 |
+| handoffs, stubs, kills | 5, 0, 0 | 3, 1, 1 |
+| rounds, reports, tunes, pings | | 3, 3, 0, 0 |
+| solver cost | $0.05 | $0.04 |
+| supervisor cost | | $0.68 (94 percent of the bill) |
+| wall time | 86 s | 157 s |
+
+The fault is not deterministic: arm A drew no kill this time (an earlier arm A run, lost to a script bug, had one), arm B drew one. The machinery held end to end. Round 1 read the brief, saw the operator preset in the knobs section, predicted `no_chance` kills, voted three dependency findings up at weight 3 (three live solvers, one supervisor), and declined to tune with n=0. Round 2's window held the kill plus three real handoffs (n=4, above `min_sample`): the supervisor confirmed the packet's `ignored` classification from the evidence (asked at 83 percent, three turns and two `board_read` calls after the request, no `civ_handoff`, killed 1.7 seconds later), replied to a solver's alert about the T-005 convention with a finding in its thread, and chose not to tune because an `ignored` kill is a prompt fault, not a knob, and overriding an operator preset on one incident would be wrong. It tried to post the prompt fix as a proposal and was refused twice, because a proposal must carry a diff file and supervisors cannot write files; it put the change in its report instead, and it has been applied to `handoff_request.md` (the first tool call after the request must be the handoff). It tried `task_reopen` on a done task and was refused. Round 3 wrote the post-mortem and sent no ping, correctly: the trigger needs kills in two consecutive windows.
+
+What this costs: an Opus supervisor round over this brief is 6 to 10 turns and $0.18 to $0.30, so at this scale supervision is the bill. At the design's scale (95 solvers on Opus, five supervisors every ten minutes) the same rounds are a few percent of solver spend. Two gaps for the next milestone came out of arm B: supervisors need a way to carry a proposal (a diff written to their own directory, which M6's merge gate then tests), and a grace measured in turns is thin when the turns are sub-second tool calls (sol-001 had three in 1.7 seconds), so the kill rule should also require a floor in seconds.
 
 ### Deviations from the design doc
 
@@ -81,7 +109,8 @@ One tune per round is enforced across all supervisors, as designed. The first ro
 1. The race fix. A solver that claims a task checks the board before claiming but not before deriving, so when a sibling task posts the fact a second later the work is done twice (seen in both demo runs). `task_claim` should report which dependency tasks are currently leased, and the solver prompt should re-check the board before deriving. Pair it with a search-before-posting rule for the end-of-loop finding, which produced duplicate posts at the end of run 2.
 2. M5 to M7: the operator controls and command line, self-modification through `civ.merge`, and the chaos controls, soak test, watchdog, and restore drill.
 3. A task pack large enough that no solver can finish inside one context window, which is the case the design exists for.
-4. The closed-loop A/B for supervisors, once that pack exists: the same `kill_grace_turns=0` fault, runs of at least six rounds, `handoff_success_rate` per round compared between the arm without supervisors and the arm with them, three seeds each. The claim to test is that the arm with supervisors recovers within two rounds of the first kill and the other arm never does.
+4. Supervisor follow-ups from the first live rounds: a wall-clock floor on the kill grace alongside the turn count; a growth-aware handoff trigger that asks early when the last turn's context growth exceeds the remaining gap to `kill_pct`; a way for a supervisor to carry a proposal without a diff file, or a writable directory of its own for M6.
+5. The closed-loop A/B for supervisors, once that pack exists: the same `kill_grace_turns=0` fault, runs of at least six rounds, `handoff_success_rate` per round compared between the arm without supervisors and the arm with them, three seeds each. The claim to test is that the arm with supervisors recovers within two rounds of the first kill and the other arm never does.
 
 The layout is the one the design doc describes: `harness/` (agent-editable), `control/` (operator-owned), `task/`, `docs/`, `scripts/`, with `agents/` and `shared/` as gitignored runtime state.
 
