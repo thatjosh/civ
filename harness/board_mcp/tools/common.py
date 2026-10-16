@@ -151,8 +151,14 @@ def spill_long_body(body: str, shared_dir: Path, limit_chars: int) -> tuple[str,
 
 def insert_message(conn: psycopg.Connection, identity: AgentIdentity, kind: str, body: str, *,
                    thread_id: int | None, parent_id: int | None, refs: list[str] | None,
-                   shared_dir: Path, knobs: Knobs) -> dict[str, Any]:
-    stored, extra = spill_long_body(body, shared_dir, int(knobs.get("long_body_chars", conn)))
+                   shared_dir: Path, knobs: Knobs, spill: bool = True) -> dict[str, Any]:
+    # Long bodies become refs so a hundred solvers cannot bloat every read. A supervisor report is
+    # the exception (spill=False): there is at most one per supervisor per round, and the operator
+    # and the next round's supervisor need the whole text, not a preview and a file to open.
+    if spill:
+        stored, extra = spill_long_body(body, shared_dir, int(knobs.get("long_body_chars", conn)))
+    else:
+        stored, extra = body, []
     all_refs = list(refs or []) + extra
     row = fetch_one(
         conn,

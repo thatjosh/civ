@@ -1,0 +1,155 @@
+{
+  "model": "claude-opus-5-5",
+  "trial": 1,
+  "control": false,
+  "fixture": "docs/demo/2026-10-15-m3-fixture.sql",
+  "agent_id": "sup-001-r1",
+  "round_id": 1,
+  "brief_markdown": "## Round 1 (final round: the solvers have finished, write the post-mortem)\n\nWindow: 2026-10-15T21:38:40.531786+01:00 to 2026-10-16T02:05:11.543598+01:00. Supervisors this round: 1.\n\n## Status\n\n- Live agents: 0 solvers, 0 supervisors\n- Tasks: open 0, leased 0, done 8, blocked 0\n- Tokens per minute (last minute): 0\n\n## SLOs (this window against the previous one)\n\n| SLO | this window | n | previous | n |\n|---|---|---|---|---|\n| completions_per_mtok | 2.73 | 8 | none |  |\n| blocked_failed_rate | 0 | 8 | none |  |\n| duplicate_rate | 0 | 7 | none |  |\n| lease_wait_median_s | 15.4 | 8 | none |  |\n| handoff_success_rate | 0.6 | 5 | none |  |\n\nNo previous window: this is the first round, so nothing can be compared yet.\n\nmin_sample is 3: a tune naming an SLO with n below that is refused.\n\nHistory (older rounds first): round 1: completions_per_mtok=2.73, blocked_failed_rate=0, duplicate_rate=0, lease_wait_median_s=15.4, handoff_success_rate=0.6\n\n## Succession\n\n- Handoff requests: 4, real handoffs: 3, stubs: 2, kills: 2\n- Handoff success rate: 0.6\n- Median turns from request to handoff: none; median seconds: 5.64\n- Lineage generations: L-001 at 2, L-002 at 3, L-003 at 3\n\n### Kill: sol-003 (lineage L-003, generation 1)\n- Classification (heuristic, confirm or override): **no_chance**\n- Reason: kill threshold reached; task held: T-007\n- Requested: yes; turns since request: none; seconds since request: 2.72; grace turns: 2; context at request: 87%\n- Tool calls after the request: none\n- Handoff refusals: none\n\n### Kill: sol-002 (lineage L-002, generation 1)\n- Classification (heuristic, confirm or override): **never_asked**\n- Reason: kill threshold reached; task held: T-008\n- Requested: no; turns since request: none; seconds since request: none; grace turns: 2; context at request: none\n- Tool calls after the request: none\n- Handoff refusals: none\n\n## Blockers\n\nNo blockers this window.\n\nBlocked tasks (attempts exhausted, waiting for a supervisor):\n- none\n\n## Alerts since the window opened\n\nNone.\n\n## Previous round's reports\n\nNone (first round, or nobody reported).\n\n## Knobs\n\nEvery knob is at its seed.\n\n## Verifier progress\n\n- Done 8 of 8, mean score 0.946\n- Lowest scores: T-005 0.667 (years_between: expected 2, got 1); T-007 0.9 (9/10 keyword groups, missing: michaelmas); T-001 1 (all fields correct)\n",
+  "brief": {
+    "round": {
+      "id": 1,
+      "number": 1,
+      "final": true,
+      "window_start": "2026-10-15T21:38:40.531786+01:00",
+      "window_end": "2026-10-16T02:05:11.543598+01:00",
+      "supervisors": 1
+    },
+    "status": {
+      "live_agents": {
+        "solver": 0,
+        "supervisor": 0
+      },
+      "tokens_per_min": 0,
+      "tasks": {
+        "open": 0,
+        "leased": 0,
+        "done": 8,
+        "blocked": 0
+      }
+    },
+    "slo": {
+      "current": {
+        "completions_per_mtok": {
+          "value": 2.728619983389526,
+          "n": 8
+        },
+        "blocked_failed_rate": {
+          "value": 0.0,
+          "n": 8
+        },
+        "duplicate_rate": {
+          "value": 0.0,
+          "n": 7
+        },
+        "lease_wait_median_s": {
+          "value": 15.413754,
+          "n": 8
+        },
+        "handoff_success_rate": {
+          "value": 0.6,
+          "n": 5
+        }
+      },
+      "previous": null,
+      "min_sample": 3,
+      "history": [
+        {
+          "round": 1,
+          "completions_per_mtok": 2.728619983389526,
+          "blocked_failed_rate": 0.0,
+          "duplicate_rate": 0.0,
+          "lease_wait_median_s": 15.413754,
+          "handoff_success_rate": 0.6
+        }
+      ]
+    },
+    "succession": {
+      "requests": 4,
+      "handoffs": 3,
+      "stubs": 2,
+      "kills": 2,
+      "success_rate": 0.6,
+      "median_turns_to_handoff": null,
+      "median_seconds_to_handoff": 5.644,
+      "refusals": {},
+      "generations": {
+        "L-001": 2,
+        "L-002": 3,
+        "L-003": 3
+      },
+      "incidents": [
+        {
+          "agent_id": "sol-003",
+          "lineage_id": "L-003",
+          "generation": 1,
+          "reason": "kill threshold reached",
+          "requested": true,
+          "turns_since_request": null,
+          "seconds_since_request": 2.719,
+          "grace_turns": 2,
+          "context_pct_at_request": 86.997,
+          "tool_calls_after_request": [],
+          "handoff_refusals": [],
+          "task": "T-007",
+          "classification": "no_chance"
+        },
+        {
+          "agent_id": "sol-002",
+          "lineage_id": "L-002",
+          "generation": 1,
+          "reason": "kill threshold reached",
+          "requested": false,
+          "turns_since_request": null,
+          "seconds_since_request": null,
+          "grace_turns": 2,
+          "context_pct_at_request": null,
+          "tool_calls_after_request": [],
+          "handoff_refusals": [],
+          "task": "T-008",
+          "classification": "never_asked"
+        }
+      ]
+    },
+    "blockers": [],
+    "blocked_tasks": [],
+    "alerts": [],
+    "previous_reports": [],
+    "tunes": {
+      "active": [],
+      "pending": [],
+      "round_tuned": false
+    },
+    "verifier": {
+      "done": 8,
+      "total": 8,
+      "mean_score": 0.945833332836628,
+      "lowest": [
+        {
+          "id": "T-005",
+          "score": 0.6666667,
+          "notes": "years_between: expected 2, got 1"
+        },
+        {
+          "id": "T-007",
+          "score": 0.9,
+          "notes": "9/10 keyword groups, missing: michaelmas"
+        },
+        {
+          "id": "T-001",
+          "score": 1.0,
+          "notes": "all fields correct"
+        }
+      ]
+    }
+  },
+  "report": "## Window\nRound 1, the final round and the post-mortem for the run. Window 2026-10-15T21:38:40 to 2026-10-16T02:05:11 (+01:00), though all board activity is in seqs 1\u201327, about 21:39\u201321:41. Live now: 0 solvers and 0 supervisors (I am the only supervisor). No knob had been tuned before this round. There is no previous window to compare against.\n\n## Succession\n- 4 handoff requests, 3 real handoffs (for example seq 22 from sol-001), 2 stubs, 2 kills.\n- Handoff success rate is 0.6 (n=5), with no baseline. Median time from request to handoff was 5.64 s.\n- No earlier tune to evaluate.\n- Lineages L-002 and L-003 reached generation 3 and L-001 generation 2. For a pack of 8 tasks finished in about 2 minutes, that is churn: each solver burned through its context in only a few tasks.\n- The stub successors did not redo work: duplicate_rate is 0 (n=7). sol-003-g3 finished T-007 by building on seqs 12\u201320.\n\n## Queue and SLOs\n- Tasks: 8 done, 0 open, 0 leased, 0 blocked. Verifier mean score 0.946.\n- SLOs, all first-window values:\n  - completions_per_mtok 2.73 (n=8)\n  - blocked_failed_rate 0 (n=8)\n  - duplicate_rate 0 (n=7)\n  - lease_wait_median_s 15.4 (n=8)\n  - handoff_success_rate 0.6 (n=5)\n- Lowest scores:\n  - T-005 scored 0.667. years_between was 1 where 2 was expected (seq 17/20, corrected at seq 21).\n  - T-007 scored 0.9; it was missing the \"michaelmas\" keyword. \"Michaelmas\" appeared in seq 17, but the chronicle (seq 26) left it out.\n- Throughput and queue health were good. Succession was the only weak SLO.\n\n## Actions taken\n- Votes:\n  - +1 on seq 21: the correct years_between convention.\n  - \u22121 on seq 17: its convention was scored wrong.\n  - +1 on seq 22: an exemplary handoff.\n  - All three returned weight 0 because no solvers are live. They are a record only.\n- No tune. Solvers are gone, any tune would expire at its TTL before another solver ran, and there is no previous window for hysteresis. Had solvers been live, I would have lowered handoff_pct from 80 to 70 (slo handoff_success_rate, 2 kills of 5 successions).\n- No blockers, alerts or reopens. No ping: the succession_failing trigger needs kills in two windows, and only one exists.\n\n## Diagnosis\n- **sol-003 (L-003 gen 1, T-007):** I confirm no_chance, with a note. The request landed at 87% context, and the kill came 2.72 s later with zero turns and zero tool calls in between. The next turn crossed kill_pct before the agent could act. The root cause is the same as never_asked: one turn can add more than the gap between handoff_pct and kill_pct. The request arrived when the agent was already at 87%, not at about 80%.\n- **sol-002 (L-002 gen 1, T-008):** I confirm never_asked. No request was ever sent; a single turn jumped from under 80% to over kill_pct.\n- Together the two kills are a pattern: on this workload, single turns grow context by more than the handoff-to-kill gap, probably because whole materials files are read in one turn.\n- Recommendations for the next run:\n  1. Seed handoff_pct at 70 instead of 80. This addresses both kills.\n  2. Consider kill_grace_turns 3.\n  3. In the solver prompt, tell agents to read large materials with offset/limit rather than whole files.\n- **Pack and verifier:**\n  - T-005 does not say how to count years_between. The verifier wants calendar-year subtraction (2), and a careful solver reasonably computed complete years (1). Next run's task text should say \"1855 minus 1853\" or \"calendar-year difference\".\n  - T-007's grader wants the word \"michaelmas\", which the task text never asks for. Either say \"give the reopening date as the source names it\" or drop that keyword group.\n- The handoff prompt worked: seq 22 has every heading and is useful. The successes were not limited by prompt quality.\n\n## For the operator\n- The run succeeded: 8 of 8 done, mean 0.946, no blocked tasks, no duplicates.\n- Two items to consider at leisure:\n  1. Seed handoff_pct at 70 next run (2 kills of 5 successions; both kills came from a single turn jumping past the gap between handoff_pct and kill_pct).\n  2. Fix the ambiguous task text for T-005 years_between and T-007 \"michaelmas\".\n- Votes cast after the solvers have exited carry zero weight. If supervisor votes in a final round are meant to shape the next run's board, that is a harness design question.\n- No ping sent.",
+  "tunes": [],
+  "refusals": [],
+  "pings": [],
+  "cost_usd": 0.24146919999999997,
+  "cost_estimated": false,
+  "turns": 8,
+  "error": null,
+  "written_at": "2026-10-16T01:05:49+00:00"
+}

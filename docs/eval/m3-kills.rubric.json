@@ -16,7 +16,7 @@
      "any": ["never_asked", "never asked", "no request", "without (being|a|any) request", "not asked", "was not requested", "no handoff request", "jumped (past|over|across) both", "both thresholds in (one|a single) turn"]},
     {"id": "classifies_sol_003", "points": 1, "check": "text_near", "anchor": "sol-003", "window": 800,
      "description": "classifies sol-003 as given no chance (or says so in plain words)",
-     "any": ["no_chance", "no chance", "2\\.7", "seconds? (after|later|of)", "(zero|0) turns", "one turn", "before it could", "no time", "immediately after"]},
+     "any": ["no_chance", "no chance", "2\\.72", "2\\.7 ?s(ec|\\b)", "seconds? (after|later than|since|of) (its |the |a )?request", "(zero|0|no) turns", "before it could (act|hand|write|respond)", "no time to (act|hand|write|respond)"]},
     {"id": "succession_knob_or_reason", "points": 1, "check": "tune_direction",
      "description": "tuned a succession knob in the right direction, or explained why it did not tune",
      "no_tune_any": ["did not tune", "no tune", "not tun(e|ing)", "below min_sample", "insufficient", "not enough", "too few", "one window", "single window", "hold off", "wait (for|until) (another|the next|a second) (round|window)"]},

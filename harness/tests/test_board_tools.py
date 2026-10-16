@@ -120,6 +120,15 @@ def test_supervisor_weight_equals_solvers_over_supervisors(board, make_agent, su
     assert board.vote(supervisor, msg2, 1, "confirmed")["weight"] == 2.0
 
 
+def test_supervisor_weight_is_floored_at_one_when_no_solver_is_live(board, make_agent, supervisor, op):
+    # A final-round supervisor votes after the solvers have ended; the ratio is 0 / 1 and would make
+    # the vote a no-op, so it is floored at one like the operator's.
+    author = make_agent("solver")[0]
+    msg = board.post(author, "finding", "last word")["id"]
+    op.set_agent_status(author.id, "ended")
+    assert board.vote(supervisor, msg, 1, "still right")["weight"] == 1.0
+
+
 def test_operator_pin_blocks_writes_until_ack(board, solver, other, op, task):
     target = board.post(other, "finding", "look at this")["id"]
     op.vote(target, 1, "everyone read this")

@@ -112,6 +112,7 @@ def vote_weight_for(conn: psycopg.Connection, role: str) -> float:
         return 1.0
     counts = live_counts(conn)
     weight = float(counts["solver"]) / float(max(counts["supervisor"], 1))
-    if role == "operator":
-        return max(weight, 1.0)
-    return weight
+    # Floored at one for supervisors and the operator alike: a final-round supervisor voting after
+    # the solvers have gone would otherwise cast weight zero, and a vote that cannot move the board
+    # is a vote nobody will bother to reason about.
+    return max(weight, 1.0)

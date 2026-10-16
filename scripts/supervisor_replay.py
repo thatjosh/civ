@@ -10,7 +10,8 @@ scores that output against a rubric written from what really happened in the rec
     python scripts/supervisor_replay.py --fixture docs/demo/2026-10-15-m3-fixture.sql \\
         --model claude-opus-5-5 --trials 3 [--without-succession-section]
 
-Each trial writes docs/demo/<date>-replay-<model>-<trial>[-control].json. The control arm
+Each trial writes docs/demo/<date>-replay-<model>-<trial>[-control].json. The fixture is
+reloaded before every trial, so each is an independent round 1 over the same recording. The control arm
 (--without-succession-section) blanks the succession block of the brief, so the difference in
 score between the two arms is what the orchestrator's incident packet buys over a supervisor
 reading the board on its own.
@@ -223,8 +224,10 @@ def run_trial(args: argparse.Namespace, trial: int, board_url: str) -> Path:
     operator = Operator(db)
     check_operator(operator)
 
-    round_id = open_covering_round(operator, args.db_url, trial)
-    brief = dict(operator.round_brief(round_id))
+    round_id = open_covering_round(operator, args.db_url, 1)
+    # The supervisor is registered by the spawn below, after the brief is built, so the count is
+    # passed in rather than read from the agents table.
+    brief = dict(operator.round_brief(round_id, supervisors=1))
     if args.without_succession_section:
         brief["succession"] = {}
     brief_md = render_brief(brief)
@@ -283,6 +286,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--fixture", type=Path, default=DEFAULT_FIXTURE)
     p.add_argument("--model", default="claude-opus-5-5")
     p.add_argument("--trials", type=int, default=1)
+    p.add_argument("--first-trial", type=int, default=1,
+                   help="number the trials from here, to add trials to a batch without redoing the earlier ones")
     p.add_argument("--without-succession-section", action="store_true",
                    help="control arm: blank the succession block of the brief")
     p.add_argument("--db-url", default=os.environ.get("CIV_REPLAY_DATABASE_URL", DEFAULT_DB_URL))
@@ -309,7 +314,13 @@ def main(argv: list[str] | None = None) -> int:
     server = start_server(args.db_url, args.port, server_log)
     written: list[Path] = []
     try:
-        for trial in range(1, args.trials + 1):
+        for trial in range(args.first_trial, args.first_trial + args.trials):
+            if trial > args.first_trial:
+                # Each trial starts from the recording alone. Left in place, trial 1's report would
+                # sit in trial 2's "previous round's reports" and the later trials would simply
+                # agree with it, which is what the first batch of this eval did.
+                ensure_database(args.db_url)
+                load_fixture(args.db_url, args.fixture)
             out = run_trial(args, trial, board_url)
             written.append(out)
             record = json.loads(out.read_text(encoding="utf-8"))

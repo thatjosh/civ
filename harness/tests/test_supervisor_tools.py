@@ -330,3 +330,14 @@ async def test_gateway_logs_every_refusal_with_the_tool_name(db, civ, make_agent
     unknown = await gw.call(FakeCtx("nope"), "civ_status", civ.status)
     assert unknown == {"ok": False, "error": "unknown agent token"}
     assert db.fetch_one("select count(*) as n from events where type = 'tool.refused'")["n"] == 1
+
+
+def test_report_is_stored_whole_even_when_long(civ, sup, op, db):
+    # Reports are exempt from the long-body spill: a replayed Opus report ran to 3,600 characters
+    # and a 300-character preview of it scored 3 of 8 on a rubric the full text passed.
+    op.open_round(1)
+    body = "## Window\n" + ("x" * 3000)
+    out = civ.report(sup, body)
+    assert out["ok"]
+    row = db.fetch_one("select body, refs from messages where id = %s", (out["id"],))
+    assert row["body"] == body and row["refs"] == [] and "[full text:" not in row["body"]

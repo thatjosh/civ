@@ -245,7 +245,7 @@ class CivTools:
                     return refuse(problem)
                 stored = f"{PING_PREFIX}{trigger}] {stored}"
             inserted = insert_message(conn, identity, "report", stored, thread_id=None, parent_id=None,
-                                      refs=None, shared_dir=self.shared_dir, knobs=self.knobs)
+                                      refs=None, shared_dir=self.shared_dir, knobs=self.knobs, spill=False)
             log_event(conn, identity.id, "tool.civ_report", {"id": inserted["id"], "round_id": rnd["id"], "trigger": trigger})
             if trigger is not None:
                 log_event(conn, identity.id, "report.ping", {"id": inserted["id"], "round_id": rnd["id"], "trigger": trigger})

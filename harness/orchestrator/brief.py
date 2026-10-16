@@ -131,7 +131,7 @@ def _incident(pk: dict[str, Any]) -> str:
         f"- Reason: {pk.get('reason', '?')}; task held: {pk.get('task') or 'none'}",
         f"- Requested: {_b(pk.get('requested'))}; turns since request: {_v(pk.get('turns_since_request'))}; "
         f"seconds since request: {_v(pk.get('seconds_since_request'))}; grace turns: {_v(pk.get('grace_turns'))}; "
-        f"context at request: {_v(pk.get('context_pct_at_request'))}%",
+        f"context at request: {_v(pk.get('context_pct_at_request'))}{'%' if pk.get('context_pct_at_request') is not None else ''}",
         f"- Tool calls after the request: {', '.join(tools) if tools else 'none'}",
         f"- Handoff refusals: {'; '.join(_clip(str(r), BODY_CHARS) for r in refusals) if refusals else 'none'}",
     ])

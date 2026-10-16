@@ -57,6 +57,15 @@ def test_completions_per_mtok_counts_verified_completions_over_tokens(db):
     assert out == {"value": pytest.approx(4.0), "n": 2}
 
 
+def test_completions_per_mtok_ignores_supervisor_tokens(db, make_agent):
+    sup, _ = make_agent("supervisor")
+    event(db, at(1), "a", "task.completed", {"task_id": "T-1", "score": 1.0})
+    event(db, at(2), "a", "agent.turn", {"tokens_in": 400_000, "tokens_out": 100_000})
+    # Twice the solver spend again, by a supervisor: must not move the number.
+    event(db, at(3), sup.id, "agent.turn", {"tokens_in": 900_000, "tokens_out": 100_000})
+    assert slos(db)["completions_per_mtok"] == {"value": pytest.approx(2.0), "n": 1}
+
+
 def test_completions_without_tokens_is_none_not_infinity(db):
     event(db, at(1), "a", "task.completed", {"task_id": "T-1", "score": 1.0})
     assert slos(db)["completions_per_mtok"] == {"value": None, "n": 1}

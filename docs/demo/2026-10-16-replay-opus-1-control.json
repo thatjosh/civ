@@ -1,0 +1,109 @@
+{
+  "model": "claude-opus-5-5",
+  "trial": 1,
+  "control": true,
+  "fixture": "docs/demo/2026-10-15-m3-fixture.sql",
+  "agent_id": "sup-001-r1",
+  "round_id": 1,
+  "brief_markdown": "## Round 1 (final round: the solvers have finished, write the post-mortem)\n\nWindow: 2026-10-15T21:38:40.531786+01:00 to 2026-10-16T02:06:53.767766+01:00. Supervisors this round: 1.\n\n## Status\n\n- Live agents: 0 solvers, 0 supervisors\n- Tasks: open 0, leased 0, done 8, blocked 0\n- Tokens per minute (last minute): 0\n\n## SLOs (this window against the previous one)\n\n| SLO | this window | n | previous | n |\n|---|---|---|---|---|\n| completions_per_mtok | 2.73 | 8 | none |  |\n| blocked_failed_rate | 0 | 8 | none |  |\n| duplicate_rate | 0 | 7 | none |  |\n| lease_wait_median_s | 15.4 | 8 | none |  |\n| handoff_success_rate | 0.6 | 5 | none |  |\n\nNo previous window: this is the first round, so nothing can be compared yet.\n\nmin_sample is 3: a tune naming an SLO with n below that is refused.\n\nHistory (older rounds first): round 1: completions_per_mtok=2.73, blocked_failed_rate=0, duplicate_rate=0, lease_wait_median_s=15.4, handoff_success_rate=0.6\n\n## Succession\n\n- Handoff requests: 0, real handoffs: 0, stubs: 0, kills: 0\n- Handoff success rate: none\n- Median turns from request to handoff: none; median seconds: none\n\nNo kills this window.\n\n## Blockers\n\nNo blockers this window.\n\nBlocked tasks (attempts exhausted, waiting for a supervisor):\n- none\n\n## Alerts since the window opened\n\nNone.\n\n## Previous round's reports\n\nNone (first round, or nobody reported).\n\n## Knobs\n\nEvery knob is at its seed.\n\n## Verifier progress\n\n- Done 8 of 8, mean score 0.946\n- Lowest scores: T-005 0.667 (years_between: expected 2, got 1); T-007 0.9 (9/10 keyword groups, missing: michaelmas); T-001 1 (all fields correct)\n",
+  "brief": {
+    "round": {
+      "id": 1,
+      "number": 1,
+      "final": true,
+      "window_start": "2026-10-15T21:38:40.531786+01:00",
+      "window_end": "2026-10-16T02:06:53.767766+01:00",
+      "supervisors": 1
+    },
+    "status": {
+      "live_agents": {
+        "solver": 0,
+        "supervisor": 0
+      },
+      "tokens_per_min": 0,
+      "tasks": {
+        "open": 0,
+        "leased": 0,
+        "done": 8,
+        "blocked": 0
+      }
+    },
+    "slo": {
+      "current": {
+        "completions_per_mtok": {
+          "value": 2.728619983389526,
+          "n": 8
+        },
+        "blocked_failed_rate": {
+          "value": 0.0,
+          "n": 8
+        },
+        "duplicate_rate": {
+          "value": 0.0,
+          "n": 7
+        },
+        "lease_wait_median_s": {
+          "value": 15.413754,
+          "n": 8
+        },
+        "handoff_success_rate": {
+          "value": 0.6,
+          "n": 5
+        }
+      },
+      "previous": null,
+      "min_sample": 3,
+      "history": [
+        {
+          "round": 1,
+          "completions_per_mtok": 2.728619983389526,
+          "blocked_failed_rate": 0.0,
+          "duplicate_rate": 0.0,
+          "lease_wait_median_s": 15.413754,
+          "handoff_success_rate": 0.6
+        }
+      ]
+    },
+    "succession": {},
+    "blockers": [],
+    "blocked_tasks": [],
+    "alerts": [],
+    "previous_reports": [],
+    "tunes": {
+      "active": [],
+      "pending": [],
+      "round_tuned": false
+    },
+    "verifier": {
+      "done": 8,
+      "total": 8,
+      "mean_score": 0.945833332836628,
+      "lowest": [
+        {
+          "id": "T-005",
+          "score": 0.6666667,
+          "notes": "years_between: expected 2, got 1"
+        },
+        {
+          "id": "T-007",
+          "score": 0.9,
+          "notes": "9/10 keyword groups, missing: michaelmas"
+        },
+        {
+          "id": "T-001",
+          "score": 1.0,
+          "notes": "all fields correct"
+        }
+      ]
+    }
+  },
+  "report": "## Window\nRound 1 and also the final round, so this is the run's post-mortem. Window: 2026-10-15T21:38:40 to 2026-10-16T02:06:53 (+01:00). All solver activity fell between seq 2 and seq 27, about 21:39:40 to 21:40:51. Live at round start: 0 solvers and 0 supervisors (me only). There was no previous window to compare against.\n\n## Succession\nThe brief contradicts itself. Its Succession section says 0 requests, 0 handoffs, 0 stubs and 0 kills, but the SLO table gives handoff_success_rate 0.6 with n=5. The board agrees with the SLO table:\n- 3 real handoffs: seq 22 (sol-001), seq 23 (sol-002-g2), seq 24 (sol-003-g2).\n- By the formula real/(real+stubs), 0.6 with n=5 means 2 stubs. The likely successions are sol-002\u2192g2 and sol-003\u2192g2.\n- Two lineages reached generation 3 (sol-002-g3, sol-003-g3) in about 1 minute of wall time. That is heavy churn.\n- No packets, kills or medians were supplied, so I could not classify the incidents.\n- No earlier tune exists to evaluate.\n\n## Queue and SLOs\nTasks: 8 done, 0 open, 0 leased, 0 blocked. Verifier mean score 0.946.\n\n| SLO | value | n |\n|---|---|---|\n| completions_per_mtok | 2.73 | 8 |\n| blocked_failed_rate | 0 | 8 |\n| duplicate_rate | 0 | 7 |\n| lease_wait_median_s | 15.4 | 8 |\n| handoff_success_rate | 0.6 | 5 |\n\nThroughput and queue health were good. Succession is the weak SLO. completions_per_mtok of 2.73 is low for an 8-task pack, which suggests context spent on handoffs and successors starting over.\n\n## Actions taken\n- Voted +1 on seq 21, sol-002's correction of T-005 to years_between=2.\n- Voted \u22121 on seq 17, the superseded years_between=1 answer.\n- Both votes returned weight 0 because no agents are live. They are on record but did not move the ranking.\n- No tune. This is the final round, there is no previous window, and hysteresis means one window cannot justify a move.\n- No reopens, because nothing is blocked. No blocker replies, because there are no blockers. No ping, because no trigger is met: there is a single window and no kills in the brief.\n\n## Diagnosis\n**Succession.** I could not confirm or override any incident classification because the brief had no packets.\n- Gen-3 lineages inside one minute on a small pack point to a handoff threshold that fires too early relative to the context budget. They could also mean the context budget is too small for agents that read the full materials.\n- 2 stubs out of 5 successions means 2 successors started with no written account.\n- Even so, seq 25 and seq 27 show the gen-3 agents finished their tasks without repeating findings (duplicate_rate 0). The handoffs at seq 23 and 24 were used well.\n\n**Low scores.**\n- T-005 (0.667): the solver chose complete elapsed years (1) over the calendar-year difference (2). The task text says \"integer years from the fire to the reopening\", which is ambiguous. Seq 21 recorded the correction, but only after the task was scored.\n- T-007 (0.9): the result lacks \"michaelmas\". The facts were on the board at seq 17, but the chronicle prompt never asked for named feast days.\n\n**What the next run should change:**\n- **Pack:** make T-005 say \"calendar-year difference (reopening year minus fire year)\". Make T-007 require the dates as the sources name them, including Michaelmas.\n- **Knobs:** start handoff_pct one step lower (for example 70 to 75) if the stubs prove to be never_asked or silent. Otherwise, if lineage churn is the cause, check the context budget per solver. Do not raise handoff_pct.\n- **Harness:** fix the brief's Succession section so it agrees with the SLO table (stubs and handoffs are counted in one and missing from the other), and include incident packets. Without them a supervisor cannot classify stubs.\n- **Board:** when an earlier answer is corrected, the correction should replace it (seq 17 stayed visible as the thread's main answer).\n\n## For the operator\n- No ping sent; no trigger applies.\n- The brief's Succession section reported zero activity while handoff_success_rate was 0.6 (n=5) and the board shows 3 handoffs. The orchestrator's succession counter seems to be broken. Please check it before the next run, since the succession policy depends on it entirely.\n- The run finished 8 of 8 tasks with a mean score of 0.946.",
+  "tunes": [],
+  "refusals": [],
+  "pings": [],
+  "cost_usd": 0.2342777,
+  "cost_estimated": false,
+  "turns": 8,
+  "error": null,
+  "written_at": "2026-10-16T01:07:28+00:00"
+}

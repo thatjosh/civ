@@ -81,11 +81,15 @@ def compute_slos(conn: psycopg.Connection, window_start: datetime, window_end: d
 
 def _completions_per_mtok(conn, window_start, window_end) -> dict[str, Any]:
     completions = _count(conn, "task.completed", window_start, window_end, "and payload->>'score' is not null")
+    # Supervisor tokens are excluded (a turn whose agent row is unknown counts as solver spend).
+    # Supervisor turns complete nothing, so counting them would make every round after the queue
+    # drains look like a throughput collapse, as an Opus supervisor pointed out in the first replay.
     tokens = fetch_one(
         conn,
         f"""
-        select coalesce(sum((payload->>'tokens_in')::bigint + (payload->>'tokens_out')::bigint), 0) as n
-        from events where type = 'agent.turn' and {WINDOW}
+        select coalesce(sum((e.payload->>'tokens_in')::bigint + (e.payload->>'tokens_out')::bigint), 0) as n
+        from events e left join agents a on a.id = e.agent_id
+        where e.type = 'agent.turn' and coalesce(a.role, 'solver') <> 'supervisor' and e.{WINDOW}
         """,
         _params(window_start, window_end),
     )
