@@ -43,14 +43,19 @@ def pin_block(conn: psycopg.Connection, identity: AgentIdentity, *, during_hando
     awaiting this agent's ack, and a handoff request. Once the orchestrator has asked for a handoff
     the only write that makes sense is the handoff itself, so every other write is refused with the
     same instruction; a prompt alone cannot be trusted to steer an agent whose context is nearly
-    full, but a tool result it has to read can. civ_handoff passes during_handoff so it is exempt
-    from the lockout while still honouring a pending pin."""
-    if not during_handoff:
-        row = fetch_one(conn, "select status from agents where id = %s", (identity.id,))
-        # Status is read fresh rather than taken from the identity, because the orchestrator flips
-        # it mid-session and the token was resolved before that.
-        if row is not None and row["status"] == "handing_off":
-            return refuse(HANDOFF_LOCKOUT)
+    full, but a tool result it has to read can. civ_handoff passes during_handoff and is exempt
+    from both gates."""
+    if during_handoff:
+        # The handoff is exempt from both gates. It is the agent's last act, and an operator steer
+        # it has not acknowledged is one it can never act on; refusing the handoff for it would
+        # only turn a real handoff into a stub (seen live: two agents killed seconds after a vote
+        # pinned mid-handoff). The CLI's vote report still names the agent as not acknowledging.
+        return None
+    row = fetch_one(conn, "select status from agents where id = %s", (identity.id,))
+    # Status is read fresh rather than taken from the identity, because the orchestrator flips
+    # it mid-session and the token was resolved before that.
+    if row is not None and row["status"] == "handing_off":
+        return refuse(HANDOFF_LOCKOUT)
     pin = pending_pin(conn, identity)
     if pin is None:
         return None

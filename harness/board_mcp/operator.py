@@ -532,12 +532,15 @@ class Operator:
     def lineages_to_resume(self) -> list[dict[str, Any]]:
         """Every lineage whose latest handoff has no successor yet: what --resume spawns after a
         restore. A lineage whose last session ended on its own has a successor on its last handoff
-        (or no handoff at all) and is left alone."""
+        (or no handoff at all) and is left alone. Solver lineages only: a supervisor is a round
+        session, and a round interrupted by a loss is simply lost."""
         rows = self.db.fetch_all(
             """
             select h.lineage_id, h.from_agent, h.generation, h.id, h.stub, h.body from handoffs h
             join (select lineage_id, max(id) as id from handoffs group by lineage_id) latest on latest.id = h.id
-            where h.to_agent is null order by h.lineage_id
+            where h.to_agent is null
+              and exists (select 1 from agents a where a.lineage_id = h.lineage_id and a.role = 'solver')
+            order by h.lineage_id
             """
         )
         return [
@@ -545,6 +548,12 @@ class Operator:
              "handoff_id": int(r["id"]), "stub": bool(r["stub"]), "body": r["body"]}
             for r in rows
         ]
+
+    def last_round_number(self) -> int:
+        """The highest supervisor round number so far, 0 when none. A restarted orchestrator
+        continues from here, because round numbers are also supervisor generations and ids."""
+        row = self.db.fetch_one("select coalesce(max(number), 0) as n from rounds")
+        return int(row["n"]) if row else 0
 
     def agents_without_ack(self, message_id: int) -> list[str]:
         """Agents that were live while the operator's vote on message_id was pinned and never

@@ -90,9 +90,9 @@ def test_pin_gates_every_other_write_tool(board, tasks, civ, solver, supervisor,
     op.set_agent_status(solver.id, "handing_off")
     handoff = "\n".join(f"## {h}\nx" for h in ("State of work", "Open threads", "What to try next",
                                                 "What not to retry", "Files worth reading"))
-    assert civ.handoff(solver, handoff)["error"].startswith("acknowledge")
-    # The lease survived every refusal, so nothing was half-applied.
-    assert tasks.heartbeat(solver, "T-001")["ok"] or True
+    # The one exception: the handoff is the agent's last act and is exempt from the pin, so a
+    # steer pinned mid-handoff cannot turn a real handoff into a stub.
+    assert civ.handoff(solver, handoff)["ok"]
 
 
 def test_operator_vote_has_weight_when_no_agents_are_live(op, db, task):

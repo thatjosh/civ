@@ -111,3 +111,17 @@ def test_inbox_is_pings_first_then_newest_and_honours_since_seq(db, op, make_age
     assert finding not in [i["seq"] for i in items]
     assert [i["seq"] for i in op.inbox(since_seq=report)] == [ping_id]
     assert op.inbox(since_seq=0, limit=1) == items[:1]
+
+
+def test_lineages_to_resume_skips_supervisor_rounds_and_last_round_number(op, make_agent, db):
+    sol, _ = make_agent("solver", agent_id="sol-001", lineage="L-001")
+    sup, _ = make_agent("supervisor", agent_id="sup-001-r1", lineage="S-001")
+    with db.transaction() as conn:
+        for agent, lineage in ((sol, "L-001"), (sup, "S-001")):
+            conn.execute("insert into handoffs (lineage_id, from_agent, generation, body, stub) values (%s, %s, 1, 'x', true)",
+                         (lineage, agent.id))
+    rows = op.lineages_to_resume()
+    assert [r["lineage_id"] for r in rows] == ["L-001"]
+    assert op.last_round_number() == 0
+    op.open_round(3)
+    assert op.last_round_number() == 3

@@ -70,7 +70,12 @@ class Population:
 
     async def run(self) -> list[Any]:
         for row in self._resume_rows:
-            index = lineage_index(row["lineage_id"])
+            try:
+                index = lineage_index(row["lineage_id"])
+            except ValueError:
+                # Not a solver slot (the restore drill once handed us S-001): nothing to resume.
+                log.warning("not resuming %s: not a solver lineage", row["lineage_id"])
+                continue
             self._tasks[index] = asyncio.create_task(
                 self._runner.resume(row["lineage_id"], row["from_agent"], row))
             log.info("resuming lineage %s from %s", row["lineage_id"], row["from_agent"])

@@ -139,6 +139,9 @@ class FakeOperator:
     def reports_for_round(self, round_id: int) -> list[dict[str, Any]]:
         return list(self.reports.get(round_id, []))
 
+    def last_round_number(self) -> int:
+        return max((r.get("number", 0) for r in getattr(self, "rounds", [])), default=0)
+
     def reopened_in_round(self, round_id: int) -> list[str]:
         return list(self.reopened.get(round_id, []))
 

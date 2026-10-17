@@ -292,3 +292,13 @@ def test_restore_broadcasts_and_records_itself(run, db, mid_flight):
     record = state(db, "last_restore")
     assert record["epoch"] == 2 and record["lineages_stubbed"] == 2 and record["leases_released"] == 1
     assert "minutes_lost" in record and "at" in record
+
+
+def test_restore_retires_a_mid_round_supervisor_without_a_stub(run, db, make_agent, mid_flight):
+    make_agent("supervisor", agent_id="sup-001-r1", lineage="S-001")
+    code, out = run("restore", "--yes")
+    assert code == 0
+    row = db.fetch_one("select status from agents where id = 'sup-001-r1'")
+    assert row["status"] == "dead"
+    assert db.fetch_one("select count(*) as n from handoffs where lineage_id = 'S-001'")["n"] == 0
+    assert state(db, "last_restore")["supervisors_retired"] == ["sup-001-r1"]

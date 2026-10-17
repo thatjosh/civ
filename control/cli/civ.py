@@ -257,11 +257,21 @@ class Board:
             select a.id, a.lineage_id, a.generation,
                    (select t.id from tasks t where t.lease_owner = a.id and t.status = 'leased' limit 1) as task
             from agents a
-            where a.status in ('live', 'handing_off')
+            where a.status in ('live', 'handing_off') and a.role = 'solver'
               and a.generation = (select max(b.generation) from agents b where b.lineage_id = a.lineage_id)
             order by a.lineage_id
             """
         )
+
+    def retire_active_supervisors(self) -> list[str]:
+        """Supervisors caught mid-round are simply ended: a round is a reading of one window, not a
+        lineage, so there is nothing to hand to a successor (the first drill stubbed one and the
+        resumed orchestrator tried to resume it as a solver)."""
+        rows = self.all(
+            "update agents set status = 'dead', ended_at = now() "
+            "where role = 'supervisor' and status in ('live', 'handing_off') returning id"
+        )
+        return [r["id"] for r in rows]
 
     def recent_post_seqs(self, agent_id: str, n: int = 10) -> list[int]:
         rows = self.all("select id from messages where author_id = %s order by id desc limit %s", (agent_id, n))
@@ -454,10 +464,11 @@ class Cli:
         heads = board.lineage_heads_in_flight()
         for head in heads:
             board.write_restore_stub(head, now)
+        retired = board.retire_active_supervisors()
         released = board.release_leases()
         board.reset_knobs({k: v for k, v in shape.items() if k in KNOB_KEYS})
         record = {"at": now.isoformat(timespec="seconds"), "epoch": epoch, "lineages_stubbed": len(heads),
-                  "leases_released": released, "minutes_lost": minutes_lost}
+                  "leases_released": released, "minutes_lost": minutes_lost, "supervisors_retired": retired}
         board.state_set("last_restore", record)
         line = (f"Restored at {_local(now)} into epoch {epoch}: {len(heads)} lineages queued for stubs, "
                 f"{released} leases released, about {minutes_lost:g} minutes of activity after "

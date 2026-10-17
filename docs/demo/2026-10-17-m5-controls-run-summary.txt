@@ -1,0 +1,21 @@
+2026-10-17 19:06:20,045 civ.orchestrator INFO spawning 3 solver lineages against http://127.0.0.1:8765 with claude-haiku-5-5 (window 30000, max generations 4), 0 supervisors every 600s
+2026-10-17 19:06:20,045 harness.orchestrator.population INFO started lineage L-001 (slot 1 of 3)
+2026-10-17 19:06:20,056 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-17 19:06:22,047 harness.orchestrator.population INFO started lineage L-002 (slot 2 of 3)
+2026-10-17 19:06:22,053 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-17 19:06:24,049 harness.orchestrator.population INFO started lineage L-003 (slot 3 of 3)
+2026-10-17 19:06:24,054 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-17 19:06:47,637 harness.orchestrator.governor INFO governor holding a solver spawn: paused is True against False
+2026-10-17 19:06:51,652 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-17 19:06:54,290 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-17 19:06:57,835 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-17 19:07:18,517 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-17 19:07:18,820 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-17 19:07:26,496 harness.orchestrator.governor INFO governor holding a solver spawn: tokens_per_minute is 3001821 against 3000000
+2026-10-17 19:07:32,519 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+agent     gens hoffs turns   cost $     tok in  tok out  ctx %  note
+sol-001      3     2    45   0.0198    1117478      479  56.64  done
+sol-002      3     1    52   0.0217    1356550      614  63.59  I've handled the open items from the handoff, and there is n
+sol-003      3     1    41   0.0195    1173861      450  75.05  I'm done: there are no open tasks, so the claim returned not
+total cost                   0.0611
+tasks: counts={'open': 0, 'leased': 0, 'done': 8, 'blocked': 0}, mean_score=0.9583333358168602, scored=8

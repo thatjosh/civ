@@ -261,8 +261,9 @@ def build_supervisor_cron(cfg: RunConfig, operator: Any, knobs: Any, governor: A
     spawner = Spawner(operator, cfg.board_url, cfg.root, prompts, model=cfg.supervisor_model_id,
                       max_turns=cfg.supervisor_max_turns, knobs=knobs, context_window=cfg.context_window,
                       governor=governor)
+    first_number = int(getattr(operator, "last_round_number", lambda: 0)()) + 1
     return SupervisorCron(SupervisorRound(spawner, operator, cfg.supervisors, shape_reader=shape_reader),
-                          cfg.supervisor_interval_s, shape_reader=shape_reader)
+                          cfg.supervisor_interval_s, shape_reader=shape_reader, first_number=first_number)
 
 
 def load_shape_for(cfg: RunConfig) -> Shape:

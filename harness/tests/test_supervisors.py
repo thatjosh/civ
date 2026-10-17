@@ -199,3 +199,22 @@ def test_format_rounds_lines():
     out = format_rounds(rows).splitlines()
     assert out[0] == "round 1: reports 1, pings 0, tuned none, reopened [], turns 6, cost $0.0123"
     assert out[1] == "round 2 (final): reports 1, pings 1, tuned handoff_pct (80 -> 75), reopened ['T-005'], turns 8, cost $~0.0200, error: RuntimeError: x"
+
+
+async def test_cron_continues_round_numbers_from_first_number(tmp_path):
+    # After a restore the orchestrator restarts; round ids must not collide with the old epoch's.
+    from harness.orchestrator.supervisors import SupervisorCron
+
+    class StubRound:
+        def __init__(self):
+            self.numbers = []
+
+        async def run(self, number, final=False):
+            self.numbers.append((number, final))
+            return RoundResult(number=number, final=final)
+
+    done = asyncio.Event()
+    done.set()
+    cron = SupervisorCron(StubRound(), interval_s=0, sleep=lambda s: asyncio.sleep(0), first_number=4)
+    results = await cron.run_until(done)
+    assert [r.number for r in results] == [4] and results[0].final is True

@@ -51,10 +51,12 @@ def test_lockout_is_per_agent(board, solver, other, op, task):
     assert board.post(other, "finding", "unaffected", thread_id=task["thread_id"])["ok"]
 
 
-def test_ack_stays_open_during_handoff_so_a_pin_cannot_deadlock_it(board, civ, solver, op, task):
+def test_ack_stays_open_during_handoff_and_the_handoff_needs_no_ack(board, civ, solver, op, task):
+    # Two gates meet here. The ack stays open under the lockout so an agent that wants to clear
+    # the steer can, and the handoff is exempt from the pin so one that does not still ends with
+    # a real handoff rather than a stub (the M5 live check killed two agents on the old rule).
     op.vote(task["thread_id"], 1, "look at this")
     op.request_handoff(solver.id)
-    assert civ.handoff(solver, VALID_HANDOFF)["error"].startswith("acknowledge")
     assert board.ack(solver, task["thread_id"])["ok"]
     assert civ.handoff(solver, VALID_HANDOFF)["ok"]
 
@@ -215,3 +217,16 @@ def test_write_stub_handoff_stores_a_stub_from_the_board(board, tasks, civ, solv
 def db_lease(op, task_id: str) -> str | None:
     row = op.db.fetch_one("select lease_owner from tasks where id = %s", (task_id,))
     return row["lease_owner"] if row else None
+
+
+def test_handoff_is_not_blocked_by_a_pending_operator_pin(civ, board, solver, other, op, db):
+    # An operator vote pinned while an agent is handing off must not stop the handoff: the agent
+    # is about to end and can never act on the steer, and a refused handoff becomes a stub.
+    target = board.post(other, "finding", "steer target")["id"]
+    op.vote(target, 1, "everyone look")
+    assert op.request_handoff(solver.id)
+    body = "## State of work\nx\n## Open threads\n\n## What to try next\n\n## What not to retry\n\n## Files worth reading\n"
+    out = civ.handoff(solver, body)
+    assert out["ok"] and out["stop"] is True
+    # Other writes stay gated by the pin as before.
+    assert "acknowledge operator vote" in board.post(other, "finding", "blocked")["error"]

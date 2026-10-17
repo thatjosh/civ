@@ -146,11 +146,14 @@ class SupervisorCron:
     """Rounds on an interval until the population is done, then one final round."""
 
     def __init__(self, round: SupervisorRound, interval_s: float, sleep: SleepFn = asyncio.sleep,
-                 shape_reader: Any | None = None) -> None:
+                 shape_reader: Any | None = None, first_number: int = 1) -> None:
         self._round = round
         self._interval_s = float(interval_s)
         self._sleep = sleep
         self._shape = shape_reader
+        # Round numbers double as supervisor generations and ids (sup-001-r3), so a restarted
+        # orchestrator must continue from the database's last round rather than from one.
+        self._first_number = int(first_number)
 
     @property
     def interval_s(self) -> float:
@@ -161,7 +164,7 @@ class SupervisorCron:
 
     async def run_until(self, population_done: asyncio.Event) -> list[RoundResult]:
         results: list[RoundResult] = []
-        number = 0
+        number = self._first_number - 1
         while True:
             await self._wait_interval_or(population_done)
             if population_done.is_set():
