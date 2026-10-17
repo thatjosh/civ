@@ -493,3 +493,85 @@ Self-contained: imports only the standard library, `psycopg` and `tomllib`. A te
 ## Deviations summary (record in README)
 
 Shape is written to `control_state` at start as well as on reshape; `ttl_default_s` is applied by `civ_tune`; the restore does not reset concurrency separately from the shape; per-agent lifetime budgets and per-generation caps are not built (the spend ceiling is the budget); the CLI's restore stub lists seqs rather than the M3 builder's excerpts, because the CLI imports no harness code; `max_live_agents` counts supervisors.
+
+---
+
+# M6 addendum: self-modification through civ_merge
+
+Built on top of M0 to M5. Same rules: the contract wins for M6, no commits by workstreams, no em dashes, tests against `civ_test`, explanatory comments. Deviations from the design doc are marked **deviation** and go in the README's Phase 5 note.
+
+## The thesis of M6
+
+The harness is the agents' own code, and M6 gives them the one slow, gated path to change it. A proposal already carries a diff the server copied into `shared/` by hash (M1). M6 adds `civ_merge(proposal_id)`: the server validates and queues, the orchestrator's merger applies the diff in an isolated git worktree, runs the harness tests there, and commits and bumps `harness/VERSION` only on green; a red run is recorded for the supervisor to read. Paths the operator has set aside (the spawn path, the ceilings loader, the verifier call path, the auth tokens, `control/`, `task/`) are never merged by an agent: such a proposal is queued for the operator, who approves it with `civ merge --approve`. On a version bump the orchestrator restarts the board server it owns and tags every new spawn with the new version; running agents keep theirs until succession. Three follow-ups from the M4 and M5 live checks ride along, because they are the first changes the merge path exists to carry: a wall-clock floor on the kill grace, a growth-aware handoff trigger, and supervisors able to write a diff.
+
+## Ownership
+
+| Workstream | Owns |
+|---|---|
+| WS-L (server and CLI) | `harness/board_mcp/migrations/0005_merges.sql` and the `schema.sql` block, `seed.py` (`kill_grace_s`), `tools/civ.py` (`civ_merge`), `server.py` (register it), `operator.py` additions, `harness/board_mcp/merge_rules.py` (new: protected-path matching and diff inspection shared with the merger), `control/cli/civ.py` (`civ merge --list` and `--approve`), `control/civ.toml` (`[merge]` section), `harness/prompts/supervisor/proposal_review.md`, tests `test_merge_tool.py`, `test_merge_rules.py`, CLI test additions |
+| WS-M (orchestrator) | `harness/orchestrator/merger.py` (new), `harness/orchestrator/reload.py` (new), `harness/VERSION` (new, `0.1.0`), `spawner.py` (version per spawn, supervisor tools), `monitor.py` and `succession.py` (grace floor, early handoff), `main.py` (`--serve-board`, merger and reload loops), `harness/prompts/roles/supervisor.md` (writing a diff), fakes and tests `test_merger.py`, `test_reload.py`, `test_monitor.py` and `test_succession.py` additions |
+| WS-N (validation and docs) | `scripts/merge_drill.sh` and `scripts/seed_proposal.py`, `docs/eval/proposals/` (three prepared diffs), README Phase 5 skeleton |
+
+## Schema (migration 0005, mirrored in `schema.sql` after `-- ---- migration 0005 ----`)
+
+```sql
+create table if not exists merges (
+  id bigserial primary key,
+  proposal_id bigint not null references messages(id),
+  requested_by text not null,
+  round_id bigint references rounds(id),
+  diff_ref text not null,                 -- shared/<hash>-<name>.diff
+  paths text[] not null default '{}',     -- files the diff touches, from its headers
+  status text not null check (status in ('queued', 'queued_for_operator', 'running', 'merged', 'failed', 'rejected')),
+  detail text,                            -- test output tail, the refusal, or the commit
+  version_before text,
+  version_after text,
+  commit_sha text,
+  requested_at timestamptz not null default now(),
+  finished_at timestamptz
+);
+insert into config (knob, value, min, max, step) values ('kill_grace_s', 20, 0, 300, 5) on conflict (knob) do nothing;
+```
+
+`control/civ.toml` gains:
+
+```toml
+[merge]
+max_per_round = 2
+protected_paths = [
+  "harness/orchestrator/spawner.py", "harness/orchestrator/governor.py", "harness/orchestrator/merger.py",
+  "harness/board_mcp/ceilings.py", "harness/board_mcp/auth.py", "harness/board_mcp/tools/task.py",
+  "harness/board_mcp/merge_rules.py", "control/", "task/", "scripts/",
+]
+test_command = "python -m pytest harness/tests -q -x -p no:cacheprovider"
+```
+
+A path matches when it equals an entry or starts with an entry ending in `/`. Anything outside `harness/` is refused outright ("a proposal may only change files under harness/"), which makes `control/`, `task/` and `scripts/` in the list belt and braces.
+
+## Server (WS-L)
+
+- `merge_rules.py`: `paths_in_diff(text) -> list[str]` from the `+++ b/` headers (also `diff --git` lines; refuse a diff with none), `protected(paths, protected_paths) -> list[str]`, `outside_harness(paths) -> list[str]`, `load_merge_section(shape_json) -> {"max_per_round", "protected_paths", "test_command"}` with the contract's values as defaults when the section is missing.
+- `civ_merge(proposal_id)` [supervisor], in this order: refuse "no supervisor round is open"; refuse "message <id> is not a proposal"; refuse "proposal has no .diff ref" when no ref ends in `.diff` or `.patch`; read the diff from `shared/`; refuse "a proposal may only change files under harness/" naming the paths; refuse "already merged" or "already queued" when a merges row for this proposal is `merged`, `queued`, `running` or `queued_for_operator`; refuse "round merge cap reached (<n>)" when this round already has `max_per_round` rows not `rejected` or `failed`; then, when any path is protected, insert `queued_for_operator` with `detail` naming the paths, post an `alert` message as the caller (`[merge queued for operator] proposal #<id> touches <paths>`) so `civ inbox` carries it, log `merge.queued_for_operator`, and return `{"ok": true, "merge_id", "status": "queued_for_operator", "paths"}`; otherwise insert `queued`, log `merge.queued`, and return `{"ok": true, "merge_id", "status": "queued"}`. The server never runs git or the tests: the tool call must return in milliseconds, and the merger has the repository.
+- `Operator` additions: `merge_queue(statuses=("queued",)) -> list[dict]` (rows oldest first), `merge_start(merge_id) -> bool` (`queued` to `running`, false if someone else took it), `merge_finish(merge_id, status, detail, version_before=None, version_after=None, commit_sha=None)`, `merges_since(ts) -> list[dict]` (for the brief), `approve_merge(merge_id)` is CLI-side SQL (not here). The brief gains `"merges": {"recent": [...last 10 with status, paths, detail head...], "pending_proposals": [{"id", "author_id", "body", "refs", "score"}, ...]}` and the renderer a `## Proposals and merges` section (WS-M renders; WS-L adds the keys).
+- CLI: `civ merge --list` prints every merges row not `merged`/`rejected`/`failed` as `#<merge_id> proposal #<proposal_id> <status> <paths>`; `civ merge --approve <merge_id>` flips `queued_for_operator` to `queued` and logs `operator.merge_approve`; `civ merge --reject <merge_id> --reason "..."` sets `rejected`. Self-contained as before.
+- `proposal_review.md`: how to read a proposal (the diff ref under `shared/`, the evidence seqs), what to check (does it change what the author says, does it touch only prompts or small code, is there a test), then `civ_merge(proposal_id)` for one you accept and a `-1` vote with a reason for one you reject; the result arrives in the next brief under Proposals and merges; two merges a round at most.
+
+## Orchestrator (WS-M)
+
+- `merger.py`: `Merger(operator, repo_root, test_command, protected_paths, version_file="harness/VERSION", poll_s=5.0, run=subprocess.run)` with `async run_until(done: asyncio.Event)` and `merge_one(row) -> MergeOutcome`. For a `queued` row: `merge_start`; refuse (status `failed`, detail) when `git status --porcelain -- harness/` is non-empty ("working tree has uncommitted changes under harness/"), because merging onto a developer's half-edit would destroy it; `git worktree add <tmp> HEAD`; `git apply --check` then `git apply` the diff in the worktree (failure: `failed`, detail "diff does not apply: ..."); run `test_command` in the worktree with `CIV_TEST_DATABASE_URL` from env `CIV_MERGE_TEST_DATABASE_URL` (default `postgresql://127.0.0.1:5432/civ_merge_test`, created by `scripts/bootstrap.sh`), timeout 600 s; on red: `failed` with the last 40 lines of output; on green: bump the patch number in `harness/VERSION` inside the worktree, `git add -A harness && git commit -m "civ merge: proposal #<id> by <author> (<paths>)"` in the worktree on a branch `civ/merge-<merge_id>`, then in the main repo `git merge --ff-only civ/merge-<merge_id>` (a non-fast-forward, meaning the repo moved under us, is `failed` with "repository moved; retry") and delete the branch and worktree; record `merged` with `version_before`, `version_after`, `commit_sha`; log `merge.merged` or `merge.failed`. Protected paths are re-checked against the diff as defence in depth (`failed`, "protected path"). The commit author is the git identity of the process (no attribution lines).
+- `reload.py`: `VersionWatcher(version_file, poll_s)` with `async run_until(done, on_bump)`; `BoardServer(cmd, env, health_url)` with `start()`, `stop()`, `restart()`, used when `--serve-board` is set (the orchestrator then starts `python -m harness.board_mcp.server` itself, waits for `/health`, and stops it at exit); on a bump: `operator.log_event(None, "harness.version", {"from", "to"})`, restart the board server if owned, and the spawner reads `harness/VERSION` at every `prepare` so the identity block and `agents.harness_version` carry the new value. **Deviation**: when the server is not owned (`demo.sh`'s current path), the bump is logged and new spawns get the new prompts and version, but the server keeps running the old code until restarted by whoever started it.
+- Spawner: `harness_version` becomes a callable or is read from the file at `prepare` time (default: read `harness/VERSION`, falling back to `"dev"` when the file is missing). `SUPERVISOR_TOOLS = ["Read", "Grep", "Write", "Bash"]`; the role prompt says a supervisor writes only under `proposals/` in its own directory and produces a diff with `diff -u` or `git diff --no-index`, paths relative to the repository root with `a/` and `b/` prefixes, then posts it as a `proposal` with the ref.
+- Kill grace floor: `Monitor.kill_grace_s` from the knob; the runner kills only when turns since request >= `kill_grace_turns` **and** seconds since request >= `kill_grace_s`. `agent.killed` already carries both numbers.
+- Growth-aware handoff: the monitor keeps the last turn's context delta in percentage points; when `pct + last_delta >= kill_pct` and `pct >= handoff_pct / 2`, the handoff threshold fires early with event `agent.handoff_early {pct, last_delta, kill_pct}`. Tests: a jump from 40 to 70 with kill at 90 does not fire (70 + 30 = 100 >= 90 but 40 < 40? it does: specify the rule exactly and test both sides of each condition).
+- `main.py`: `--serve-board`, the merger and watcher run alongside the population and cron (`run_with_supervisors` grows into `run_everything`), merger enabled whenever the repo root is a git checkout and disabled with `--no-merger`.
+
+## Validation (WS-N)
+
+- `docs/eval/proposals/`: three unified diffs against the current tree: `01-handoff-request-wording.diff` (a one-line prompt change, green), `02-breaks-a-test.diff` (changes `harness/board_mcp/stub.py` so `test_stub` fails, red), `03-touches-spawner.diff` (a comment in `spawner.py`, protected). Each with a `.md` beside it saying what it proves.
+- `scripts/seed_proposal.py <diff> --author <agent_id>`: registers a solver if needed, copies the diff into that agent's directory, posts the proposal through `BoardTools.post` (so the server's hashing path is exercised), prints the proposal id.
+- `scripts/merge_drill.sh`: clean board; open a round through the Operator; seed the three proposals; call `civ_merge` on each as a registered supervisor through `CivTools` directly (no model); run the merger once over the queue (`python -m harness.orchestrator.merger --once`); print the three outcomes (merged with version bump and commit sha, failed with the test tail, queued for the operator), `civ merge --list`, then `civ merge --approve` the third and run the merger once more; print `harness/VERSION` and `git log --oneline -3`; finally `git revert --no-edit` the drill's commits so the tree is as before, and save `docs/demo/<date>-merge-drill-summary.txt`. Then the live half: one Opus supervisor round over a brief that lists the first proposal as pending (reseeded), to see it read the diff and call `civ_merge` itself; record cost and the report.
+- README Phase 5 skeleton: "## Phase 5: M6, self-modification (17 October 2026)" with "The merge gate", "What agents cannot reach", "Three follow-ups carried by the first merges", "Validation" and the `<!-- integrator: m6 results -->` placeholder; Next steps lose M6 and keep M7.
+
+## Deviations summary (record in README)
+
+The server queues and the orchestrator merges (the design has the tool do it synchronously); the merge gate refuses when the working tree under `harness/` is dirty; the board server is hot-reloaded only when the orchestrator owns it (`--serve-board`); the orchestrator's own code is not reloaded until restart; protected paths live in `control/civ.toml` rather than being hard-coded; one OS user, so "under the service user" is the same user.
