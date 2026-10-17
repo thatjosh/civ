@@ -366,3 +366,130 @@ Three measurements, cheapest first, each with a script and a saved record under 
 ## Deviations summary (record in README)
 
 One tune per round is enforced across all supervisors (as designed); the first round runs after the first interval, not before the population is full; `min_sample` seeds at 3; no task splitting (reopen instead); `ceiling_pinned` is unverifiable until M5; supervisors do not write stubs (the orchestrator's instant stub from M3 stays, supervisors diagnose it instead); cron interval is a flag, not a knob, until M5's `civ.toml`.
+
+---
+
+# M5 addendum: the operator's controls
+
+Built on top of M0 to M4. Same rules: the contract wins for M5, no commits by workstreams, no em dashes, tests against `civ_test`, explanatory comments. Deviations from the design doc are marked **deviation** and go in the README's Phase 4 note.
+
+## The thesis of M5
+
+Everything built so far is inside the box. M5 is the box and the operator's hands on it: two operator-owned files that no agent writes (`control/ceilings.toml` caps what the system may ever do; `control/civ.toml` gives it its launch-time shape), a governor in the orchestrator that refuses or delays spawns against the ceilings and a pause flag, an epoch counter stamped on every agent and event, and a `civ` command line that works even when the harness is broken: say, vote, inbox, status, pause, resume, reshape, restore. Restore is a succession for the whole population at once, so it reuses M3: it marks the old epoch dead, writes a stub for every lineage caught mid-flight, and the orchestrator restarted with `--resume` spawns generation N+1 for each.
+
+## Ownership
+
+| Workstream | Owns |
+|---|---|
+| WS-I (control and CLI) | `control/ceilings.toml`, `control/civ.toml`, `control/__init__.py`, `control/cli/__init__.py`, `control/cli/civ.py`, `harness/board_mcp/migrations/0004_control_state.sql`, the matching block in `schema.sql`, `pyproject.toml` (packages and the `civ` entry point), tests `harness/tests/test_cli.py`, `test_control_state.py` |
+| WS-J (orchestrator) | `harness/orchestrator/governor.py` (new), `harness/orchestrator/shape.py` (new), `harness/orchestrator/main.py` (civ.toml defaults, `--control-dir`, `--resume`, the population manager), `spawner.py` (governor gate), `succession.py` (`resume_from` and the slot check), `supervisors.py` (shape-driven count and interval), fakes and tests `test_governor.py`, `test_shape.py`, `test_resume.py` |
+| WS-K (server, operator reads, drill) | `harness/board_mcp/ceilings.py` (new loader), `tools/civ.py` (tune respects the ceiling), `operator.py` additions, tests `test_ceilings.py`, `test_operator_reads.py`; `scripts/restore_drill.sh`, `scripts/demo.sh` (passes `--control-dir`), README Phase 4 skeleton |
+
+## Schema (migration 0004, mirrored in `schema.sql` after a `-- ---- migration 0004 ----` marker)
+
+```sql
+create table if not exists control_state (
+  key text primary key,            -- epoch | paused | shape | inbox_last_seq | last_restore
+  value jsonb not null,
+  updated_at timestamptz not null default now()
+);
+insert into control_state (key, value) values ('epoch', '1'), ('paused', 'false'), ('inbox_last_seq', '0')
+on conflict (key) do nothing;
+
+-- The epoch is read by a function so every writer stamps it without knowing about it.
+create or replace function current_epoch() returns int language sql stable as
+  $$ select coalesce((select (value #>> '{}')::int from control_state where key = 'epoch'), 1) $$;
+alter table agents add column if not exists epoch int not null default current_epoch();
+alter table events add column if not exists epoch int not null default current_epoch();
+create index if not exists events_epoch_ts_idx on events (epoch, ts);
+```
+
+`paused` is `true` or `false`, or `{"on": true, "reason": "..."}`; readers accept both. `shape` is the parsed `civ.toml` as JSON plus `"written_at"`. `last_restore` is `{"at", "epoch", "lineages_stubbed", "leases_released", "minutes_lost"}`.
+
+## The two files (WS-I writes them; the repo copies are the small-scale demo values)
+
+`control/ceilings.toml`:
+
+```toml
+# Hard ceilings. The orchestrator reads this file before every spawn and the board server when
+# validating a tune, so nothing decided inside the system can exceed them. Operator-owned.
+max_live_agents = 8
+max_tokens_per_minute = 3000000
+max_spend_per_day_usd = 5.0
+max_handoff_tokens = 8000
+model = "claude-opus-5-5"      # the default model; --model on the command line still wins
+```
+
+`control/civ.toml` (keys that are also knobs are seeded into the config table at launch through `Operator.set_knob` with reason `civ.toml`, so they carry `set_by = 'operator'`):
+
+```toml
+[population]
+solvers = 3
+supervisors = 1
+[cadence]
+supervisor_round_s = 600
+[lifecycle]
+max_generations = 5
+handoff_pct = 80          # knob
+kill_pct = 90             # knob
+kill_grace_turns = 2      # knob
+[voting]
+decay_offset_h = 2        # knob
+decay_power = 1.5         # knob
+operator_pin_s = 300
+[governance]
+vote_quota = 1            # knob
+min_sample = 3            # knob; the design says 10 for a 95-solver run, 3 fits an eight-task pack
+big_move_steps = 2        # knob
+ttl_default_s = 3600
+```
+
+Precedence for the orchestrator: command-line flag, then `civ.toml`, then the dataclass default. `--solvers`, `--supervisors`, `--supervisor-interval`, `--max-generations` and `--model` therefore become optional overrides. `operator_pin_s` and `ttl_default_s` are read by the CLI and the server respectively (**deviation**: `ttl_default_s` is read by `civ_tune` as the default `ttl_s`; `cooldown_s` stays the column default).
+
+## Governor (WS-J, `harness/orchestrator/governor.py`)
+
+`Governor(operator, ceilings_path, poll_s=2.0, clock=time.monotonic, sleep=asyncio.sleep)` with `async acquire(role: str, replaces_slot: bool) -> None`, called by `Spawner.spawn` before every session when a governor is attached (`replaces_slot` is true for a successor, which takes over its predecessor's slot). It loops until clear, in this order, logging one `governor.wait {reason, value, limit}` event per wait and `governor.resumed` when it clears:
+
+1. `paused` in `control_state` is on: wait.
+2. Live agents (status `live` or `handing_off`, any role) >= `max_live_agents` and not `replaces_slot`: wait.
+3. Tokens in the last minute (`Operator.tokens_per_minute()`) > `max_tokens_per_minute`: wait.
+4. Spend in the last 24 hours (`Operator.spend_usd(hours=24)`, from `agent.ended` cost plus the price-table estimate for live sessions) >= `max_spend_per_day_usd`: raise `SpendCeilingReached`. A lineage that meets it ends with `ended_by = "halted"` and the cron stops after the current round; `main` prints the halt and exits 2.
+
+The ceilings file is re-read when its mtime changes, so an operator edit takes effect at the next spawn without a restart. A missing file is an error at start, not a default.
+
+## Shape and the population (WS-J)
+
+`shape.py`: `Shape` dataclass with the fields above, `load_shape(path) -> Shape`, `Shape.knob_seeds() -> dict[str, float]` (the keys marked knob), `Shape.to_json()`. At start `main` loads `civ.toml`, writes it to `control_state.shape` (**deviation**: the design has only `civ reshape` writing it; writing at start too means `civ status` can show the shape the run is using), and seeds the knobs. `ShapeReader(operator, poll_s)` polls `control_state.shape` and `epoch` and exposes `current()`; the population and the cron read it.
+
+`Population` (in `main.py` or a new `population.py`): owns the lineage slots. At start it runs `shape.solvers` lineages (or, with `--resume`, the lineages the database says to continue, then new ones up to the target). When the shape's `solvers` grows it starts new lineages (`sol-004`, `L-004`, ...) at the stagger; when it shrinks, lineages with index above the target are not given a successor at their next succession (`LineageRunner` asks `population.slot_open(index)` before `succeed`), which is the design's "applied lineage by lineage". The cron reads `supervisors` and `supervisor_round_s` from the shape at the start of every round.
+
+`--resume`: `Operator.lineages_to_resume() -> [{"lineage_id", "from_agent", "generation", "handoff_id", "stub"}]`, every lineage whose latest handoff has `to_agent is null`. `LineageRunner.resume(lineage_id, from_agent, handoff_row)` spawns generation N+1 exactly as the loop does after a kill. Lineages whose last session ended naturally are not resumed.
+
+## Server and operator reads (WS-K)
+
+- `harness/board_mcp/ceilings.py`: `Ceilings` loader (path from `CIV_CONTROL_DIR` or `<CIV_ROOT>/control`, mtime cached) with `.get(name)`. `civ_tune` refuses `max_handoff_tokens` above `Ceilings.max_handoff_tokens` with "above the ceiling in control/ceilings.toml (<n>)", and uses `ttl_default_s` from the shape when `ttl_s` is not given.
+- `Operator` additions: `tokens_per_minute() -> int`, `spend_usd(hours: float) -> float` (ended sessions by `agent.ended.cost_usd`, live ones estimated from `agents.tokens_in/tokens_out` with the monitor's price table for the ceilings' model), `live_agents() -> {"solver": n, "supervisor": n}`, `epoch() -> int`, `control_get(key) -> Any | None`, `control_set(key, value) -> None`, `lineages_to_resume()`, `agents_without_ack(message_id) -> list[str]` (agents live during the pin window with no `operator_acks` row), `inbox(since_seq, limit=50) -> list[dict]` (reports, pings and alerts with seq > since_seq, newest first, each with `kind`, `author_id`, `body`, `trigger`, `created_at`).
+- `scripts/restore_drill.sh`: the recovery runbook at small scale. Clean board, three Haiku solvers at a 30k window with one supervisor on a fifteen-second round, SIGKILL the orchestrator process about 25 seconds in (and `pkill -f "claude --output-format stream-json"` for the sessions it leaves), `civ restore --yes`, restart with `--resume`, then print: epochs seen in events, lineages resumed with their generation and stub flag, tasks done and mean score, the restore broadcast, and the wall time of each half. Saves `docs/demo/<date>-restore-drill-{events,board-transcript,summary}.txt`.
+
+## The `civ` command line (WS-I, `control/cli/civ.py`)
+
+Self-contained: imports only the standard library, `psycopg` and `tomllib`. A test asserts no `harness` import, because this is the one channel that must work when the harness is broken. Installed as `civ` through `[project.scripts]` and runnable as `python -m control.cli.civ`. Common options: `--db-url` (env `CIV_DATABASE_URL`, default `postgresql://127.0.0.1:5432/civ`), `--control-dir` (env `CIV_CONTROL_DIR`, default `<repo>/control`). Exit 0 on success, 1 on a refused or failed action, 2 on bad usage. Every command logs an `operator.<command>` event.
+
+- `civ say "<text>"`: inserts a `broadcast` message as `operator` and prints `broadcast #<seq>`. (The next-tool-result push already exists in the server.)
+- `civ vote <message_id> <+1|-1> --reason "<text>"`: the pinned, must-acknowledge vote at supervisor weight (`live solvers / max(live supervisors, 1)`, floored at 1), pinned for `operator_pin_s` from `civ.toml`; prints `vote on #<id> pinned until <time>`. `civ vote --report <message_id>` prints the agents that were live during the pin and never acknowledged, one per line, or `all acknowledged`.
+- `civ inbox [--all] [--limit N]`: reports, pings and alerts newer than `inbox_last_seq`, newest first, each as `#<seq> <time> <kind> <author>` and the body indented; pings first. Then expired pins of the last 24 hours with the agents that never acknowledged. Marks read by advancing `inbox_last_seq` unless `--all`.
+- `civ status`: epoch, paused (and reason), live agents by role against `max_live_agents`, tasks by status with mean score, tokens per minute against the ceiling, spend in 24 hours against the ceiling, the shape in one line, then the knob table (`knob value seed set_by expires_at`).
+- `civ pause [--reason "<text>"]` and `civ resume`: write `control_state.paused`; print the new state.
+- `civ reshape`: re-reads `civ.toml`, writes it to `control_state.shape`, bumps the epoch, prints each changed key as `solvers 3 -> 5`; with no change it says so and does not bump.
+- `civ restore --yes` (refuses without `--yes`), in one transaction: bump the epoch; for every lineage whose head agent is `live` or `handing_off`, write a stub handoff (five headings; `State of work` names the held task and the agent's last ten post seqs, `Files worth reading` is empty because the CLI never touches `agents/`), with `stub = true`, and set the agent `dead`; set every `leased` task to `open` with the lease cleared, attempts unchanged, `next_attempt_at = now()`; reset the knobs that `civ.toml` seeds to its values and clear `set_by`, `ttl_s`, `expires_at` on every knob; write `last_restore`; insert a broadcast `Restored at <time> into epoch <n>: <k> lineages queued for stubs, <l> leases released, about <m> minutes of activity after <last event time> are lost`; print the same line. **Deviation**: the design's "reset target concurrency" is the shape's `solvers`, which the restore leaves as written in `civ.toml`.
+
+## Live checks (integrator, cents)
+
+1. `civ status` and `civ inbox` on the database after an M4 run.
+2. A Haiku demo with `civ pause` issued after ten seconds: no new spawns while paused (`governor.wait` events), successions resume after `civ resume`.
+3. `civ say` and `civ vote` during a run: the broadcast appears in the next tool result of every live session, the vote is acknowledged, `civ vote --report` lists who missed it.
+4. `scripts/restore_drill.sh`: two epochs in the events, every mid-flight lineage resumed at generation N+1 from a stub, eight of eight done.
+
+## Deviations summary (record in README)
+
+Shape is written to `control_state` at start as well as on reshape; `ttl_default_s` is applied by `civ_tune`; the restore does not reset concurrency separately from the shape; per-agent lifetime budgets and per-generation caps are not built (the spend ceiling is the budget); the CLI's restore stub lists seqs rather than the M3 builder's excerpts, because the CLI imports no harness code; `max_live_agents` counts supervisors.
