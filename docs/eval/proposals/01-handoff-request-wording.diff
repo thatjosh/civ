@@ -1,0 +1,10 @@
+diff --git a/harness/prompts/handoff_request.md b/harness/prompts/handoff_request.md
+index a78eb90..2858296 100644
+--- a/harness/prompts/handoff_request.md
++++ b/harness/prompts/handoff_request.md
+@@ -14,4 +14,4 @@ Call `mcp__civ__civ_handoff` once, with a body in exactly this shape, every head
+ 
+ Keep it under about 4,000 tokens. Under each heading write what your successor needs and nothing else; it inherits your directory and your lease, so name the task you hold and where you stopped. Cite board seqs rather than repeating their contents.
+ 
+-This call ends your session. Do not call anything after it and do not wait for a reply.
++This call ends your session. Do not call anything after it and do not wait for a reply; your successor reads the handoff, not the board.

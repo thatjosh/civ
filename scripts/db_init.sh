@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Create the civ and civ_test databases if missing and bring both up to the latest migration.
+# Create the civ, civ_test and civ_merge_test databases if missing and bring both up to the latest migration.
 # Safe to re-run. Assumes Postgres 17 from Homebrew is running on 127.0.0.1:5432.
 set -euo pipefail
 
@@ -14,7 +14,7 @@ if ! pg_isready -h "$PGHOST" -q; then
   exit 1
 fi
 
-for db in civ civ_test; do
+for db in civ civ_test civ_merge_test; do
   if ! psql -h "$PGHOST" -d postgres -tAc "select 1 from pg_database where datname = '$db'" | grep -q 1; then
     createdb -h "$PGHOST" "$db"
     echo "created database $db"

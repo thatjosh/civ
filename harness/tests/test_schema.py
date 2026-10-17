@@ -8,7 +8,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 EXPECTED_TABLES = {
     "agents", "messages", "votes", "tasks", "config", "events", "handoffs",
     "session_reads", "broadcast_seen", "operator_pins", "operator_acks", "schema_migrations",
-    "rounds", "tune_proposals", "control_state",
+    "rounds", "tune_proposals", "control_state", "merges",
 }
 
 
@@ -25,7 +25,8 @@ def test_migration_is_recorded_and_idempotent(migrated_url):
 
     with psycopg.connect(migrated_url) as conn:
         names = [r[0] for r in conn.execute("select name from schema_migrations order by name")]
-    assert names == ["0001_init.sql", "0002_kill_grace_turns.sql", "0003_supervisor_rounds.sql", "0004_control_state.sql"]
+    assert names == ["0001_init.sql", "0002_kill_grace_turns.sql", "0003_supervisor_rounds.sql", "0004_control_state.sql",
+                     "0005_merges.sql"]
 
 
 def test_schema_sql_is_embedded_in_its_migrations():

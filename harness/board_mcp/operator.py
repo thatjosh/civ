@@ -24,6 +24,10 @@ BRIEF_TOP_BLOCKERS = 10
 BRIEF_LOWEST_SCORES = 3
 
 
+# The merge section of the brief: how many rows, and how much of a detail or a body to carry.
+BRIEF_RECENT_MERGES = 10
+BRIEF_DETAIL_CHARS = 200
+BRIEF_BODY_CHARS = 300
 class Operator:
     def __init__(self, db: Db, ceilings: Ceilings | None = None):
         self.db = db
@@ -321,6 +325,7 @@ class Operator:
                     "round_tuned": rnd["tuned_knob"] is not None,
                 },
                 "verifier": self._verifier_progress(conn),
+                "merges": {"recent": self._recent_merges(conn), "pending_proposals": self._pending_proposals(conn)},
             }
             conn.execute("update rounds set brief = %s where id = %s", (json.dumps(brief, default=str), round_id))
         return brief
@@ -460,6 +465,89 @@ class Operator:
         return {"done": int(totals["done"]), "total": int(totals["total"]),
                 "mean_score": float(totals["mean"]) if totals["mean"] is not None else None,
                 "lowest": [{"id": r["id"], "score": float(r["score"]), "notes": r["notes"]} for r in lowest]}
+
+    # Merge gate (M6): what the brief shows and what the merger reads and writes
+
+    @staticmethod
+    def _shape_merge(r) -> dict[str, Any]:
+        return {"id": int(r["id"]), "proposal_id": int(r["proposal_id"]), "requested_by": r["requested_by"],
+                "round_id": int(r["round_id"]) if r["round_id"] is not None else None, "diff_ref": r["diff_ref"],
+                "paths": list(r["paths"] or []), "status": r["status"], "detail": r["detail"],
+                "version_before": r["version_before"], "version_after": r["version_after"], "commit_sha": r["commit_sha"],
+                "requested_at": r["requested_at"].isoformat(),
+                "finished_at": r["finished_at"].isoformat() if r["finished_at"] else None}
+
+    _MERGE_COLUMNS = ("id, proposal_id, requested_by, round_id, diff_ref, paths, status, detail, version_before, "
+                      "version_after, commit_sha, requested_at, finished_at")
+
+    def _recent_merges(self, conn, limit: int = BRIEF_RECENT_MERGES) -> list[dict[str, Any]]:
+        rows = fetch_all(conn, f"select {self._MERGE_COLUMNS} from merges order by id desc limit %s", (limit,))
+        out = []
+        for r in rows:
+            shaped = self._shape_merge(r)
+            # The detail is a test tail or a refusal; the brief wants the gist, the row keeps it all.
+            shaped["detail"] = (shaped["detail"] or "")[:BRIEF_DETAIL_CHARS] or None
+            out.append({k: shaped[k] for k in ("id", "proposal_id", "requested_by", "status", "paths", "detail", "version_after", "requested_at")})
+        return out
+
+    @staticmethod
+    def _pending_proposals(conn, limit: int = BRIEF_RECENT_MERGES) -> list[dict[str, Any]]:
+        """Proposals no merge has spoken for, best scored first, so a supervisor sees what waits for
+        review. The decay formula is the board's own, with the seeds as a fallback for a wiped config."""
+        rows = fetch_all(
+            conn,
+            """
+            select m.id, m.author_id, m.body, m.refs, m.created_at,
+                   coalesce((select sum(v.value * v.weight) from votes v where v.message_id = m.id), 0)
+                   / power(extract(epoch from (now() - m.created_at)) / 3600.0
+                           + coalesce((select value from config where knob = 'decay_offset_h'), 2),
+                           coalesce((select value from config where knob = 'decay_power'), 1.5)) as score
+            from messages m
+            where m.kind = 'proposal'
+              and not exists (select 1 from merges g where g.proposal_id = m.id
+                              and g.status in ('merged', 'queued', 'running', 'queued_for_operator'))
+            order by score desc, m.id desc limit %s
+            """,
+            (limit,),
+        )
+        return [{"id": int(r["id"]), "author_id": r["author_id"], "body": (r["body"] or "")[:BRIEF_BODY_CHARS],
+                 "refs": list(r["refs"] or []), "score": round(float(r["score"]), 4), "created_at": r["created_at"].isoformat()}
+                for r in rows]
+
+    def merge_queue(self, statuses: tuple[str, ...] = ("queued",)) -> list[dict[str, Any]]:
+        """Merges in the given states, oldest first: the merger's work list."""
+        rows = self.db.fetch_all(f"select {self._MERGE_COLUMNS} from merges where status = any(%s) order by id", (list(statuses),))
+        return [self._shape_merge(r) for r in rows]
+
+    def merge_start(self, merge_id: int) -> bool:
+        """Take a queued merge: queued to running. False when it is no longer queued, so two mergers
+        cannot both apply one diff."""
+        row = self.db.fetch_one("update merges set status = 'running' where id = %s and status = 'queued' returning id", (int(merge_id),))
+        return row is not None
+
+    def merge_finish(self, merge_id: int, status: str, detail: str | None, version_before: str | None = None,
+                     version_after: str | None = None, commit_sha: str | None = None) -> None:
+        """Record how a merge ended and log merge.<status>; the merger logs nothing else about it."""
+        with self.db.transaction() as conn:
+            row = fetch_one(
+                conn,
+                """
+                update merges set status = %s, detail = %s, version_before = %s, version_after = %s, commit_sha = %s,
+                       finished_at = now()
+                where id = %s returning proposal_id, requested_by, paths
+                """,
+                (status, detail, version_before, version_after, commit_sha, int(merge_id)),
+            )
+            if row is None:
+                raise ValueError(f"unknown merge {merge_id}")
+            self._event(conn, row["requested_by"], f"merge.{status}",
+                        {"merge_id": int(merge_id), "proposal_id": int(row["proposal_id"]), "paths": list(row["paths"] or []),
+                         "detail": (detail or "")[:BRIEF_DETAIL_CHARS], "version_before": version_before,
+                         "version_after": version_after, "commit_sha": commit_sha})
+
+    def merges_since(self, ts) -> list[dict[str, Any]]:
+        rows = self.db.fetch_all(f"select {self._MERGE_COLUMNS} from merges where requested_at >= %s order by id", (ts,))
+        return [self._shape_merge(r) for r in rows]
 
     # Operator controls (M5): reads for the governor and the civ command line
 

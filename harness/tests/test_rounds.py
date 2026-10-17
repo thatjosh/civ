@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-BRIEF_KEYS = {"round", "status", "slo", "succession", "blockers", "blocked_tasks", "alerts", "previous_reports", "tunes", "verifier"}
+BRIEF_KEYS = {"round", "status", "slo", "succession", "blockers", "blocked_tasks", "alerts", "previous_reports", "tunes", "verifier", "merges"}
 
 
 def old_event(db, seconds_ago: int, type: str = "task.created", payload: dict | None = None) -> datetime:
@@ -69,6 +69,8 @@ def test_brief_shape_on_an_empty_board(db, op):
     assert brief["blockers"] == [] and brief["blocked_tasks"] == [] and brief["alerts"] == [] and brief["previous_reports"] == []
     assert brief["tunes"] == {"active": [], "pending": [], "round_tuned": False}
     assert brief["verifier"] == {"done": 0, "total": 0, "mean_score": None, "lowest": []}
+    # M6: the merge gate's view, empty on an empty board.
+    assert brief["merges"] == {"recent": [], "pending_proposals": []}
     # Stored on the round as built.
     stored = db.fetch_one("select brief from rounds where id = %s", (rid,))["brief"]
     assert stored["round"]["id"] == rid

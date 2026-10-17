@@ -8,6 +8,7 @@
     civ pause [--reason ...] / resume    stop or restart new spawns (the orchestrator's governor reads it)
     civ reshape                          re-read control/civ.toml, bump the epoch
     civ restore --yes                    the one-shot recovery step: new epoch, stubs, leases, knobs, broadcast
+    civ merge --list | --approve ID | --reject ID --reason ...   the merges waiting on the operator (M6)
 
 This module imports nothing from harness/: it talks to Postgres directly and reads the two toml
 files under control/. The harness is agent-editable and may be broken at exactly the moment the
@@ -319,6 +320,29 @@ class Board:
 # --- the commands -----------------------------------------------------------------------------
 
 
+    # merge gate (M6)
+
+    def merges_open(self) -> list[dict]:
+        return self.all(
+            "select id, proposal_id, status, paths from merges where status not in ('merged', 'rejected', 'failed') order by id"
+        )
+
+    def merge_approve(self, merge_id: int) -> dict:
+        """An operator-set path waits in queued_for_operator; approving it hands it to the merger."""
+        row = self.one("update merges set status = 'queued', detail = coalesce(detail, '') || ' [approved by operator]' "
+                       "where id = %s and status = 'queued_for_operator' returning id, proposal_id, paths", (merge_id,))
+        if row is None:
+            raise Refused(f"merge #{merge_id} is not queued for the operator")
+        return row
+
+    def merge_reject(self, merge_id: int, reason: str) -> dict:
+        row = self.one("update merges set status = 'rejected', detail = %s, finished_at = now() "
+                       "where id = %s and status not in ('merged', 'rejected') returning id, proposal_id", (reason, merge_id))
+        if row is None:
+            raise Refused(f"merge #{merge_id} cannot be rejected (merged already, or already rejected)")
+        return row
+
+
 def _local(ts: dt.datetime) -> str:
     return ts.astimezone().strftime("%H:%M:%S")
 
@@ -478,6 +502,27 @@ class Cli:
         self._print(line)
 
 
+    def cmd_merge(self, board: Board, args: argparse.Namespace) -> None:
+        if args.approve is not None:
+            row = board.merge_approve(args.approve)
+            board.event("operator.merge_approve", {"merge_id": args.approve, "proposal_id": int(row["proposal_id"]),
+                                                   "paths": list(row["paths"] or [])})
+            self._print(f"merge #{args.approve} approved; the merger will run it")
+            return
+        if args.reject is not None:
+            row = board.merge_reject(args.reject, args.reason.strip())
+            board.event("operator.merge_reject", {"merge_id": args.reject, "proposal_id": int(row["proposal_id"]),
+                                                  "reason": args.reason.strip()})
+            self._print(f"merge #{args.reject} rejected")
+            return
+        rows = board.merges_open()
+        if not rows:
+            self._print("no merges waiting")
+            return
+        for row in rows:
+            self._print(f"#{row['id']} proposal #{row['proposal_id']} {row['status']} {','.join(row['paths'] or [])}")
+
+
 # --- argument parsing --------------------------------------------------------------------------
 
 
@@ -507,6 +552,12 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("reshape", help="re-read control/civ.toml and bump the epoch")
     restore = sub.add_parser("restore", help="the one-shot recovery step")
     restore.add_argument("--yes", action="store_true")
+
+    merge = sub.add_parser("merge", help="merges waiting on the operator: list, approve or reject")
+    merge.add_argument("--list", action="store_true")
+    merge.add_argument("--approve", type=int, metavar="MERGE_ID")
+    merge.add_argument("--reject", type=int, metavar="MERGE_ID")
+    merge.add_argument("--reason", default="")
     return p
 
 
@@ -518,6 +569,12 @@ def main(argv: list[str] | None = None) -> int:
             parser.error("vote needs <message_id> <+1|-1> --reason ..., or --report <message_id>")
         if args.report is None and not args.reason.strip():
             parser.error("an operator vote needs --reason")
+    if args.command == "merge":
+        chosen = [x for x in (args.list, args.approve is not None, args.reject is not None) if x]
+        if len(chosen) != 1:
+            parser.error("merge takes exactly one of --list, --approve ID, --reject ID")
+        if args.reject is not None and not args.reason.strip():
+            parser.error("a rejection needs --reason")
     cli = Cli(args.db_url, Control(args.control_dir))
     try:
         return cli.run(args.command, args)

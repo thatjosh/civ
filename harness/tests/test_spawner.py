@@ -212,7 +212,9 @@ async def test_supervisor_role_gets_its_own_tools_directory_prompt_and_kickoff(t
     call = q.calls[0]
     assert call["prompt"].startswith(SUPERVISOR_KICKOFF) and "shared" in call["prompt"] and "materials" not in call["prompt"]
     opts = call["options"]
-    assert opts.tools == SUPERVISOR_TOOLS == ["Read", "Grep"]
+    # Write and Bash arrived with M6, so a supervisor can produce a diff under proposals/.
+    assert opts.tools == SUPERVISOR_TOOLS == ["Read", "Grep", "Write", "Bash"]
+    assert f"{tmp_path.resolve()}/harness" in call["prompt"]
     assert opts.add_dirs == [str(tmp_path / "shared")]
     assert "BRIEF BODY" in opts.system_prompt and "You are a supervisor" in opts.system_prompt
     assert "You are a solver" not in opts.system_prompt
@@ -235,3 +237,21 @@ async def test_solver_role_is_the_default_and_unchanged(tmp_path):
     await spawner.spawn("sol-009", "L-009")
     assert op.registered[0]["role"] == "solver"
     assert q.calls[0]["options"].tools == SOLVER_TOOLS and q.calls[0]["prompt"].startswith(KICKOFF_PROMPT)
+
+
+async def test_harness_version_is_read_from_the_version_file_at_every_spawn(tmp_path):
+    # A merge bumps harness/VERSION; the next spawn must carry the new value in its identity
+    # block without a restart, and a root with no file reads as "dev".
+    q1 = scripted_query([init_message(), result(num_turns=1)])
+    spawner, op = make_spawner(tmp_path, q1)
+    await spawner.spawn("sol-001", "L-001")
+    assert json.loads((tmp_path / "agents" / "sol-001" / "identity.json").read_text())["harness_version"] == "dev"
+    (tmp_path / "harness").mkdir()
+    (tmp_path / "harness" / "VERSION").write_text("0.1.3\n")
+    q2 = scripted_query([init_message(), result(num_turns=1)])
+    spawner2, _ = make_spawner(tmp_path, q2)
+    await spawner2.spawn("sol-002", "L-002")
+    assert json.loads((tmp_path / "agents" / "sol-002" / "identity.json").read_text())["harness_version"] == "0.1.3"
+    assert "harness_version: 0.1.3" in q2.calls[0]["options"].system_prompt
+    (tmp_path / "harness" / "VERSION").write_text("0.1.4\n")
+    assert spawner2.harness_version() == "0.1.4"

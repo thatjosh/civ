@@ -302,3 +302,68 @@ def test_restore_retires_a_mid_round_supervisor_without_a_stub(run, db, make_age
     assert row["status"] == "dead"
     assert db.fetch_one("select count(*) as n from handoffs where lineage_id = 'S-001'")["n"] == 0
     assert state(db, "last_restore")["supervisors_retired"] == ["sup-001-r1"]
+
+
+# --- merge (M6) -----------------------------------------------------------------------------------
+
+
+@pytest.fixture
+def waiting_merge(db, make_agent, op):
+    """A proposal queued for the operator and a plain queued one, as civ_merge would leave them."""
+    author = make_agent("solver", agent_id="sol-001", lineage="L-001")[0]
+    sup = make_agent("supervisor", agent_id="sup-001-r1", lineage="S-001")[0]
+    rid = op.open_round(1)
+    with db.transaction() as conn:
+        p1 = conn.execute("insert into messages (author_id, kind, body, refs) values (%s, 'proposal', 'touch the spawner', '{shared/aa-a.diff}') returning id",
+                          (author.id,)).fetchone()["id"]
+        p2 = conn.execute("insert into messages (author_id, kind, body, refs) values (%s, 'proposal', 'a prompt fix', '{shared/bb-b.diff}') returning id",
+                          (author.id,)).fetchone()["id"]
+        m1 = conn.execute(
+            "insert into merges (proposal_id, requested_by, round_id, diff_ref, paths, status, detail) "
+            "values (%s, %s, %s, 'shared/aa-a.diff', '{harness/orchestrator/spawner.py}', 'queued_for_operator', 'protected paths: harness/orchestrator/spawner.py') returning id",
+            (p1, sup.id, rid)).fetchone()["id"]
+        m2 = conn.execute(
+            "insert into merges (proposal_id, requested_by, round_id, diff_ref, paths, status) "
+            "values (%s, %s, %s, 'shared/bb-b.diff', '{harness/prompts/handoff_request.md,harness/prompts/roles/solver.md}', 'queued') returning id",
+            (p2, sup.id, rid)).fetchone()["id"]
+    return {"p1": p1, "p2": p2, "m1": m1, "m2": m2}
+
+
+def test_merge_list_prints_every_merge_still_waiting(run, waiting_merge):
+    w = waiting_merge
+    assert run("merge", "--list") == (0, f"#{w['m1']} proposal #{w['p1']} queued_for_operator harness/orchestrator/spawner.py\n"
+                                          f"#{w['m2']} proposal #{w['p2']} queued harness/prompts/handoff_request.md,harness/prompts/roles/solver.md\n")
+
+
+def test_merge_list_when_nothing_waits(run):
+    assert run("merge", "--list") == (0, "no merges waiting\n")
+
+
+def test_merge_approve_hands_a_protected_merge_to_the_merger(run, db, waiting_merge):
+    w = waiting_merge
+    assert run("merge", "--approve", str(w["m1"])) == (0, f"merge #{w['m1']} approved; the merger will run it\n")
+    row = db.fetch_one("select status, detail from merges where id = %s", (w["m1"],))
+    assert row["status"] == "queued" and row["detail"].endswith("[approved by operator]")
+    assert events(db, "operator.merge_approve")[-1]["payload"]["merge_id"] == w["m1"]
+    # Only a merge waiting on the operator can be approved.
+    code, out = run("merge", "--approve", str(w["m2"]))
+    assert code == 1 and out == f"merge #{w['m2']} is not queued for the operator\n"
+
+
+def test_merge_reject_records_the_reason(run, db, waiting_merge):
+    w = waiting_merge
+    assert run("merge", "--reject", str(w["m1"]), "--reason", "not now") == (0, f"merge #{w['m1']} rejected\n")
+    row = db.fetch_one("select status, detail, finished_at from merges where id = %s", (w["m1"],))
+    assert row["status"] == "rejected" and row["detail"] == "not now" and row["finished_at"] is not None
+    assert events(db, "operator.merge_reject")[-1]["payload"]["reason"] == "not now"
+    code, out = run("merge", "--reject", str(w["m1"]), "--reason", "again")
+    assert code == 1 and "cannot be rejected" in out
+
+
+def test_merge_usage_errors_exit_two(run, waiting_merge):
+    with pytest.raises(SystemExit) as exc:
+        run("merge")
+    assert exc.value.code == 2
+    with pytest.raises(SystemExit) as exc:
+        run("merge", "--reject", "1")
+    assert exc.value.code == 2

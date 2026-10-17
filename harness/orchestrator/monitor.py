@@ -22,6 +22,8 @@ ThresholdCallback = Callable[[str, float], None]
 DEFAULT_HANDOFF_PCT = 80.0
 DEFAULT_KILL_PCT = 90.0
 DEFAULT_KILL_GRACE_TURNS = 2
+# Wall-clock floor on the grace: three sub-second tool calls are three turns and no chance.
+DEFAULT_KILL_GRACE_S = 20.0
 # The usage probe is asked every this many turns, and once more when the
 # arithmetic first crosses this percentage, because the arithmetic can drift
 # from the CLI's own count (system prompt, tool schemas) and the handoff
@@ -72,7 +74,8 @@ class StaticKnobs:
 
     def __init__(self, values: dict[str, float] | None = None) -> None:
         self._values = {"handoff_pct": DEFAULT_HANDOFF_PCT, "kill_pct": DEFAULT_KILL_PCT,
-                        "kill_grace_turns": DEFAULT_KILL_GRACE_TURNS, **(values or {})}
+                        "kill_grace_turns": DEFAULT_KILL_GRACE_TURNS, "kill_grace_s": DEFAULT_KILL_GRACE_S,
+                        **(values or {})}
 
     def get(self, knob: str) -> float:
         return float(self._values[knob])
@@ -97,6 +100,11 @@ class UsageTotals:
     # What the CLI itself last reported, kept apart from the arithmetic so a
     # disagreement between the two is visible in the events.
     probe_pct: float | None = None
+    # How much the context grew between the previous and the current assistant turn, in
+    # percentage points. One big file read is one big delta, and that is what the early
+    # handoff rule looks at.
+    last_delta_pct: float = 0.0
+    handoff_early: bool = False
 
 
 class Monitor:
@@ -141,6 +149,13 @@ class Monitor:
         before being asked at all, and its successor starts from a stub for no reason."""
         return int(self._knobs.get("kill_grace_turns"))
 
+    @property
+    def kill_grace_s(self) -> float:
+        """Seconds the agent gets after the request before kill_pct may act, alongside the turn
+        count. A live run killed an agent after three turns in 1.7 seconds: turns alone measure
+        nothing when each is a sub-second tool call."""
+        return float(self._knobs.get("kill_grace_s"))
+
     def on_threshold(self, pct: float, callback: ThresholdCallback) -> None:
         """Register a callback for when context fill first crosses pct."""
         self._thresholds.append((pct, callback))
@@ -172,7 +187,9 @@ class Monitor:
         t.model = message.model or t.model
         t.tokens_in += context_size
         t.tokens_out += out
+        previous_pct = t.context_pct
         t.context_pct = context_size / self._window * 100.0
+        t.last_delta_pct = t.context_pct - previous_pct
 
         # One write per turn is enough for the dashboard and keeps the
         # orchestrator from hammering Postgres on long runs.
@@ -192,6 +209,7 @@ class Monitor:
         )
         self._fire_thresholds(t.context_pct)
         self._fire_forced_handoff()
+        self._fire_early_handoff()
 
     # --- the CLI's own view of the context, as a cross-check -------------
 
@@ -279,6 +297,33 @@ class Monitor:
                 self.totals.fired.add(level)
                 self._op.log_event(self._agent_id, "agent.handoff_forced", {"turn": self.totals.turns})
                 callback(self._agent_id, self.totals.context_pct)
+
+    def _fire_early_handoff(self) -> None:
+        """The growth-aware trigger: ask for the handoff before the handoff threshold when the
+        last turn's growth, repeated once, would cross the kill threshold.
+
+        The rule is exactly: context_pct + last_delta_pct >= kill_pct and context_pct >=
+        handoff_pct / 2. The second clause is a stated guard against a first huge read (with the
+        seeded knobs it is implied by the first, since a delta can never exceed the fill), kept so
+        the rule reads the same in the prompt and in the code. Fires at most once, through the
+        same once-per-level bookkeeping as the ordinary threshold.
+        """
+        t = self.totals
+        level = self.handoff_pct
+        if level in t.fired:
+            return
+        if not (t.context_pct + t.last_delta_pct >= self.kill_pct and t.context_pct >= level / 2):
+            return
+        for lvl, callback in self._thresholds:
+            if lvl == level:
+                t.fired.add(level)
+                t.handoff_early = True
+                self._op.log_event(
+                    self._agent_id,
+                    "agent.handoff_early",
+                    {"pct": round(t.context_pct, 3), "last_delta": round(t.last_delta_pct, 3), "kill_pct": self.kill_pct},
+                )
+                callback(self._agent_id, t.context_pct)
 
     def _observe_result(self, message: ResultMessage) -> None:
         t = self.totals

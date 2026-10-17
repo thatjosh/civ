@@ -5,7 +5,7 @@ context nears the handoff threshold; the runner then asks it to hand off,
 waits for the handoff row, cuts the session, and starts generation N+1 in the
 same directory with the handoff in its prompt. An agent that reaches the kill
 threshold without handing off is cut anyway, once it has had kill_grace_turns
-assistant turns since the request to act on it, and its successor gets a stub
+assistant turns and kill_grace_s seconds since the request to act on it, and its successor gets a stub
 built from its board posts. The lineage ends when a session ends on its own
 (no tasks left, or an error) or when the generation cap is reached.
 
@@ -291,14 +291,14 @@ class LineageRunner:
             self._handed_off(state, control)
             return
 
-        if state.kill_due and state.phase == PHASE_HANDING_OFF:
-            # The kill rule is kill_pct and at least kill_grace_turns since the request. The
-            # request reaches the agent through its next tool result and the injected message,
-            # and acting on it takes a turn of its own, so fewer turns than that is no chance.
-            since = monitor.totals.turns - (state.turns_at_request or 0)
-            if since >= monitor.kill_grace_turns:
-                self._kill(state, control, "kill threshold reached")
-                return
+        if state.kill_due and state.phase == PHASE_HANDING_OFF and self._grace_spent(state):
+            # The kill rule is kill_pct and at least kill_grace_turns and kill_grace_s since the
+            # request. The request reaches the agent through its next tool result and the
+            # injected message, and acting on it takes a turn of its own, so fewer turns than
+            # that is no chance; and turns alone are no measure when each is a sub-second tool
+            # call, hence the floor in seconds as well.
+            self._kill(state, control, "kill threshold reached")
+            return
 
         if isinstance(message, ResultMessage) and state.watcher is not None:
             state.watcher.cancel()
@@ -321,19 +321,35 @@ class LineageRunner:
                 # True when both thresholds fired in the same turn: the request is already late.
                 "kill_due": state.kill_due,
                 "grace_turns": monitor.kill_grace_turns,
+                "grace_s": monitor.kill_grace_s,
             },
         )
         state.watcher = asyncio.create_task(self._watch_handoff(state, lineage_id, control))
 
+    def _grace_spent(self, state: _SessionState) -> bool:
+        """Whether the agent has had both the turns and the seconds of grace since the request."""
+        monitor = state.monitor
+        if monitor is None or state.requested_at is None:
+            return True
+        turns = int(monitor.totals.turns) - int(state.turns_at_request or 0)
+        seconds = self._clock() - state.requested_at
+        return turns >= monitor.kill_grace_turns and seconds >= monitor.kill_grace_s
+
     async def _watch_handoff(self, state: _SessionState, lineage_id: str, control: SessionControl) -> None:
         """Poll for the handoff row, because the agent may be inside a long tool call
-        and produce no message for the hook to react to."""
+        and produce no message for the hook to react to. The same poll applies the kill rule
+        once the grace in seconds has passed, so a kill owed to a silent agent does not wait
+        for a message that never comes."""
         while state.phase == PHASE_HANDING_OFF:
             await self._sleep(self._poll_s)
             if state.phase != PHASE_HANDING_OFF:
                 return
             if self._latest_handoff_from(lineage_id, state.agent_id):
                 self._handed_off(state, control)
+                await control.interrupt()
+                return
+            if state.kill_due and self._grace_spent(state):
+                self._kill(state, control, "kill threshold reached")
                 await control.interrupt()
                 return
             if state.requested_at is not None and self._clock() - state.requested_at > self._wait_s:
@@ -350,8 +366,9 @@ class LineageRunner:
             turns = int(monitor.totals.turns) - int(state.turns_at_request)
         seconds = round(self._clock() - state.requested_at, 3) if state.requested_at is not None else None
         grace = int(monitor.kill_grace_turns) if monitor is not None else None
+        grace_s = float(monitor.kill_grace_s) if monitor is not None else None
         return {"requested": state.requested_at is not None, "turns_since_request": turns,
-                "seconds_since_request": seconds, "grace_turns": grace}
+                "seconds_since_request": seconds, "grace_turns": grace, "grace_s": grace_s}
 
     def _handed_off(self, state: _SessionState, control: SessionControl) -> None:
         state.phase = PHASE_HANDED_OFF

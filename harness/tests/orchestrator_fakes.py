@@ -27,6 +27,8 @@ class FakeOperator:
         self.succeeded: list[tuple[str, str, str]] = []
         self.stubs: list[tuple[str, list[str]]] = []
         self.posts: dict[str, list[dict[str, Any]]] = {}
+        # M6: the merges table, rows as dicts with id, proposal_id, requested_by, diff_ref, paths, status.
+        self.merges: list[dict[str, Any]] = []
         # Supervisor rounds (M4), mirroring the rounds table and the reads the round makes.
         self.rounds: list[dict[str, Any]] = []
         self.brief_template: dict[str, Any] = {}
@@ -174,6 +176,33 @@ class FakeOperator:
 
     def spend_usd(self, hours: float) -> float:
         return float(self.spend)
+
+    # --- M6 surface ---------------------------------------------------------
+
+    def merge_queue(self, statuses=("queued",)) -> list[dict[str, Any]]:
+        return [dict(r) for r in getattr(self, "merges", []) if r.get("status") in statuses]
+
+    def merge_start(self, merge_id: int) -> bool:
+        for r in getattr(self, "merges", []):
+            if r["id"] == merge_id and r["status"] == "queued":
+                r["status"] = "running"
+                return True
+        return False
+
+    def merge_finish(self, merge_id: int, status: str, detail: str, version_before=None, version_after=None,
+                     commit_sha=None) -> None:
+        # Like the real Operator: records the row and logs merge.<status> itself, so the merger
+        # must not log on its own; unknown ids raise.
+        for r in getattr(self, "merges", []):
+            if r["id"] == merge_id:
+                r.update({"status": status, "detail": detail, "version_before": version_before,
+                          "version_after": version_after, "commit_sha": commit_sha})
+                self.events.append((r.get("requested_by"), f"merge.{status}", {
+                    "merge_id": merge_id, "proposal_id": r.get("proposal_id"), "paths": list(r.get("paths") or []),
+                    "detail": (detail or "")[:200], "version_before": version_before, "version_after": version_after,
+                    "commit_sha": commit_sha}))
+                return
+        raise ValueError(f"unknown merge {merge_id}")
 
     def lineages_to_resume(self) -> list[dict[str, Any]]:
         return [dict(r) for r in self.resume_rows]

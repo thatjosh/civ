@@ -23,7 +23,10 @@ def make(tmp_path: Path, clients: list[FakeClient], window: int = 1000, max_gene
     factory = client_factory(clients)
     spawner = Spawner(
         op, "http://127.0.0.1:8765", tmp_path, PromptAssembler(PROMPTS_DIR),
-        client_factory=factory, knobs=knobs or StaticKnobs(), context_window=window, force_handoff_after_turns=force_after,
+        # kill_grace_s is 0 here because scripted clients turn in microseconds; the seconds floor
+        # has its own test with a scripted clock.
+        client_factory=factory, knobs=knobs or StaticKnobs({"kill_grace_s": 0.0}), context_window=window,
+        force_handoff_after_turns=force_after,
     )
     runner = LineageRunner(spawner, op, REQUEST, max_generations=max_generations, poll_s=0, **runner_kw)
     return runner, op, factory
@@ -119,10 +122,28 @@ async def test_kill_waits_for_the_grace_turns_after_the_request(tmp_path):
     assert outcome.stubs == 1
 
 
+async def test_kill_also_waits_for_the_seconds_floor(tmp_path):
+    # Three turns in two seconds is three turns and no chance (seen live: 1.7 s). With a 20 s
+    # floor the kill waits for the clock even though the turn grace is spent; once the clock
+    # passes the floor on the watcher's poll, the kill fires without a further message.
+    ticks = iter([0.0, 0.0, 1.0, 1.5, 2.0, 2.0, 2.0, 30.0, 30.0, 30.0, 30.0])
+    first = FakeClient([init_message(), assistant(850), assistant(950), assistant(955), assistant(960)] + [assistant(961)] * 3)
+    second = FakeClient([init_message(), result()])
+    runner, op, _ = make(tmp_path, [first, second], knobs=StaticKnobs({"kill_grace_s": 20.0}),
+                         clock=lambda: next(ticks, 30.0))
+    outcome = await runner.run("L-014", "sol-014")
+    kill = [e for e in op.events if e[1] == "agent.killed"][0][2]
+    assert kill["reason"] == "kill threshold reached" and kill["grace_s"] == 20.0
+    assert kill["seconds_since_request"] >= 20.0 and kill["turns_since_request"] >= 2
+    assert outcome.stubs == 1
+    sent = [e for e in op.events if e[1] == "agent.handoff_sent"][0][2]
+    assert sent["grace_s"] == 20.0
+
+
 async def test_zero_grace_restores_the_immediate_kill(tmp_path):
     first = FakeClient([init_message(), assistant(100), assistant(950), assistant(955), assistant(960)])
     second = FakeClient([init_message(), result()])
-    runner, op, _ = make(tmp_path, [first, second], knobs=StaticKnobs({"kill_grace_turns": 0}))
+    runner, op, _ = make(tmp_path, [first, second], knobs=StaticKnobs({"kill_grace_turns": 0, "kill_grace_s": 0.0}))
     await runner.run("L-012", "sol-012")
     # Still asked (the request costs nothing), but killed in the same turn.
     assert op.handoff_requests == ["sol-012"] and first.turns_yielded == 2

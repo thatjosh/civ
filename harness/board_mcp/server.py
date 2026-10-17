@@ -170,6 +170,10 @@ def build_server(db: Db, shared_dir: Path, verifier=None) -> MCPServer:
                        ctx: Context = None) -> dict[str, Any]:
         return await gw.call(ctx, "civ_tune", civ.tune, knob=knob, value=value, slo=slo, reason=reason, ttl_s=ttl_s)
 
+    @server.tool(description="Supervisor only: queue a proposal's diff for the merge gate (tests must pass before it lands).")
+    async def civ_merge(proposal_id: int, ctx: Context = None) -> dict[str, Any]:
+        return await gw.call(ctx, "civ_merge", civ.merge, proposal_id=proposal_id)
+
     @server.tool(description="Supervisor only: write the round's one report; a trigger makes it a ping the server verifies.")
     async def civ_report(body: str, trigger: str | None = None, ctx: Context = None) -> dict[str, Any]:
         return await gw.call(ctx, "civ_report", civ.report, body=body, trigger=trigger)

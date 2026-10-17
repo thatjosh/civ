@@ -30,6 +30,9 @@ CONFIG_SEEDS: dict[str, tuple[float, float, float, float]] = {
     # from its seed a knob may sit before a second supervisor has to agree.
     "min_sample": (3, 1, 50, 1),
     "big_move_steps": (2, 1, 5, 1),
+    # Wall-clock floor on the same grace (M6): three sub-second tool calls are turns too, and an
+    # agent cannot write a handoff in under a couple of seconds whatever its turn count says.
+    "kill_grace_s": (20, 0, 300, 5),
 }
 
 SEED_SQL = """

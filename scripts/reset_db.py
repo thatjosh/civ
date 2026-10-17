@@ -29,7 +29,8 @@ TABLES = [
     "handoffs", "events", "votes", "tasks", "messages", "agents", "config",
     # M4: a reset must close out the supervisor rounds too, or current_round() would hand the
     # next run a round left open by the last one.
-    "tune_proposals", "rounds",
+    # M6: the merge queue, which references rounds and proposals.
+    "merges", "tune_proposals", "rounds",
     # M5: and the epoch, pause flag and inbox mark, or a clean board would start at the epoch the
     # last restore drill left behind (seen: a fresh demo opening at epoch 2).
     "control_state",

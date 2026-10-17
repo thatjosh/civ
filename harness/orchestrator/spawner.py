@@ -40,7 +40,11 @@ log = logging.getLogger(__name__)
 SOLVER_TOOLS = ["Read", "Write", "Edit", "Bash", "Glob", "Grep"]
 # A supervisor reads the board and the shared/ files it references, nothing
 # else: no shell, no writes, so its whole output is board actions.
-SUPERVISOR_TOOLS = ["Read", "Grep"]
+# Write and Bash so a supervisor can produce a diff under proposals/ in its own directory and
+# post it as a proposal (M6); the prompt confines the writes, the sandbox is the boundary.
+SUPERVISOR_TOOLS = ["Read", "Grep", "Write", "Bash"]
+VERSION_FILE = "harness/VERSION"
+DEFAULT_VERSION = "dev"
 KICKOFF_PROMPT = "Begin your solver loop."
 SUPERVISOR_KICKOFF = "Begin your round."
 MCP_SERVER_NAME = "civ"
@@ -66,9 +70,10 @@ class RoleProfile:
     extra_dir: str
     kickoff: str
 
-    def kickoff_prompt(self, cwd: Path, extra: Path) -> str:
+    def kickoff_prompt(self, cwd: Path, extra: Path, root: Path | None = None) -> str:
         if self.name == "supervisor":
-            return f"{self.kickoff} Your directory is {cwd}. Files the board references as shared/... are under {extra}."
+            harness = f" The harness source you may propose changes to is under {root}/harness (read it, never edit it in place)." if root else ""
+            return f"{self.kickoff} Your directory is {cwd}. Files the board references as shared/... are under {extra}.{harness}"
         return (
             f"{self.kickoff} Your directory is {cwd} (write only there, under work/). "
             f"The read-only materials are at {extra}."
@@ -212,7 +217,7 @@ class Spawner:
         prompts: PromptAssembler,
         model: str = "claude-opus-5-5",
         max_turns: int = 40,
-        harness_version: str = "dev",
+        harness_version: str | None = None,
         query_fn: QueryFn | None = None,
         client_factory: ClientFactory | None = None,
         knobs: KnobReader | None = None,
@@ -231,6 +236,8 @@ class Spawner:
         self._prompts = prompts
         self._model = model
         self._max_turns = max_turns
+        # None means "read harness/VERSION at every spawn", so a merge that bumps the file is
+        # carried by the next spawn's identity block without a restart; a string pins it (tests).
         self._harness_version = harness_version
         self._knobs = knobs
         self._window = context_window
@@ -320,7 +327,7 @@ class Spawner:
             role=role,
             generation=generation,
             lineage_id=lineage_id,
-            harness_version=self._harness_version,
+            harness_version=self.harness_version(),
             broadcasts=list(broadcasts or []),
             handoff=handoff,
             handoff_is_stub=handoff_is_stub,
@@ -441,7 +448,17 @@ class Spawner:
 
     def kickoff_prompt(self, cwd: Path, role: str = "solver") -> str:
         profile = self._profile(role)
-        return profile.kickoff_prompt(cwd, (self._root / profile.extra_dir).resolve())
+        return profile.kickoff_prompt(cwd, (self._root / profile.extra_dir).resolve(), self._root)
+
+    def harness_version(self) -> str:
+        """The version new spawns are tagged with: the pinned string, else harness/VERSION as it
+        reads right now, else "dev" when there is no file (a bare tmp root in tests)."""
+        if self._harness_version is not None:
+            return self._harness_version
+        try:
+            return (self._root / VERSION_FILE).read_text(encoding="utf-8").strip() or DEFAULT_VERSION
+        except OSError:
+            return DEFAULT_VERSION
 
     async def _next_message(self, agent_id: str, stream: AsyncIterator[Any], drain_until: float | None) -> Any | None:
         """The next message, or None when the stream ends or the drain deadline passes."""

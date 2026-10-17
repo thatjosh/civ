@@ -13,6 +13,9 @@ export PATH="$PG_BIN:$PATH"
 
 DB_URL="${CIV_DATABASE_URL:-postgresql://127.0.0.1:5432/civ}"
 TEST_DB_URL="${CIV_TEST_DATABASE_URL:-postgresql://127.0.0.1:5432/civ_test}"
+# The merge gate (M6) runs the harness tests on its own database so a merge in flight cannot
+# collide with a developer's test run on civ_test.
+MERGE_TEST_DB_URL="${CIV_MERGE_TEST_DATABASE_URL:-postgresql://127.0.0.1:5432/civ_merge_test}"
 
 if [ ! -x "$ROOT/.venv/bin/python" ]; then
   echo "bootstrap: no .venv found; create it with 'uv venv --python 3.12 .venv && uv pip install -e .[dev]'" >&2
@@ -30,7 +33,7 @@ if ! pg_isready -h 127.0.0.1 -q; then
   pg_isready -h 127.0.0.1 -q || { echo "bootstrap: postgres did not start" >&2; exit 1; }
 fi
 
-for db in civ civ_test; do
+for db in civ civ_test civ_merge_test; do
   if ! psql -h 127.0.0.1 -d postgres -tAc "select 1 from pg_database where datname='$db'" | grep -q 1; then
     echo "bootstrap: creating database $db"
     createdb -h 127.0.0.1 "$db"
@@ -38,7 +41,7 @@ for db in civ civ_test; do
 done
 
 # migrate.py is WS-A's; it reads CIV_DATABASE_URL, so run it once per database.
-for url in "$DB_URL" "$TEST_DB_URL"; do
+for url in "$DB_URL" "$TEST_DB_URL" "$MERGE_TEST_DB_URL"; do
   CIV_DATABASE_URL="$url" python scripts/migrate.py
 done
 

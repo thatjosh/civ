@@ -4,7 +4,8 @@ handoff carries its full validation and ends the agent itself (M3). tune and rep
 round rules (M4): a tune happens inside an open supervisor round, once per round, on a sample the
 round's brief can vouch for, and a big move needs two supervisors; a report happens once per
 supervisor per round, and a report that pings the operator names a trigger the server can find in
-the data.
+the data. merge (M6) queues a proposal's diff for the orchestrator's merge gate, never running
+git or the tests itself.
 """
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ from ..auth import OPERATOR_ID, AgentIdentity
 from ..ceilings import Ceilings
 from ..db import Db, fetch_one
 from ..limits import Knobs, posts_in_last_hour
+from ..merge_rules import load_merge_section, outside_harness, paths_in_diff, protected
 from ..seed import CONFIG_SEEDS
 from ..slo import HIGHER_IS_BETTER, SLO_NAMES, compute_slos, status_snapshot
 from .common import insert_message, log_event, pin_block, refuse
@@ -27,6 +29,9 @@ SLOS = SLO_NAMES
 TRIGGERS = ("succession_failing", "slo_degraded", "big_move_disputed", "ceiling_pinned")
 NO_ROUND = "no supervisor round is open"
 PING_PREFIX = "[ping: "
+# A merges row in one of these states means the proposal is spoken for; a failed or rejected one may be queued again.
+MERGE_LIVE_STATUSES = ("merged", "queued", "running", "queued_for_operator")
+DIFF_SUFFIXES = (".diff", ".patch")
 # How many stored briefs "degraded for three windows" needs, and how old a pending big move has to
 # be before a disagreement over it counts as a dispute.
 DEGRADED_WINDOWS = 3
@@ -200,6 +205,86 @@ class CivTools:
                        "big_move": big_move, "round_id": rnd["id"]})
             self.knobs.invalidate()
             return {"ok": True, "knob": knob, "value": value, "expires_at": updated["expires_at"].isoformat()}
+
+    # --- civ_merge (M6) ------------------------------------------------------------------------------
+
+    def merge(self, identity: AgentIdentity, proposal_id: int) -> dict[str, Any]:
+        """Queue a proposal's diff for the merge gate. The server only decides where it queues: the
+        orchestrator's merger applies the diff in a worktree and runs the tests, because a tool call
+        has to return in milliseconds and the repository belongs to the process that owns it."""
+        if not identity.is_supervisor:
+            return refuse("supervisor only")
+        with self.db.transaction() as conn:
+            blocked = pin_block(conn, identity)
+            if blocked:
+                return blocked
+            rnd = self._open_round(conn)
+            if rnd is None:
+                return refuse(NO_ROUND)
+            proposal = fetch_one(conn, "select id, author_id, kind, refs from messages where id = %s", (int(proposal_id),))
+            if proposal is None or proposal["kind"] != "proposal":
+                return refuse(f"message {int(proposal_id)} is not a proposal")
+            ref = next((r for r in (proposal["refs"] or []) if r.endswith(DIFF_SUFFIXES)), None)
+            if ref is None:
+                return refuse("proposal has no .diff ref")
+            text = self._read_shared(ref)
+            if text is None:
+                return refuse(f"diff file missing: {ref}")
+            paths = paths_in_diff(text)
+            if not paths:
+                return refuse("diff names no files")
+            outside = outside_harness(paths)
+            if outside:
+                return refuse("a proposal may only change files under harness/: " + ", ".join(outside))
+            existing = fetch_one(conn, "select status from merges where proposal_id = %s and status = any(%s) order by id desc limit 1",
+                                 (proposal["id"], list(MERGE_LIVE_STATUSES)))
+            if existing is not None:
+                return refuse("already merged" if existing["status"] == "merged" else "already queued")
+            rules = load_merge_section(self._shape_json(conn))
+            used = fetch_one(conn, "select count(*) as n from merges where round_id = %s and status not in ('rejected', 'failed')",
+                             (rnd["id"],))
+            if int(used["n"]) >= rules["max_per_round"]:
+                return refuse(f"round merge cap reached ({rules['max_per_round']})")
+            held = protected(paths, rules["protected_paths"])
+            status = "queued_for_operator" if held else "queued"
+            detail = ("protected paths: " + ", ".join(held)) if held else None
+            row = fetch_one(
+                conn,
+                """
+                insert into merges (proposal_id, requested_by, round_id, diff_ref, paths, status, detail)
+                values (%s, %s, %s, %s, %s, %s, %s) returning id
+                """,
+                (proposal["id"], identity.id, rnd["id"], ref, paths, status, detail),
+            )
+            merge_id = int(row["id"])
+            payload = {"merge_id": merge_id, "proposal_id": int(proposal["id"]), "paths": paths, "round_id": rnd["id"]}
+            if held:
+                # The operator reads the inbox, not the merges table, so the wait is announced there.
+                insert_message(conn, identity, "alert",
+                               f"[merge queued for operator] proposal #{int(proposal['id'])} touches {', '.join(held)}",
+                               thread_id=None, parent_id=None, refs=None, shared_dir=self.shared_dir, knobs=self.knobs)
+                log_event(conn, identity.id, "merge.queued_for_operator", {**payload, "protected": held})
+                return {"ok": True, "merge_id": merge_id, "status": status, "paths": paths}
+            log_event(conn, identity.id, "merge.queued", payload)
+            return {"ok": True, "merge_id": merge_id, "status": status}
+
+    def _read_shared(self, ref: str) -> str | None:
+        """The text behind a shared/<name> ref, or None when the file is gone."""
+        name = ref.split("/", 1)[1] if ref.startswith("shared/") else ref
+        path = self.shared_dir / name
+        if not path.is_file():
+            return None
+        return path.read_text(encoding="utf-8", errors="replace")
+
+    @staticmethod
+    def _shape_json(conn) -> dict[str, Any] | None:
+        """The whole shape from control_state (civ.toml as JSON), or None; the existence check comes
+        first because a missing table would abort the surrounding transaction."""
+        exists = fetch_one(conn, "select to_regclass('control_state') is not null as present")
+        if not exists or not exists["present"]:
+            return None
+        row = fetch_one(conn, "select value from control_state where key = 'shape'")
+        return row["value"] if row is not None and isinstance(row["value"], dict) else None
 
     @staticmethod
     def _shape_value(conn, section: str, key: str, default: Any) -> Any:

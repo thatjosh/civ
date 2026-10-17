@@ -1,0 +1,13 @@
+diff --git a/harness/board_mcp/stub.py b/harness/board_mcp/stub.py
+index 887007c..67e1003 100644
+--- a/harness/board_mcp/stub.py
++++ b/harness/board_mcp/stub.py
+@@ -26,7 +26,7 @@ def build_stub(posts: list[dict[str, Any]], task: dict[str, Any] | None, listing
+     thread_id, body and created_at. task: the task the agent still held, or None. listing: the
+     files under the agent's work/ and notes/ directories.
+     """
+-    ordered = sorted(posts, key=lambda p: int(p["id"]))
++    ordered = sorted(posts, key=lambda p: int(p["id"]), reverse=True)
+     lines: list[str] = []
+ 
+     lines.append(f"## {HEADINGS[0]}")

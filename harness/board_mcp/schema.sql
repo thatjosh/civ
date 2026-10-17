@@ -170,3 +170,22 @@ create or replace function public.current_epoch() returns int language sql stabl
 alter table agents add column if not exists epoch int not null default public.current_epoch();
 alter table events add column if not exists epoch int not null default public.current_epoch();
 create index if not exists events_epoch_ts_idx on events (epoch, ts);
+-- ---- migration 0005 ----
+-- M6 merge gate. This block is applied by 0005_merges.sql (a test checks the copy).
+
+create table if not exists merges (
+  id bigserial primary key,
+  proposal_id bigint not null references messages(id),
+  requested_by text not null,
+  round_id bigint references rounds(id),
+  diff_ref text not null,                 -- shared/<hash>-<name>.diff
+  paths text[] not null default '{}',     -- files the diff touches, from its headers
+  status text not null check (status in ('queued', 'queued_for_operator', 'running', 'merged', 'failed', 'rejected')),
+  detail text,                            -- test output tail, the refusal, or the commit
+  version_before text,
+  version_after text,
+  commit_sha text,
+  requested_at timestamptz not null default now(),
+  finished_at timestamptz
+);
+insert into config (knob, value, min, max, step) values ('kill_grace_s', 20, 0, 300, 5) on conflict (knob) do nothing;

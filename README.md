@@ -144,10 +144,42 @@ The first drill failed twice, which is what a drill is for: the restore had stub
 
 Shape is written to `control_state` at start as well as on reshape; `ttl_default_s` is applied by `civ_tune`; the restore does not reset concurrency separately from the shape; per-agent lifetime budgets and per-generation caps are not built (the spend ceiling is the budget); the CLI's restore stub lists seqs rather than the M3 builder's excerpts, because the CLI imports no harness code; `max_live_agents` counts supervisors.
 
+## Phase 5: M6, self-modification (17 October 2026)
+
+### The merge gate
+
+The harness is the agents' own code, and M6 gives them the one slow, gated path to change it. A proposal already carries a diff the server copied into `shared/` by hash. `civ_merge(proposal_id)`, supervisor only, validates and queues it: the message must be a proposal with a `.diff` ref, the diff may only touch files under `harness/`, a round may queue at most two, and a proposal already merged or in flight is refused. The orchestrator's merger does the rest, in a git worktree rather than the live tree: apply the diff, run the harness tests there, and only on green commit, bump `harness/VERSION`, and fast-forward the repository. A red run is recorded with the tail of the test output for the next round's supervisor to read. On a version bump the orchestrator restarts the board server it owns and every new spawn carries the new version in its identity block; agents already running keep theirs until succession, so a bad change can only reach agents spawned after it.
+
+### What agents cannot reach
+
+A diff that touches the spawn path, the governor, the merger itself, the ceilings loader, the auth tokens, or the verifier call path is not merged by an agent. The server records it as queued for the operator, posts an alert so `civ inbox` carries it, and the operator approves or rejects it with `civ merge --approve` or `civ merge --reject`. The list of protected paths lives in `control/civ.toml` under `[merge]`, beside the per-round cap and the test command, so the operator owns the boundary as they own the ceilings.
+
+### Three follow-ups carried by the first merges
+
+The merge path's first cargo is the three fixes the M4 and M5 live checks asked for. A wall-clock floor on the kill grace: the runner kills only when the agent has had both `kill_grace_turns` turns and `kill_grace_s` seconds since the request, because three sub-second tool calls are not a chance to hand off. A growth-aware handoff trigger: when the last turn's context growth would carry the agent past `kill_pct`, the handoff fires early rather than waiting for `handoff_pct`, which is the case the replayed supervisors diagnosed twice. And supervisors able to write a diff: they get `Write` and `Bash` for a `proposals/` directory of their own, so a prompt fault found in a round can leave as a proposal instead of a paragraph in a report.
+
+### Validation
+
+Two halves, no model in the first.
+
+1. **Merge drill.** Three prepared diffs under `docs/eval/proposals/`: a one-line wording change to the handoff request (should merge), a change to the stub builder that breaks a harness test (must not), and a comment in the spawner (protected, must wait for the operator). The drill seeds them as a solver's proposals, calls `civ_merge` on each as a registered supervisor, runs the merger once, approves the protected one as the operator, runs the merger again, and prints the merges table, the version and the git log before reverting its own commits.
+
+   ```sh
+   scripts/merge_drill.sh
+   ```
+
+2. **A supervisor merges on its own.** One Opus supervisor round over a brief that lists the wording proposal as pending, to see it open the ref, judge it, and call `civ_merge` itself. The record is its report and the merges row.
+
+<!-- integrator: m6 results -->
+
+### Deviations from the design doc
+
+The server queues and the orchestrator merges, where the design has the tool do it synchronously. The merge gate refuses when the working tree under `harness/` is dirty. The board server is hot-reloaded only when the orchestrator owns it (`--serve-board`); the orchestrator's own code is not reloaded until restart. Protected paths live in `control/civ.toml` rather than being hard-coded. There is one OS user, so "under the service user" is the same user.
+
 ## Next steps
 
 1. The race fix. A solver that claims a task checks the board before claiming but not before deriving, so when a sibling task posts the fact a second later the work is done twice (seen in both demo runs). `task_claim` should report which dependency tasks are currently leased, and the solver prompt should re-check the board before deriving. Pair it with a search-before-posting rule for the end-of-loop finding, which produced duplicate posts at the end of run 2.
-2. M6 and M7: self-modification through `civ.merge`, and the chaos controls, soak test, watchdog and backups.
+2. M7: the chaos controls, soak test, watchdog and backups.
 3. A task pack large enough that no solver can finish inside one context window, which is the case the design exists for.
 4. Supervisor follow-ups from the first live rounds: a wall-clock floor on the kill grace alongside the turn count; a growth-aware handoff trigger that asks early when the last turn's context growth exceeds the remaining gap to `kill_pct`; a way for a supervisor to carry a proposal without a diff file, or a writable directory of its own for M6.
 5. The closed-loop A/B for supervisors, once that pack exists: the same `kill_grace_turns=0` fault, runs of at least six rounds, `handoff_success_rate` per round compared between the arm without supervisors and the arm with them, three seeds each. The claim to test is that the arm with supervisors recovers within two rounds of the first kill and the other arm never does.

@@ -24,6 +24,7 @@ import argparse
 import asyncio
 import logging
 import os
+import sys
 from datetime import datetime, timezone
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field, replace
@@ -31,7 +32,9 @@ from pathlib import Path
 from typing import Any
 
 from harness.orchestrator.governor import Governor
+from harness.orchestrator.merger import Merger, merge_settings
 from harness.orchestrator.population import Population
+from harness.orchestrator.reload import BoardServer, VersionWatcher
 from harness.orchestrator.prompts import PromptAssembler
 from harness.orchestrator.shape import Shape, ShapeReader, load_shape
 from harness.orchestrator.spawner import SpawnResult, Spawner
@@ -65,6 +68,10 @@ class RunConfig:
     # The operator's controls (M5).
     control_dir: Path | None = None
     resume: bool = False
+    # Self-modification (M6): own the board server so a version bump can restart it, and run
+    # the merge gate alongside the population. The merger needs a git checkout at the root.
+    serve_board: bool = False
+    merger: bool = True
     # Fields the command line (or its environment) set explicitly. Anything else that civ.toml
     # also describes is taken from the file, so a flag always wins over the shape.
     overrides: set[str] = field(default_factory=set)
@@ -129,6 +136,10 @@ class RunConfig:
                        help="where ceilings.toml and civ.toml live; default <root>/control")
         p.add_argument("--resume", action="store_true",
                        help="continue the lineages a civ restore left mid-flight before starting new ones")
+        p.add_argument("--serve-board", action="store_true",
+                       help="start and own the board server, so a harness version bump restarts it")
+        p.add_argument("--no-merger", dest="merger", action="store_false",
+                       help="do not run the merge gate alongside the population")
         a = p.parse_args(argv)
         given = {"solvers": a.solvers, "supervisors": a.supervisors, "supervisor_interval_s": a.supervisor_interval,
                  "max_generations": a.max_generations, "model": a.model}
@@ -145,6 +156,7 @@ class RunConfig:
             supervisor_model=a.supervisor_model, supervisor_max_turns=a.supervisor_max_turns,
             presets=[parse_preset(text) for text in a.preset],
             control_dir=a.control_dir, resume=a.resume, overrides=overrides,
+            serve_board=a.serve_board, merger=a.merger,
         )
 
 
@@ -297,29 +309,90 @@ def apply_presets(cfg: RunConfig, operator: Any) -> None:
         log.info("preset %s = %s", knob, value)
 
 
-async def run_with_supervisors(population: Awaitable[list[Any]], cron: SupervisorCron | None) -> tuple[list[Any], list[RoundResult]]:
-    """Run the solver population and the supervisor cron together.
+Loop = Callable[[asyncio.Event], Awaitable[Any]]
 
-    The cron is told when the population is done through an event. A population
-    that raises still sets it and still waits for the cron, because the final
-    round is the one that reads the window in which things went wrong, and an
-    unawaited cron would leave supervisor CLI processes behind.
+
+async def run_everything(population: Awaitable[list[Any]], *loops: Loop | None) -> tuple[list[Any], list[Any]]:
+    """Run the solver population with any number of background loops (the supervisor cron, the
+    merger, the version watcher), each an `async run_until(done)`.
+
+    Every loop is told when the population is done through one event. A population that raises
+    still sets it and still waits for the loops, because the final supervisor round is the one
+    that reads the window in which things went wrong, and an unawaited loop would leave CLI
+    processes or a worktree behind. Returns the population's results and each loop's result in
+    the order the loops were given (None for a loop that was None).
     """
     done = asyncio.Event()
-    cron_task = asyncio.create_task(cron.run_until(done)) if cron is not None else None
+    tasks = [asyncio.create_task(loop(done)) if loop is not None else None for loop in loops]
+
+    async def settle() -> list[Any]:
+        out: list[Any] = []
+        for task in tasks:
+            if task is None:
+                out.append(None)
+                continue
+            try:
+                out.append(await task)
+            except Exception as exc:  # noqa: BLE001 - the population's result is the one to report
+                log.warning("background loop failed: %s", exc)
+                out.append(None)
+        return out
+
     try:
         results = await population
     except BaseException:
         done.set()
-        if cron_task is not None:
-            try:
-                await cron_task
-            except Exception as exc:  # noqa: BLE001 - the population's failure is the one to report
-                log.warning("supervisor cron failed after the population did: %s", exc)
+        await settle()
         raise
     done.set()
-    rounds = await cron_task if cron_task is not None else []
-    return results, rounds
+    return results, await settle()
+
+
+async def run_with_supervisors(population: Awaitable[list[Any]], cron: SupervisorCron | None) -> tuple[list[Any], list[RoundResult]]:
+    """The M4 shape of run_everything: the population and the cron, nothing else."""
+    results, (rounds,) = await run_everything(population, cron.run_until if cron is not None else None)
+    return results, list(rounds or [])
+
+
+def build_board_server(cfg: RunConfig) -> BoardServer:
+    """The board server as a child of the orchestrator, for --serve-board."""
+    from urllib.parse import urlparse
+
+    parsed = urlparse(cfg.board_url)
+    env = {
+        "CIV_DATABASE_URL": cfg.db_url,
+        "CIV_BOARD_HOST": parsed.hostname or "127.0.0.1",
+        "CIV_BOARD_PORT": str(parsed.port or 8765),
+        "CIV_ROOT": str(cfg.root),
+        "CIV_CONTROL_DIR": str(cfg.control_path()),
+    }
+    cmd = [sys.executable, "-m", "harness.board_mcp.server"]
+    return BoardServer(cmd, env, f"{cfg.board_url.rstrip('/')}/health", log_path=cfg.root / "shared" / "board-server.log")
+
+
+def build_merger(cfg: RunConfig, operator: Any) -> Merger | None:
+    """The merge gate, when the root is a git checkout and the flag did not turn it off."""
+    if not cfg.merger or not (cfg.root / ".git").exists():
+        return None
+    settings = merge_settings(operator.control_get("shape"))
+    return Merger(operator, cfg.root, settings["test_command"], settings["protected_paths"])
+
+
+def build_version_watcher(cfg: RunConfig, operator: Any, board: BoardServer | None) -> Callable[[asyncio.Event], Awaitable[int]]:
+    """A loop that logs every harness version bump and restarts the board server when we own it."""
+    watcher = VersionWatcher(cfg.root / "harness" / "VERSION")
+
+    async def on_bump(old: str, new: str) -> None:
+        operator.log_event(None, "harness.version", {"from": old, "to": new, "board_restarted": board is not None})
+        log.info("harness version %s -> %s", old, new)
+        if board is not None:
+            # Off the loop thread: start() blocks on the health probe.
+            await asyncio.to_thread(board.restart)
+
+    async def run_until(done: asyncio.Event) -> int:
+        return await watcher.run_until(done, on_bump)
+
+    return run_until
 
 
 async def amain(cfg: RunConfig) -> tuple[list[RunResult], list[RoundResult]]:
@@ -331,17 +404,36 @@ async def amain(cfg: RunConfig) -> tuple[list[RunResult], list[RoundResult]]:
     record_shape(operator, shape)
     apply_presets(cfg, operator)
     reader = ShapeReader(operator, shape)
-    spawner, _ = build_spawner(cfg, operator, knobs, governor)
-    runner = build_runner(cfg, spawner, operator)
-    resume_rows = list(operator.lineages_to_resume() or []) if cfg.resume else []
-    population = Population(runner, reader, cfg.stagger_s, resume_rows=resume_rows)
-    runner.set_slot_open(population.slot_open)
-    cron = build_supervisor_cron(cfg, operator, knobs, governor, reader) if cfg.supervisors > 0 else None
-    log.info("spawning %d solver lineages against %s with %s (window %d, max generations %d), %d supervisors every %.0fs%s",
-             cfg.solvers, cfg.board_url, cfg.model, cfg.context_window, cfg.max_generations,
-             cfg.supervisors, cfg.supervisor_interval_s,
-             f", resuming {len(resume_rows)} lineage(s)" if resume_rows else "")
-    results, rounds = await run_with_supervisors(population.run(), cron)
+    board = build_board_server(cfg) if cfg.serve_board else None
+    if board is not None:
+        # Before any spawn, because a session whose MCP server is not up fails its init.
+        await asyncio.to_thread(board.start)
+    try:
+        spawner, _ = build_spawner(cfg, operator, knobs, governor)
+        runner = build_runner(cfg, spawner, operator)
+        resume_rows = list(operator.lineages_to_resume() or []) if cfg.resume else []
+        population = Population(runner, reader, cfg.stagger_s, resume_rows=resume_rows)
+        runner.set_slot_open(population.slot_open)
+        cron = build_supervisor_cron(cfg, operator, knobs, governor, reader) if cfg.supervisors > 0 else None
+        merger = build_merger(cfg, operator)
+        watcher = build_version_watcher(cfg, operator, board)
+        log.info("spawning %d solver lineages against %s with %s (window %d, max generations %d), %d supervisors every %.0fs%s%s",
+                 cfg.solvers, cfg.board_url, cfg.model, cfg.context_window, cfg.max_generations,
+                 cfg.supervisors, cfg.supervisor_interval_s,
+                 f", resuming {len(resume_rows)} lineage(s)" if resume_rows else "",
+                 ", merge gate on" if merger is not None else "")
+        results, (rounds, merges, _bumps) = await run_everything(
+            population.run(),
+            cron.run_until if cron is not None else None,
+            merger.run_until if merger is not None else None,
+            watcher,
+        )
+        rounds = list(rounds or [])
+        for outcome in merges or []:
+            print(f"merge #{outcome.merge_id}: {outcome.status} {outcome.detail.splitlines()[0] if outcome.detail else ''}")
+    finally:
+        if board is not None:
+            await asyncio.to_thread(board.stop)
     summary = None
     try:
         summary = operator.tasks_summary()

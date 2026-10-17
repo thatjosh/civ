@@ -225,3 +225,59 @@ class FakeOperatorStub:
 
     def log_event(self, *a, **k):
         pass
+
+
+def test_serve_board_and_no_merger_flags(monkeypatch):
+    from harness.orchestrator.main import RunConfig
+
+    for name in ("CIV_SOLVERS", "CIV_SUPERVISORS", "CIV_MODEL"):
+        monkeypatch.delenv(name, raising=False)
+    cfg = RunConfig.from_args([])
+    assert cfg.serve_board is False and cfg.merger is True
+    cfg = RunConfig.from_args(["--serve-board", "--no-merger"])
+    assert cfg.serve_board is True and cfg.merger is False
+
+
+async def test_run_everything_signals_every_loop_and_keeps_their_order():
+    import asyncio
+
+    from harness.orchestrator.main import run_everything
+
+    seen: list[str] = []
+
+    def loop(name):
+        async def run_until(done: asyncio.Event):
+            await done.wait()
+            seen.append(name)
+            return name
+        return run_until
+
+    async def population():
+        await asyncio.sleep(0)
+        return ["pop"]
+
+    results, loops = await run_everything(population(), loop("cron"), None, loop("merger"))
+    assert results == ["pop"] and loops == ["cron", None, "merger"]
+    assert sorted(seen) == ["cron", "merger"]
+
+
+def test_build_merger_needs_a_git_checkout_and_the_flag(tmp_path):
+    from harness.orchestrator.main import RunConfig, build_merger
+    from harness.orchestrator.merger import Merger
+    from harness.tests.orchestrator_fakes import FakeOperator
+
+    op = FakeOperator()
+    assert build_merger(RunConfig(root=tmp_path), op) is None
+    (tmp_path / ".git").mkdir()
+    assert isinstance(build_merger(RunConfig(root=tmp_path), op), Merger)
+    assert build_merger(RunConfig(root=tmp_path, merger=False), op) is None
+
+
+def test_build_board_server_takes_host_port_and_control_dir_from_the_config(tmp_path):
+    from harness.orchestrator.main import RunConfig, build_board_server
+
+    cfg = RunConfig(root=tmp_path, board_url="http://127.0.0.1:8799", db_url="postgresql://x/y", control_dir=tmp_path / "ctl")
+    server = build_board_server(cfg)
+    assert server.env["CIV_BOARD_PORT"] == "8799" and server.env["CIV_DATABASE_URL"] == "postgresql://x/y"
+    assert server.env["CIV_CONTROL_DIR"] == str((tmp_path / "ctl").resolve())
+    assert server.cmd[-2:] == ["-m", "harness.board_mcp.server"]

@@ -24,3 +24,15 @@ vote_quota = 1            # knob
 min_sample = 3            # knob; the design says 10 for a 95-solver run, 3 fits an eight-task pack
 big_move_steps = 2        # knob
 ttl_default_s = 3600
+
+[merge]
+# The merge gate (M6). A proposal that touches a protected path waits for `civ merge --approve`;
+# anything outside harness/ is refused outright. The orchestrator's merger runs test_command in an
+# isolated worktree and merges only on green.
+max_per_round = 2
+protected_paths = [
+  "harness/orchestrator/spawner.py", "harness/orchestrator/governor.py", "harness/orchestrator/merger.py",
+  "harness/board_mcp/ceilings.py", "harness/board_mcp/auth.py", "harness/board_mcp/tools/task.py",
+  "harness/board_mcp/merge_rules.py", "control/", "task/", "scripts/",
+]
+test_command = "python -m pytest harness/tests -q -x -p no:cacheprovider"
