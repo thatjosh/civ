@@ -60,6 +60,10 @@ def clean_tables(db: Db):
         conn.execute(f"truncate {', '.join(DATA_TABLES)} restart identity cascade")
         conn.execute("truncate config")
         seed_config(conn)
+        # control_state is truncated and re-seeded rather than listed in DATA_TABLES, because its
+        # three seed rows (epoch, paused, inbox_last_seq) are what a fresh database starts with.
+        conn.execute("truncate control_state")
+        conn.execute("insert into control_state (key, value) values ('epoch', '1'), ('paused', 'false'), ('inbox_last_seq', '0')")
     yield
 
 

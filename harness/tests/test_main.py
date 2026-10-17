@@ -153,15 +153,75 @@ async def test_amain_wires_the_builders_together(monkeypatch, tmp_path):
     from harness.orchestrator.spawner import Spawner
     from harness.tests.orchestrator_fakes import FakeClient, FakeOperator, assistant, client_factory, init_message, result
 
+    from harness.tests.control_fixtures import write_control_dir
+
     op = FakeOperator()
-    cfg = m.RunConfig(solvers=1, stagger_s=0, root=m.DEFAULT_ROOT, supervisors=0)
+    control = write_control_dir(tmp_path)
+    # --solvers 1 is an override; civ.toml says 3 and must lose to it.
+    cfg = m.RunConfig(solvers=1, stagger_s=0, root=m.DEFAULT_ROOT, supervisors=0, control_dir=control,
+                      overrides={"solvers", "supervisors"})
     clients = [FakeClient([init_message(), assistant(100), result(num_turns=1, text="done")])]
     spawner = Spawner(op, cfg.board_url, tmp_path, PromptAssembler(m.DEFAULT_ROOT / "harness" / "prompts"),
                       client_factory=client_factory(clients), knobs=StaticKnobs())
     monkeypatch.setattr(m, "build_operator", lambda cfg: (op, StaticKnobs()))
-    monkeypatch.setattr(m, "build_spawner", lambda cfg, operator=None, knobs=None: (spawner, op))
+    monkeypatch.setattr(m, "build_spawner", lambda cfg, operator=None, knobs=None, governor=None: (spawner, op))
 
     results, rounds = await m.amain(cfg)
 
     assert len(results) == 1 and results[0].ended_by == "natural" and rounds == []
     assert [a["id"] for a in op.registered] == ["sol-001"]
+    # The run's shape went to control_state with the override folded in, and the knobs were seeded.
+    assert op.control["shape"]["population"]["solvers"] == 1 and "written_at" in op.control["shape"]
+    assert ("handoff_pct", 80.0, "civ.toml") in op.presets and ("min_sample", 3.0, "civ.toml") in op.presets
+
+
+def test_shaped_fields_follow_flag_then_file_then_default(tmp_path, monkeypatch):
+    from harness.orchestrator.shape import load_shape
+    from harness.tests.control_fixtures import write_control_dir
+
+    for name in ("CIV_SOLVERS", "CIV_MODEL", "CIV_SUPERVISORS", "CIV_SUPERVISOR_INTERVAL_S", "CIV_MAX_GENERATIONS"):
+        monkeypatch.delenv(name, raising=False)
+    control = write_control_dir(tmp_path)
+    shape = load_shape(control / "civ.toml")
+
+    # Nothing on the command line: the file fills every shaped field and ceilings.toml the model.
+    cfg = RunConfig.from_args(["--control-dir", str(control)])
+    assert cfg.overrides == set() and cfg.control_path() == control.resolve()
+    resolved = cfg.resolved(shape, "claude-haiku-5-5")
+    assert (resolved.solvers, resolved.supervisors, resolved.supervisor_interval_s, resolved.max_generations) == (3, 1, 600.0, 5)
+    assert resolved.model == "claude-haiku-5-5"
+
+    # Flags win over the file, field by field.
+    cfg = RunConfig.from_args(["--solvers", "5", "--model", "claude-opus-5-5", "--control-dir", str(control)])
+    assert cfg.overrides == {"solvers", "model"}
+    resolved = cfg.resolved(shape, "claude-haiku-5-5")
+    assert resolved.solvers == 5 and resolved.model == "claude-opus-5-5" and resolved.supervisors == 1
+    effective = resolved.effective_shape(shape)
+    assert effective.solvers == 5 and effective.supervisors == 1 and effective.knob_seeds()["kill_pct"] == 90.0
+
+    # The environment counts as the command line.
+    monkeypatch.setenv("CIV_SUPERVISORS", "2")
+    cfg = RunConfig.from_args([])
+    assert "supervisors" in cfg.overrides and cfg.resolved(shape, None).supervisors == 2
+
+
+def test_resume_flag_and_missing_shape_fall_back(tmp_path, caplog):
+    from harness.orchestrator import main as m
+
+    cfg = RunConfig.from_args(["--resume", "--control-dir", str(tmp_path / "nowhere")])
+    assert cfg.resume is True
+    # No civ.toml: the orchestrator's own defaults, with a warning, so a bare checkout still runs.
+    with caplog.at_level("WARNING"):
+        shape = m.load_shape_for(cfg)
+    assert shape.solvers == 3 and "no civ.toml" in caplog.text
+    # No ceilings.toml is an error at start, not a default.
+    with pytest.raises(FileNotFoundError):
+        m.build_governor(cfg, FakeOperatorStub())
+
+
+class FakeOperatorStub:
+    def control_get(self, key):
+        return None
+
+    def log_event(self, *a, **k):
+        pass

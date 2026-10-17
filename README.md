@@ -104,10 +104,41 @@ What this costs: an Opus supervisor round over this brief is 6 to 10 turns and $
 
 One tune per round is enforced across all supervisors, as designed. The first round runs after the first interval, not before the population is full. `min_sample` seeds at 3 for the eight-task pack; M5's `civ.toml` seeds it at 10 for production. There is no task splitting; a supervisor reopens a blocked task with guidance instead. `ceiling_pinned` cannot be verified until M5 has ceilings. Supervisors do not write stubs: the orchestrator's instant stub from M3 stays, and supervisors diagnose it instead. The round interval is a flag, not a knob, until M5's `civ.toml`.
 
+## Phase 4: M5, the operator's controls (17 October 2026)
+
+### The box and the hands
+
+Everything built through M4 runs inside a box; M5 is the box and the operator's hands on it. Two operator-owned files sit outside the harness: `control/ceilings.toml` caps what the system may ever do (live agents, tokens per minute, spend per day, handoff size, the default model), and `control/civ.toml` gives it its launch-time shape (population counts, round cadence, lifecycle thresholds, voting decay, governance constants; the keys that are also knobs are seeded into the config table at launch). The orchestrator's governor reads the ceilings before every spawn and waits while the system is paused, at the agent ceiling or over the token ceiling, and halts the run at the spend ceiling; the board server reads the ceilings when validating a tune, so a knob can never be set above one even by two supervisors acting together. An epoch counter in `control_state` is stamped on every agent and event by a database default, so a restore or a reshape draws a visible line. The `civ` command line (`control/cli/civ.py`, runnable as `python -m control.cli.civ`) imports nothing from the harness, because it is the one channel that must keep working when the harness is broken: `say`, `vote` (pinned, must-acknowledge, with `--report` naming who never acknowledged), `inbox`, `status`, `pause`, `resume`, `reshape` and `restore`.
+
+### Restore is a succession for the whole population
+
+A VM loss, from the database's side, is agents still marked live and leases still held. `civ restore --yes` bumps the epoch, writes a stub handoff for every lineage whose head agent was mid-flight and marks it dead, returns every leased task to the queue without charging an attempt, resets the shape-seeded knobs and clears every tune, and posts a broadcast naming the restore time and the minutes of activity lost. The orchestrator restarted with `--resume` then spawns generation N+1 for each of those lineages from its stub, exactly as it does after a kill, and fills any empty slots up to the shape's population. Nothing new had to be invented for this: it is the M3 kill path applied to everyone at once.
+
+### Live checks
+
+1. `civ status` and `civ inbox` against the board after an M4 run.
+2. A Haiku demo with `civ pause` issued ten seconds in: no new spawns while paused (`governor.wait` events), successions resume after `civ resume`.
+3. `civ say` and `civ vote` during a run: the broadcast arrives in every live session's next tool result, the vote is acknowledged, `civ vote --report <id>` lists who missed it.
+4. The restore drill: `KILL_AFTER_S=25 scripts/restore_drill.sh`. Expected: two epochs in the events, every mid-flight lineage resumed at generation N+1 from a stub, eight of eight done.
+
+```sh
+python -m control.cli.civ status
+python -m control.cli.civ say "Check the 1853 fire year against the parish log before building on it."
+python -m control.cli.civ vote 17 +1 --reason "the convention the verifier uses"
+python -m control.cli.civ inbox
+KILL_AFTER_S=25 scripts/restore_drill.sh
+```
+
+<!-- integrator: m5 results -->
+
+### Deviations from the design doc
+
+Shape is written to `control_state` at start as well as on reshape; `ttl_default_s` is applied by `civ_tune`; the restore does not reset concurrency separately from the shape; per-agent lifetime budgets and per-generation caps are not built (the spend ceiling is the budget); the CLI's restore stub lists seqs rather than the M3 builder's excerpts, because the CLI imports no harness code; `max_live_agents` counts supervisors.
+
 ## Next steps
 
 1. The race fix. A solver that claims a task checks the board before claiming but not before deriving, so when a sibling task posts the fact a second later the work is done twice (seen in both demo runs). `task_claim` should report which dependency tasks are currently leased, and the solver prompt should re-check the board before deriving. Pair it with a search-before-posting rule for the end-of-loop finding, which produced duplicate posts at the end of run 2.
-2. M5 to M7: the operator controls and command line, self-modification through `civ.merge`, and the chaos controls, soak test, watchdog, and restore drill.
+2. M6 and M7: self-modification through `civ.merge`, and the chaos controls, soak test, watchdog and backups.
 3. A task pack large enough that no solver can finish inside one context window, which is the case the design exists for.
 4. Supervisor follow-ups from the first live rounds: a wall-clock floor on the kill grace alongside the turn count; a growth-aware handoff trigger that asks early when the last turn's context growth exceeds the remaining gap to `kill_pct`; a way for a supervisor to carry a proposal without a diff file, or a writable directory of its own for M6.
 5. The closed-loop A/B for supervisors, once that pack exists: the same `kill_grace_turns=0` fault, runs of at least six rounds, `handoff_success_rate` per round compared between the arm without supervisors and the arm with them, three seeds each. The claim to test is that the arm with supervisors recovers within two rounds of the first kill and the other arm never does.

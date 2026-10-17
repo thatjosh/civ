@@ -23,6 +23,7 @@ from starlette.responses import JSONResponse
 
 from . import notices
 from .auth import AgentIdentity, resolve_token
+from .ceilings import Ceilings
 from .tools.common import log_event
 from .db import Db, head_seq
 from .limits import Knobs
@@ -96,7 +97,8 @@ def build_server(db: Db, shared_dir: Path, verifier=None) -> MCPServer:
     knobs = Knobs(db)
     board = BoardTools(db, shared_dir, knobs)
     tasks = TaskTools(db, shared_dir, knobs, verifier)
-    civ = CivTools(db, knobs, shared_dir)
+    # The ceilings path follows CIV_CONTROL_DIR, then <CIV_ROOT>/control; the loader warns and skips when absent.
+    civ = CivTools(db, knobs, shared_dir, Ceilings())
     gw = Gateway(db)
     server = MCPServer(
         SERVER_NAME,
@@ -164,7 +166,7 @@ def build_server(db: Db, shared_dir: Path, verifier=None) -> MCPServer:
         return await gw.call(ctx, "civ_status", civ.status)
 
     @server.tool(description="Supervisor only: move a soft knob by at most one step, naming the SLO it serves.")
-    async def civ_tune(knob: str, value: float, slo: str, reason: str, ttl_s: int = 3600,
+    async def civ_tune(knob: str, value: float, slo: str, reason: str, ttl_s: int | None = None,
                        ctx: Context = None) -> dict[str, Any]:
         return await gw.call(ctx, "civ_tune", civ.tune, knob=knob, value=value, slo=slo, reason=reason, ttl_s=ttl_s)
 

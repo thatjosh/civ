@@ -219,9 +219,13 @@ class Spawner:
         context_window: int = 1_000_000,
         force_handoff_after_turns: int | None = None,
         drain_s: float = DRAIN_AFTER_INTERRUPT_S,
+        governor: Any | None = None,
     ) -> None:
         self._op = operator
         self._drain_s = drain_s
+        # The governor (M5) gates every spawn against the operator's ceilings and the pause
+        # flag; None means ungoverned, which the unit tests and the M2 demo rely on.
+        self._governor = governor
         self._board_url = board_url.rstrip("/")
         self._root = Path(root).resolve()
         self._prompts = prompts
@@ -348,6 +352,12 @@ class Spawner:
         role: str = "solver",
         brief: str | None = None,
     ) -> SpawnResult:
+        if self._governor is not None:
+            # Before prepare, so the agent about to register is not counted against the live
+            # ceiling. A successor takes over its predecessor's slot, so only a solver past
+            # generation one replaces one; a supervisor's round number is its generation, but it
+            # holds no slot and must wait like a new agent.
+            await self._governor.acquire(role, replaces_slot=(role == "solver" and generation > 1))
         prepared = self.prepare(agent_id, lineage_id, generation, handoff, handoff_is_stub, broadcasts, token, cwd,
                                 role=role, brief=brief)
         monitor = monitor or self.monitor_for(agent_id)

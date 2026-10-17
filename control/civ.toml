@@ -1,0 +1,26 @@
+# Launch-time shape of the civilisation. Read by the orchestrator at start, restore and reshape;
+# keys marked knob are seeded into the config table, where supervisors tune them from there.
+# Operator-owned: no agent writes this file, and `civ reshape` is how a change takes effect.
+[population]
+solvers = 3
+supervisors = 1
+
+[cadence]
+supervisor_round_s = 600
+
+[lifecycle]
+max_generations = 5
+handoff_pct = 80          # knob
+kill_pct = 90             # knob
+kill_grace_turns = 2      # knob
+
+[voting]
+decay_offset_h = 2        # knob
+decay_power = 1.5         # knob
+operator_pin_s = 300
+
+[governance]
+vote_quota = 1            # knob
+min_sample = 3            # knob; the design says 10 for a 95-solver run, 3 fits an eight-task pack
+big_move_steps = 2        # knob
+ttl_default_s = 3600

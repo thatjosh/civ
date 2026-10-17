@@ -33,6 +33,11 @@ class FakeOperator:
         self.reports: dict[int, list[dict[str, Any]]] = {}
         self.reopened: dict[int, list[str]] = {}
         self.presets: list[tuple[str, float, str]] = []
+        # The operator's controls (M5), mirroring control_state and the governor's reads.
+        self.control: dict[str, Any] = {"epoch": 1, "paused": False}
+        self.tpm: int = 0
+        self.spend: float = 0.0
+        self.resume_rows: list[dict[str, Any]] = []
 
     # --- M2 surface ---------------------------------------------------------
 
@@ -136,6 +141,39 @@ class FakeOperator:
 
     def reopened_in_round(self, round_id: int) -> list[str]:
         return list(self.reopened.get(round_id, []))
+
+    # --- M5 surface ---------------------------------------------------------
+
+    def control_get(self, key: str) -> Any | None:
+        return self.control.get(key)
+
+    def control_set(self, key: str, value: Any) -> None:
+        self.control[key] = value
+        self.events.append((None, "control.set", {"key": key}))
+
+    def epoch(self) -> int:
+        return int(self.control.get("epoch", 1))
+
+    def live_agents(self) -> dict[str, int]:
+        """Registered agents whose latest status is not ended or dead, by role, the way the
+        agents table would count them."""
+        latest: dict[str, str] = {}
+        for agent_id, status in self.status:
+            latest[agent_id] = status
+        counts = {"solver": 0, "supervisor": 0}
+        for a in self.registered:
+            if latest.get(a["id"], "live") not in ("ended", "dead"):
+                counts[a["role"]] = counts.get(a["role"], 0) + 1
+        return counts
+
+    def tokens_per_minute(self) -> int:
+        return int(self.tpm)
+
+    def spend_usd(self, hours: float) -> float:
+        return float(self.spend)
+
+    def lineages_to_resume(self) -> list[dict[str, Any]]:
+        return [dict(r) for r in self.resume_rows]
 
     def _lineage_of(self, agent_id: str) -> str:
         for a in self.registered:

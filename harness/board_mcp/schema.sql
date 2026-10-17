@@ -150,3 +150,23 @@ create table if not exists tune_proposals (
   committed_by text,
   committed_at timestamptz
 );
+
+-- ---- migration 0004 ----
+-- M5 operator state. This block is applied by 0004_control_state.sql (a test checks the copy).
+
+create table if not exists control_state (
+  key text primary key,            -- epoch | paused | shape | inbox_last_seq | last_restore
+  value jsonb not null,
+  updated_at timestamptz not null default now()
+);
+insert into control_state (key, value) values ('epoch', '1'), ('paused', 'false'), ('inbox_last_seq', '0')
+on conflict (key) do nothing;
+
+-- The epoch is read by a function so every writer stamps it without knowing about it. The table is
+-- schema-qualified because pg_dump restores run with an empty search_path, and the default on
+-- events fires during their COPY.
+create or replace function public.current_epoch() returns int language sql stable as
+  $$ select coalesce((select (value #>> '{}')::int from public.control_state where key = 'epoch'), 1) $$;
+alter table agents add column if not exists epoch int not null default public.current_epoch();
+alter table events add column if not exists epoch int not null default public.current_epoch();
+create index if not exists events_epoch_ts_idx on events (epoch, ts);

@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from ..auth import OPERATOR_ID, AgentIdentity
+from ..ceilings import Ceilings
 from ..db import Db, fetch_one
 from ..limits import Knobs, posts_in_last_hour
 from ..seed import CONFIG_SEEDS
@@ -32,11 +33,18 @@ DEGRADED_WINDOWS = 3
 DISPUTE_AGE_ROUNDS = 2
 
 
+# Knobs with a hard ceiling in control/ceilings.toml: the tune check compares each against its ceiling.
+CEILINGED_KNOBS = {"max_handoff_tokens": "max_handoff_tokens"}
+DEFAULT_TTL_S = 3600
+
+
 class CivTools:
-    def __init__(self, db: Db, knobs: Knobs, shared_dir: Path):
+    def __init__(self, db: Db, knobs: Knobs, shared_dir: Path, ceilings: Ceilings | None = None):
         self.db = db
         self.knobs = knobs
         self.shared_dir = shared_dir
+        # Operator-owned ceilings (M5). Without a file every ceiling reads None and the check is skipped.
+        self.ceilings = ceilings or Ceilings()
 
     def handoff(self, identity: AgentIdentity, body: str) -> dict[str, Any]:
         missing = [h for h in HANDOFF_HEADINGS if not re.search(rf"^##\s+{re.escape(h)}\s*$", body or "", re.I | re.M)]
@@ -113,7 +121,7 @@ class CivTools:
             }
 
     def tune(self, identity: AgentIdentity, knob: str, value: float, slo: str, reason: str,
-             ttl_s: int = 3600) -> dict[str, Any]:
+             ttl_s: int | None = None) -> dict[str, Any]:
         if not identity.is_supervisor:
             return refuse("supervisor only")
         if slo not in SLOS:
@@ -137,6 +145,11 @@ class CivTools:
             value = float(value)
             if value < row["min"] or value > row["max"]:
                 return refuse(f"{knob} must stay within [{row['min']}, {row['max']}]")
+            ceiling = self.ceilings.get(CEILINGED_KNOBS[knob]) if knob in CEILINGED_KNOBS else None
+            if ceiling is not None and value > float(ceiling):
+                # The knob's own max is a seed the harness could change; the ceiling is the
+                # operator's and lives outside the agents' reach, so it is checked separately.
+                return refuse(f"above the ceiling in control/ceilings.toml ({ceiling:g})")
             if abs(value - float(row["value"])) > float(row["step"]) + 1e-9:
                 return refuse(f"{knob} moves at most one step ({row['step']}) per tune; it is {row['value']}")
             if row["set_by"] is not None and row["set_by"] != OPERATOR_ID:
@@ -169,6 +182,9 @@ class CivTools:
                     return {"ok": True, "pending": True, "knob": knob, "value": value, "needs": "a second supervisor"}
                 conn.execute("update tune_proposals set committed_by = %s, committed_at = now() where id = %s",
                              (identity.id, pending["id"]))
+            if ttl_s is None:
+                # The shape file sets the default TTL (M5); without one the M1 default stands.
+                ttl_s = self._shape_value(conn, "governance", "ttl_default_s", DEFAULT_TTL_S)
             updated = fetch_one(
                 conn,
                 """
@@ -184,6 +200,20 @@ class CivTools:
                        "big_move": big_move, "round_id": rnd["id"]})
             self.knobs.invalidate()
             return {"ok": True, "knob": knob, "value": value, "expires_at": updated["expires_at"].isoformat()}
+
+    @staticmethod
+    def _shape_value(conn, section: str, key: str, default: Any) -> Any:
+        """A value from the shape the operator wrote to control_state (civ.toml as JSON), or the
+        default when the table, the row or the key is absent. The existence check comes first
+        because a missing table would abort the surrounding transaction."""
+        exists = fetch_one(conn, "select to_regclass('control_state') is not null as present")
+        if not exists or not exists["present"]:
+            return default
+        row = fetch_one(conn, "select value from control_state where key = 'shape'")
+        if row is None or not isinstance(row["value"], dict):
+            return default
+        found = (row["value"].get(section) or {}).get(key) if isinstance(row["value"].get(section), dict) else None
+        return found if found is not None else default
 
     @staticmethod
     def _open_round(conn) -> dict[str, Any] | None:

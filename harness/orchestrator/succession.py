@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
@@ -26,6 +27,7 @@ from typing import Any
 
 from claude_agent_sdk import AssistantMessage, ResultMessage
 
+from harness.orchestrator.governor import SpendCeilingReached
 from harness.orchestrator.spawner import SessionControl, SpawnResult, Spawner
 
 log = logging.getLogger(__name__)
@@ -48,8 +50,12 @@ class LineageResult:
     sessions: list[SpawnResult] = field(default_factory=list)
     handoffs: int = 0
     stubs: int = 0
+    # natural | max_generations | error | halted (the governor's spend ceiling) | reshaped (slot closed)
     ended_by: str = "natural"
     error: str | None = None
+    halted: str | None = None
+    # Set when the lineage was continued after a restore rather than started from generation one.
+    resumed_from: str | None = None
 
     @property
     def generations(self) -> int:
@@ -107,6 +113,19 @@ class _SessionState:
     end_detail: dict[str, Any] = field(default_factory=dict)
 
 
+GENERATION_SUFFIX = re.compile(r"-g(\d+)$")
+
+
+def first_agent_id(agent_id: str) -> str:
+    """sol-002-g3 -> sol-002: successors are named after the lineage's first agent."""
+    return GENERATION_SUFFIX.sub("", agent_id)
+
+
+def generation_of(agent_id: str) -> int:
+    m = GENERATION_SUFFIX.search(agent_id)
+    return int(m.group(1)) if m else 1
+
+
 class LineageRunner:
     """Drives one lineage: session, handoff or kill, successor, repeat."""
 
@@ -120,6 +139,7 @@ class LineageRunner:
         handoff_wait_s: float = DEFAULT_HANDOFF_WAIT_S,
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
         clock: Callable[[], float] = time.monotonic,
+        slot_open: Callable[[str], bool] | None = None,
     ) -> None:
         self._spawner = spawner
         self._op = operator
@@ -129,23 +149,57 @@ class LineageRunner:
         self._wait_s = handoff_wait_s
         self._sleep = sleep
         self._clock = clock
+        # Asked before every succession with the lineage id; False means a reshape has closed
+        # this slot and the lineage ends here instead of spawning a successor.
+        self._slot_open = slot_open
+
+    def set_slot_open(self, slot_open: Callable[[str], bool] | None) -> None:
+        self._slot_open = slot_open
 
     async def run(self, lineage_id: str, agent_id: str) -> LineageResult:
         """Run the lineage `lineage_id` starting from the agent `agent_id` (for example L-001 and sol-001).
 
         Successors are named after the agent, not the lineage: sol-001-g2, sol-001-g3.
         """
-        first_agent_id = agent_id
-        outcome = LineageResult(lineage_id=lineage_id, agent_id=first_agent_id)
-        generation = 1
-        cwd = self._spawner.agent_dir(first_agent_id)
-        token: str | None = None
-        handoff: str | None = None
-        handoff_is_stub = False
+        outcome = LineageResult(lineage_id=lineage_id, agent_id=agent_id)
+        return await self._drive(outcome, lineage_id, first_agent_id=agent_id, agent_id=agent_id, generation=1,
+                                 cwd=self._spawner.agent_dir(agent_id), token=None, handoff=None, handoff_is_stub=False)
 
+    async def resume(self, lineage_id: str, from_agent: str, handoff_row: dict[str, Any]) -> LineageResult:
+        """Continue a lineage from a handoff nobody has picked up (the restore path).
+
+        A restore is a succession for the whole population at once, so this does exactly what
+        the loop does after a kill: register generation N+1 through succeed, which carries the
+        lease and the directory, and start it with the handoff (usually a stub) in its prompt.
+        """
+        first = first_agent_id(from_agent)
+        generation = int(handoff_row.get("generation") or generation_of(from_agent)) + 1
+        next_id = f"{first}-g{generation}"
+        cwd = self._spawner.agent_dir(first)
+        token = self._op.succeed(from_agent, next_id, str(cwd))
+        stub = bool(handoff_row.get("stub", False))
+        outcome = LineageResult(lineage_id=lineage_id, agent_id=first, resumed_from=from_agent)
+        self._op.log_event(next_id, "lineage.resumed",
+                           {"lineage_id": lineage_id, "from": from_agent, "generation": generation, "stub": stub})
+        return await self._drive(outcome, lineage_id, first_agent_id=first, agent_id=next_id, generation=generation,
+                                 cwd=cwd, token=token, handoff=handoff_row["body"], handoff_is_stub=stub)
+
+    async def _drive(self, outcome: LineageResult, lineage_id: str, *, first_agent_id: str, agent_id: str,
+                     generation: int, cwd: Path, token: str | None, handoff: str | None, handoff_is_stub: bool) -> LineageResult:
         while True:
             state = _SessionState(agent_id=agent_id, generation=generation, cwd=cwd)
-            session = await self._run_one(state, lineage_id, token, handoff, handoff_is_stub)
+            try:
+                session = await self._run_one(state, lineage_id, token, handoff, handoff_is_stub)
+            except SpendCeilingReached as exc:
+                # The governor refused the spawn, so there is no session to record. A successor
+                # was already registered by succeed; it is ended so it does not count as live.
+                outcome.ended_by = "halted"
+                outcome.halted = str(exc)
+                if token is not None:
+                    self._op.set_agent_status(agent_id, "ended")
+                self._op.log_event(agent_id, "lineage.ended",
+                                   {"lineage_id": lineage_id, "by": "halted", "generation": generation, "reason": str(exc)})
+                return outcome
             outcome.sessions.append(session)
 
             if state.phase == PHASE_HANDING_OFF and self._latest_handoff_from(lineage_id, agent_id):
@@ -175,6 +229,12 @@ class LineageRunner:
             if generation >= self._max_generations:
                 outcome.ended_by = "max_generations"
                 self._op.log_event(agent_id, "lineage.ended", {"lineage_id": lineage_id, "by": "max_generations", "generation": generation})
+                return outcome
+            if self._slot_open is not None and not self._slot_open(lineage_id):
+                # A reshape has closed this slot. The handoff row stays unclaimed, so a later
+                # reshape back up (or a restore) can resume the lineage from it.
+                outcome.ended_by = "reshaped"
+                self._op.log_event(agent_id, "lineage.ended", {"lineage_id": lineage_id, "by": "reshaped", "generation": generation})
                 return outcome
 
             next_id = f"{first_agent_id}-g{generation + 1}"

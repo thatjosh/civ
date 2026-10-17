@@ -72,12 +72,21 @@ def supervisor_ids(slot: int, number: int) -> tuple[str, str, str]:
 class SupervisorRound:
     """Runs one round: open, brief, spawn the supervisors together, close."""
 
-    def __init__(self, spawner: Spawner, operator: Any, count: int = 1) -> None:
+    def __init__(self, spawner: Spawner, operator: Any, count: int = 1, shape_reader: Any | None = None) -> None:
         # The spawner carries the supervisors' model, turn budget and prompt
         # assembler, because those are session facts and it already owns them.
         self._spawner = spawner
         self._op = operator
         self._count = max(1, int(count))
+        # With a shape reader attached the count follows control/civ.toml (M5), so a
+        # `civ reshape` changes the next round's size without a restart.
+        self._shape = shape_reader
+
+    @property
+    def count(self) -> int:
+        if self._shape is not None:
+            return max(1, int(self._shape.current().supervisors))
+        return self._count
 
     async def run(self, number: int, final: bool = False) -> RoundResult:
         outcome = RoundResult(number=number, final=final)
@@ -85,11 +94,12 @@ class SupervisorRound:
             outcome.round_id = int(self._op.open_round(number, final))
             brief = dict(self._op.round_brief(outcome.round_id) or {})
             # The operator may not know how many sessions the orchestrator spawns per round.
-            brief.setdefault("round", {}).setdefault("supervisors", self._count)
+            count = self.count
+            brief.setdefault("round", {}).setdefault("supervisors", count)
             markdown = render_brief(brief)
             self._op.log_event(None, "round.brief_rendered",
                                {"round_id": outcome.round_id, "number": number, "chars": len(markdown)})
-            outcome.sessions = list(await asyncio.gather(*(self._spawn(slot, number, markdown) for slot in range(1, self._count + 1))))
+            outcome.sessions = list(await asyncio.gather(*(self._spawn(slot, number, markdown) for slot in range(1, count + 1))))
             self._collect(outcome)
         except Exception as exc:  # noqa: BLE001 - a broken round must not take the cron down with it
             log.exception("supervisor round %d failed", number)
@@ -135,10 +145,19 @@ SleepFn = Callable[[float], Awaitable[None]]
 class SupervisorCron:
     """Rounds on an interval until the population is done, then one final round."""
 
-    def __init__(self, round: SupervisorRound, interval_s: float, sleep: SleepFn = asyncio.sleep) -> None:
+    def __init__(self, round: SupervisorRound, interval_s: float, sleep: SleepFn = asyncio.sleep,
+                 shape_reader: Any | None = None) -> None:
         self._round = round
         self._interval_s = float(interval_s)
         self._sleep = sleep
+        self._shape = shape_reader
+
+    @property
+    def interval_s(self) -> float:
+        # Read at the start of every wait, so a reshaped cadence applies from the next round.
+        if self._shape is not None:
+            return float(self._shape.current().supervisor_round_s)
+        return self._interval_s
 
     async def run_until(self, population_done: asyncio.Event) -> list[RoundResult]:
         results: list[RoundResult] = []
@@ -158,7 +177,7 @@ class SupervisorCron:
         """Sleep one interval, or less if the population finishes first."""
         if event.is_set():
             return
-        timer = asyncio.create_task(self._sleep(self._interval_s))
+        timer = asyncio.create_task(self._sleep(self.interval_s))
         waiter = asyncio.create_task(event.wait())
         try:
             await asyncio.wait({timer, waiter}, return_when=asyncio.FIRST_COMPLETED)

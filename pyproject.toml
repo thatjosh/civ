@@ -14,10 +14,13 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=8", "pytest-asyncio>=0.24"]
 
+[project.scripts]
+civ = "control.cli.civ:main"
+
 [tool.pytest.ini_options]
 testpaths = ["harness/tests", "task"]
 asyncio_mode = "auto"
 addopts = "-q"
 
 [tool.setuptools]
-packages = ["harness", "harness.board_mcp", "harness.board_mcp.tools", "harness.orchestrator", "task", "task.verifier"]
+packages = ["harness", "harness.board_mcp", "harness.board_mcp.tools", "harness.orchestrator", "task", "task.verifier", "control", "control.cli"]

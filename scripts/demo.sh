@@ -24,6 +24,8 @@ done
 export CIV_DATABASE_URL="${CIV_DATABASE_URL:-postgresql://127.0.0.1:5432/civ}"
 export CIV_BOARD_URL="${CIV_BOARD_URL:-http://127.0.0.1:8765}"
 export CIV_ROOT="$ROOT"
+# The operator's files (M5): the orchestrator's governor and the board server's tune check both read them.
+export CIV_CONTROL_DIR="${CIV_CONTROL_DIR:-$ROOT/control}"
 
 scripts/bootstrap.sh
 # shellcheck disable=SC1091
@@ -47,7 +49,7 @@ echo "demo: board server up at $CIV_BOARD_URL (pid $SERVER_PID)"
 
 START=$(date +%s)
 # macOS bash 3.2 treats an empty array as unbound under set -u, hence the guarded expansion
-python -m harness.orchestrator.main --solvers "$SOLVERS" --max-turns "$MAX_TURNS" --board-url "$CIV_BOARD_URL" ${PASSTHROUGH[@]+"${PASSTHROUGH[@]}"} \
+python -m harness.orchestrator.main --solvers "$SOLVERS" --max-turns "$MAX_TURNS" --board-url "$CIV_BOARD_URL" --control-dir "$CIV_CONTROL_DIR" ${PASSTHROUGH[@]+"${PASSTHROUGH[@]}"} \
   | tee "$ROOT/shared/orchestrator.log"
 END=$(date +%s)
 

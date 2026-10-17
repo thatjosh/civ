@@ -12,8 +12,9 @@ import secrets
 from typing import Any
 
 from .auth import OPERATOR_ID
+from .ceilings import Ceilings
 from .db import Db, fetch_all, fetch_one
-from .limits import vote_weight_for
+from .limits import live_counts, vote_weight_for
 from .seed import CONFIG_SEEDS
 from .slo import SLO_NAMES, compute_slos, compute_succession, status_snapshot
 
@@ -24,8 +25,17 @@ BRIEF_LOWEST_SCORES = 3
 
 
 class Operator:
-    def __init__(self, db: Db):
+    def __init__(self, db: Db, ceilings: Ceilings | None = None):
         self.db = db
+        # Only spend_usd needs the ceilings (for the model to price live sessions at); built lazily
+        # so a bare Operator(db) keeps working everywhere else.
+        self._ceilings = ceilings
+
+    @property
+    def ceilings(self) -> Ceilings:
+        if self._ceilings is None:
+            self._ceilings = Ceilings()
+        return self._ceilings
 
     # Agents
 
@@ -450,6 +460,126 @@ class Operator:
         return {"done": int(totals["done"]), "total": int(totals["total"]),
                 "mean_score": float(totals["mean"]) if totals["mean"] is not None else None,
                 "lowest": [{"id": r["id"], "score": float(r["score"]), "notes": r["notes"]} for r in lowest]}
+
+    # Operator controls (M5): reads for the governor and the civ command line
+
+    def tokens_per_minute(self) -> int:
+        """Tokens all agents spent in the last minute, from the per-turn deltas the orchestrator logs."""
+        row = self.db.fetch_one(
+            """
+            select coalesce(sum((payload->>'tokens_in')::bigint + (payload->>'tokens_out')::bigint), 0) as n
+            from events where type = 'agent.turn' and ts > now() - interval '1 minute'
+            """
+        )
+        return int(row["n"])
+
+    def spend_usd(self, hours: float) -> float:
+        """Dollars spent in the last `hours`: ended sessions by the cost the SDK reported (or the
+        orchestrator estimated), plus an estimate for sessions still running. A live session's
+        tokens_in is the sum of its context sizes, which a long session reads almost entirely
+        from cache, so it is priced at the cache-read rate plus output, for the ceilings' model."""
+        ended = self.db.fetch_one(
+            """
+            select coalesce(sum((payload->>'cost_usd')::float), 0) as usd from events
+            where type = 'agent.ended' and payload->>'cost_usd' is not null
+              and ts > now() - make_interval(secs => %s)
+            """,
+            (float(hours) * 3600.0,),
+        )
+        total = float(ended["usd"])
+        live = self.db.fetch_all(
+            "select tokens_in, tokens_out from agents where status in ('live', 'handing_off') "
+            "and spawned_at > now() - make_interval(secs => %s)",
+            (float(hours) * 3600.0,),
+        )
+        if live:
+            # Imported here so the board package does not load the orchestrator at import time.
+            from ..orchestrator.monitor import estimate_cost_usd
+
+            model = self.ceilings.get("model")
+            for row in live:
+                estimate = estimate_cost_usd(model, 0, int(row["tokens_out"]), int(row["tokens_in"]), 0)
+                total += estimate or 0.0
+        return total
+
+    def live_agents(self) -> dict[str, int]:
+        with self.db.transaction() as conn:
+            return live_counts(conn)
+
+    def epoch(self) -> int:
+        """The current epoch from control_state; 1 before migration 0004 or when the row is gone."""
+        value = self.control_get("epoch")
+        return int(value) if value is not None else 1
+
+    def control_get(self, key: str) -> Any | None:
+        with self.db.transaction() as conn:
+            present = fetch_one(conn, "select to_regclass('control_state') is not null as present")
+            if not present or not present["present"]:
+                return None
+            row = fetch_one(conn, "select value from control_state where key = %s", (key,))
+        return row["value"] if row else None
+
+    def control_set(self, key: str, value: Any) -> None:
+        with self.db.transaction() as conn:
+            conn.execute(
+                """
+                insert into control_state (key, value, updated_at) values (%s, %s, now())
+                on conflict (key) do update set value = excluded.value, updated_at = now()
+                """,
+                (key, json.dumps(value, default=str)),
+            )
+
+    def lineages_to_resume(self) -> list[dict[str, Any]]:
+        """Every lineage whose latest handoff has no successor yet: what --resume spawns after a
+        restore. A lineage whose last session ended on its own has a successor on its last handoff
+        (or no handoff at all) and is left alone."""
+        rows = self.db.fetch_all(
+            """
+            select h.lineage_id, h.from_agent, h.generation, h.id, h.stub, h.body from handoffs h
+            join (select lineage_id, max(id) as id from handoffs group by lineage_id) latest on latest.id = h.id
+            where h.to_agent is null order by h.lineage_id
+            """
+        )
+        return [
+            {"lineage_id": r["lineage_id"], "from_agent": r["from_agent"], "generation": int(r["generation"]),
+             "handoff_id": int(r["id"]), "stub": bool(r["stub"]), "body": r["body"]}
+            for r in rows
+        ]
+
+    def agents_without_ack(self, message_id: int) -> list[str]:
+        """Agents that were live while the operator's vote on message_id was pinned and never
+        acknowledged it: the receipt the design promises the operator after the window."""
+        rows = self.db.fetch_all(
+            """
+            select a.id from agents a,
+                 (select v.created_at as pinned_at, p.pinned_until
+                    from votes v join operator_pins p on p.message_id = v.message_id
+                   where v.message_id = %s and v.voter_id = %s) w
+            where a.spawned_at < w.pinned_until
+              and (a.ended_at is null or a.ended_at > w.pinned_at)
+              and not exists (select 1 from operator_acks k where k.message_id = %s and k.agent_id = a.id)
+            order by a.id
+            """,
+            (int(message_id), OPERATOR_ID, int(message_id)),
+        )
+        return [r["id"] for r in rows]
+
+    def inbox(self, since_seq: int, limit: int = 50) -> list[dict[str, Any]]:
+        """Reports and alerts newer than since_seq, pings first, then newest first."""
+        rows = self.db.fetch_all(
+            """
+            select id, kind, author_id, body, created_at from messages
+            where kind in ('report', 'alert') and id > %s
+            order by (body like %s) desc, id desc limit %s
+            """,
+            (int(since_seq), PING_PREFIX + "%", int(limit)),
+        )
+        out = []
+        for r in rows:
+            shaped = self._shape_report(r)
+            out.append({"seq": shaped["id"], "kind": r["kind"], "author_id": r["author_id"], "body": r["body"],
+                        "trigger": shaped["trigger"], "ping": shaped["ping"], "created_at": shaped["created_at"]})
+        return out
 
     # Board writes
 
