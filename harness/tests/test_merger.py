@@ -137,6 +137,17 @@ def test_protected_and_outside_harness_paths_fail(repo):
     assert out.status == "failed" and out.detail.startswith("a proposal may only change files under harness/")
 
 
+def test_operator_approval_lets_a_protected_path_past_the_check(repo):
+    # The CLI's approval marker on the row is what the merger honours; the tmp repo has no
+    # spawner.py, so the merge then fails at apply time rather than at the protected check.
+    merger, op = make(repo)
+    (repo / "shared" / "spawner.diff").write_text(
+        "--- a/harness/orchestrator/spawner.py\n+++ b/harness/orchestrator/spawner.py\n@@ -1 +1 @@\n-x\n+y\n")
+    approved = {**row(op, "shared/spawner.diff"), "detail": "protected paths: harness/orchestrator/spawner.py [approved by operator]"}
+    out = merger.merge_one(approved)
+    assert out.status == "failed" and out.detail.startswith("diff does not apply")
+
+
 def test_repository_that_moved_during_the_tests_is_not_merged(repo):
     # A run function that lets the main repository move while the tests are "running".
     real_run = subprocess.run

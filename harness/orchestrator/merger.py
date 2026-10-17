@@ -95,6 +95,16 @@ def paths_in_diff(text: str) -> list[str]:
     return seen
 
 
+def operator_approved(row: dict) -> bool:
+    """Whether the operator approved this merge; the marker is defined once in merge_rules and
+    repeated by the self-contained CLI (a test pins the two)."""
+    try:
+        from harness.board_mcp.merge_rules import operator_approved as shared
+        return shared(row)
+    except ImportError:
+        return "[approved by operator]" in str(row.get("detail") or "")
+
+
 def protected(paths: list[str], protected_paths: list[str] | tuple[str, ...]) -> list[str]:
     try:
         from harness.board_mcp.merge_rules import protected as shared
@@ -224,7 +234,9 @@ class Merger:
         if bad:
             return MergeOutcome(merge_id, STATUS_FAILED, "a proposal may only change files under harness/: " + ", ".join(bad))
         hits = protected(paths, self._protected)
-        if hits:
+        if hits and not operator_approved(row):
+            # An operator's approval (civ merge --approve) is the one thing that lets a protected
+            # path through; the first drill approved one and this check then refused it anyway.
             return MergeOutcome(merge_id, STATUS_FAILED, "protected path: " + ", ".join(hits))
         dirty = self._git("status", "--porcelain", "--", "harness/").stdout.strip()
         if dirty:

@@ -62,3 +62,15 @@ def test_load_merge_section_defaults_and_overrides():
     assert load_merge_section({"population": {"solvers": 3}}) == defaults
     custom = load_merge_section({"merge": {"max_per_round": 1, "protected_paths": ["harness/x.py"], "test_command": "true"}})
     assert custom == {"max_per_round": 1, "protected_paths": ["harness/x.py"], "test_command": "true"}
+
+
+def test_cli_approval_marker_matches_merge_rules():
+    # The CLI is self-contained and repeats the literal; the merger reads it through merge_rules.
+    from pathlib import Path
+
+    from harness.board_mcp.merge_rules import APPROVED_MARKER, operator_approved
+
+    cli = (Path(__file__).resolve().parents[2] / "control" / "cli" / "civ.py").read_text()
+    assert APPROVED_MARKER in cli
+    assert operator_approved({"detail": f"protected paths: x {APPROVED_MARKER}"})
+    assert not operator_approved({"detail": "protected paths: x"}) and not operator_approved({})

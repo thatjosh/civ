@@ -78,11 +78,14 @@ for diff in "$PROPOSALS"/01-handoff-request-wording.diff "$PROPOSALS"/02-breaks-
   PROPOSAL_IDS+=("$(echo "$line" | sed -n 's/^proposal #\([0-9]*\).*/\1/p')")
 done
 
-echo
-echo "civ_merge on each, as $SUPERVISOR:"
 # The supervisor is registered once and the tool class is called directly: no model, no HTTP.
-# shellcheck disable=SC2086
-python - "$SUPERVISOR" ${PROPOSAL_IDS[@]+"${PROPOSAL_IDS[@]}"} <<'PY'
+# Called twice: the first two proposals before the merger runs, the protected one after, because
+# the round cap of two counts queued rows and the failed second merge only stops counting once
+# the merger has run (the first drill hit the cap and never reached the protected case).
+queue_merges() {
+  local sup="$1"; shift
+  # shellcheck disable=SC2086
+  python - "$sup" "$@" <<'PY'
 import json, sys
 from pathlib import Path
 from harness.board_mcp.auth import load_identity, resolve_token
@@ -110,12 +113,21 @@ try:
 finally:
     db.close()
 PY
+}
+
+echo
+echo "civ_merge on the first two proposals, as $SUPERVISOR:"
+queue_merges "$SUPERVISOR" "${PROPOSAL_IDS[0]}" "${PROPOSAL_IDS[1]}"
 
 echo
 echo "merger, first pass:"
 python -m harness.orchestrator.merger --once
 echo
 merges_table
+
+echo
+echo "civ_merge on the protected proposal, as $SUPERVISOR (the failed merge no longer counts against the cap):"
+queue_merges "$SUPERVISOR" "${PROPOSAL_IDS[2]}"
 
 echo
 echo "civ merge --list:"

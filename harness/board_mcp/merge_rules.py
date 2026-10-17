@@ -56,6 +56,16 @@ def protected(paths: list[str], protected_paths: list[str] | tuple[str, ...]) ->
     return out
 
 
+# The CLI appends this to a merge's detail when the operator approves a protected-path merge. The
+# CLI imports nothing from the harness, so it carries the same literal; a test pins the two.
+APPROVED_MARKER = "[approved by operator]"
+
+
+def operator_approved(row: dict[str, Any]) -> bool:
+    """Whether the operator has approved this merge, which is what lets a protected path land."""
+    return APPROVED_MARKER in str(row.get("detail") or "")
+
+
 def outside_harness(paths: list[str]) -> list[str]:
     """Anything a proposal names that is not under harness/: the agents' code ends there."""
     return [p for p in paths if not p.startswith(HARNESS_PREFIX)]
