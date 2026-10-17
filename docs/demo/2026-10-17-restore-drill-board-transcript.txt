@@ -1,0 +1,488 @@
+=== thread 1: T-001 Census headcount [done, score 1.00]
+  #1 19:12:48 operator task
+      T-001: Census headcount
+      
+      From task/materials/census_1851.txt, count the households and the persons present, and
+      list every distinct surname in alphabetical order. Other tasks depend on the surname list,
+      so post it as a finding in this thread as soon as you have it, before you write the result
+      file.
+      
+      Result file: census.txt (write it under work/ in your directory and pass its path to
+      task_complete).
+      Format: Three lines: 'households: <integer>', 'persons: <integer>', 'surnames: <comma-
+      separated list of the distinct surnames, alphabetical>'.
+  #9 19:12:56 sol-001 finding (had read to #8) score +1.03
+      census_1851.txt: 12 households, 37 persons (per-household counts 4+2+5+3+1+3+4+1+6+3+1+4,
+      each checked against the names listed; enumerator's note says no empty house, Netherby
+      excluded). Distinct surnames (12), alphabetical: Ashby, Bramwell, Carrow, Dunmore,
+      Fenwick, Grice, Hale, Lumley, Pargeter, Reeve, Tolley, Wick.
+      vote +1 by sol-002: Household count of 12 matches the parish log entry 1851-03-30 ("Twelve households counted", seq 2 materials); surname list is usable as a basis for T-004.
+      vote +1 by sol-003: Cross-checked against the ledger: 7 of my 9 payees (Ashby, Carrow, Fenwick, Grice, Hale, Pargeter, Tolley) appear in this surname list, and the two that don't (Marlow, Vane) are the Netherby payers, consistent with the enumerator excluding Netherby.
+      vote +1 by sol-001-g4: Verified against census_1851.txt: 12 households, per-household counts sum to 37, and the 12 surnames match.
+  #11 19:12:59 sol-001 finding (had read to #8)
+      [T-001 completed] Counted 12 households and 37 persons in census_1851.txt, with each
+      household's stated total checked against the names listed. Posted the 12 distinct surnames
+      in alphabetical order as finding seq 9.
+      refs: shared/f83c34ed4264148a-census.txt
+
+=== thread 2: T-002 The mill fire [done, score 1.00]
+  #2 19:12:48 operator task
+      T-002: The mill fire
+      
+      In what year did Hollowmere mill burn, and who was the miller at the time? The parish log
+      and the 1853 letter both record it. Other tasks depend on the year, so post it as a
+      finding in this thread as soon as you have it.
+      
+      Result file: mill_fire.txt (write it under work/ in your directory and pass its path to
+      task_complete).
+      Format: Two lines: 'year: <four-digit year>', 'miller: <first name and surname>'.
+  #10 19:12:58 sol-002 finding (had read to #8) score +0.35
+      Hollowmere mill burned in 1853 (night of 4 Oct 1853). Miller at the time: Josiah Reeve.
+      Sources: parish_log_1850_1055.txt line "1853-10-04 The mill burned in the night... Josiah
+      Reeve, miller, saved the ledgers"; letter_1853_ashby.txt (12 Oct 1853) says the mill took
+      fire "on the night of the fourth" and names Josiah Reeve as miller.
+      vote +1 by sol-003-g3: Parish log line 1853-10-04 in parish_log_1850_1855.txt confirms the mill burned that night with Josiah Reeve as miller.
+  #12 19:13:01 sol-002 finding (had read to #8) score +0.35
+      [T-002 completed] The Hollowmere mill burned in 1853, and the miller at the time was
+      Josiah Reeve. Both the parish log entry for 1853-10-04 and Ruth Ashby's letter of 12
+      October 1853 agree on this.
+      refs: shared/c37dda2ed71b3af6-mill_fire.txt
+      vote +1 by sol-003-g3: Fire year 1853 and miller Josiah Reeve match the parish log entries of 1853-10-04 and 1854-02-17 in parish_log_1850_1855.txt.
+
+=== thread 3: T-003 Ledger total [done, score 1.00]
+  #3 19:12:48 operator task
+      T-003: Ledger total
+      
+      Total the receipts in task/materials/ledger_1852.txt in shillings and count the distinct
+      payees. Post the list of payee surnames as a finding in this thread, because another task
+      needs it.
+      
+      Result file: ledger.txt (write it under work/ in your directory and pass its path to
+      task_complete).
+      Format: Two lines: 'total_shillings: <integer>', 'payees: <integer count of distinct
+      payees>'.
+  #13 19:13:01 sol-003 finding (had read to #9) score +2.07
+      ledger_1852.txt: 14 receipts totalling 125 shillings (all entries, including the three
+      "(of Netherby)" lines: Vane 15, Marlow 18, Vane 9). Excluding Netherby payers would give
+      83. Distinct payees (9), alphabetical: Ashby, Carrow, Fenwick, Grice, Hale, Marlow,
+      Pargeter, Tolley, Vane. Verified by summing the amount column twice.
+      vote +1 by sol-001: Checked against ledger_1852.txt: 14 receipts sum to 125 shillings, Netherby lines are 15+18+9, and 9 distinct payees match the list.
+      vote +3 by sup-001-r1: Full ledger total (125), the Netherby-excluded alternative (83) and the payee list are all stated with the basis for each, so solvers can build on it.
+      vote +1 by sol-003-g3: Re-summed the 14 receipts in ledger_1852.txt: 125 shillings, and 9 distinct payees, matching the list given.
+      vote +1 by sol-001-g4: Verified against ledger_1852.txt: 14 receipts sum to 125, 83 excluding Netherby, and 9 distinct payees match.
+  #14 19:13:04 sol-003 finding (had read to #9) score -1.04
+      [T-003 completed] Summed all 14 receipts in ledger_1852.txt to 125 shillings and counted 9
+      distinct payees, including the three out-of-parish (Netherby) entries. Posted the
+      alphabetical payee surname list in thread 3 and noted the 83-shilling alternative if
+      Netherby payers are excluded.
+      refs: shared/a5a76ca51bdb6ed3-ledger.txt
+      vote -3 by sup-001-r1: Repeats the figures and payee list of seq 13 in the same thread without new evidence; counts as a duplicate finding.
+
+=== thread 4: T-004 Customers from the parish [done, score 1.00]
+  #4 19:12:48 operator task
+      T-004: Customers from the parish
+      
+      Which payees in the 1852 ledger were also households in the 1851 census, and which were
+      outsiders? This depends on facts two other tasks establish: the census surnames (T-001)
+      and the ledger payees (T-003). Check the board first with board_top on findings and
+      board_search for 'surnames' or 'payees' before redoing that work. If a fact is not on the
+      board, post a question in your thread saying which one, then derive it yourself from the
+      materials and post it as a finding so the next solver does not have to.
+      
+      Result file: customers.txt (write it under work/ in your directory and pass its path to
+      task_complete).
+      Format: Two lines: 'in_parish: <comma-separated surnames, alphabetical>', 'outsiders:
+      <comma-separated surnames, alphabetical>'.
+  #27 19:13:48 sol-001-g3 finding (had read to #21)
+      T-004 result: 7 of the 9 ledger payees (seq 13 list, checked against census_1851.txt and
+      ledger_1852.txt) are census households: Ashby, Carrow, Fenwick, Grice, Hale, Pargeter,
+      Tolley. Outsiders: Marlow and Vane, both marked (of Netherby) and absent from the census,
+      which excludes Netherby per its enumerator's note. Relies on seq 9 (census surnames) and
+      seq 13 (payees).
+      refs: seq:9, seq:13
+  #28 19:13:49 sol-001-g3 finding (had read to #21)
+      [T-004 completed] Seven of nine 1852 ledger payees are 1851 census households (Ashby,
+      Carrow, Fenwick, Grice, Hale, Pargeter, Tolley); Marlow and Vane are outsiders from
+      Netherby. Sourced from seq 9 and seq 13, checked against the materials.
+      refs: shared/f4dfd39ba9e30db1-customers.txt
+
+=== thread 5: T-005 The rebuilding [done, score 1.00]
+  #5 19:12:48 operator task
+      T-005: The rebuilding
+      
+      When did the mill reopen, who was miller then, and how many years passed between the fire
+      and the reopening? The fire year is established by T-002: check the board first with
+      board_search for 'fire' or board_top on findings, and only derive it yourself if nobody
+      has posted it, in which case post a question in your thread first and a finding
+      afterwards. The reopening is in the parish log and the 1855 letter.
+      
+      Result file: rebuild.txt (write it under work/ in your directory and pass its path to
+      task_complete).
+      Format: Three lines: 'reopened: <four-digit year>', 'miller: <first name and surname at
+      reopening>', 'years_between: <integer years from the fire to the reopening>'.
+  #16 19:13:23 sol-003-g2 finding (had read to #15) score +0.69
+      Mill reopened 1855-09-29 (Michaelmas) under Samuel Reeve, miller. Source:
+      parish_log_1850_1855.txt line "1855-09-29 Michaelmas. The mill reopened. Samuel Reeve,
+      miller." Corroborated by letter_1855_dunmore.txt (30 Sep 1855: reopened "yesterday, at
+      Michaelmas, two years all but a week after it burned"). Fire year 1853 per seq 10/12, so
+      years_between = 2.
+      refs: seq:10, seq:12
+      vote +1 by sol-003-g3: Checked against parish_log_1850_1855.txt (1855-09-29 Samuel Reeve, miller) and letter_1855_dunmore.txt (30 Sep 1855, two years after the fire); correct.
+      vote +1 by sol-002-g3: Checked: parish_log has "1855-09-29 Michaelmas. The mill reopened. Samuel Reeve, miller." and the 30 Sep 1855 Dunmore letter says the same, so years_between 2 holds.
+  #23 19:13:42 sol-003-g3 finding (had read to #19)
+      [T-005 completed] The mill reopened on 29 Sep 1855 (Michaelmas) under miller Samuel Reeve,
+      per the parish log and the 30 Sep 1855 Dunmore letter. The fire was in 1853 (board seq
+      10/12), so 2 years passed between the fire and the reopening.
+      refs: shared/d6e29268b42ff1f8-rebuild.txt
+
+=== thread 6: T-006 Insurance shortfall [done, score 1.00]
+  #6 19:12:48 operator task
+      T-006: Insurance shortfall
+      
+      Total the inventory of what the fire destroyed (task/materials/inventory_1854.txt), find
+      what the insurer paid (parish log, 1855 letter), and compute the shortfall. Post the three
+      numbers as a finding in this thread; the chronicle task will want them.
+      
+      Result file: insurance.txt (write it under work/ in your directory and pass its path to
+      task_complete).
+      Format: Three lines: 'inventory_pounds: <integer>', 'paid_pounds: <integer>',
+      'shortfall_pounds: <integer>'.
+  #17 19:13:25 sol-001-g2 finding (had read to #15) score +0.35
+      T-006 numbers: inventory_1854.txt items 40+25+6+12+5+8 = 96 pounds (total not carried in
+      the document, summed by me). Insurer paid 80 pounds: parish_log_1850_1855.txt 1854-03-10
+      "The Wessex Mutual paid 80 pounds on the mill claim", confirmed by letter_1855_dunmore.txt
+      ("paid eighty pounds against an inventory of ninety-six"). Shortfall 96 - 80 = 16 pounds
+      (letter says the 16 was made up by parish subscription).
+      vote +1 by sol-002-g3: Checked against materials: the six inventory items sum to 96, parish log 1854-03-10 and the 1855 letter both give 80 paid, shortfall 16.
+  #22 19:13:42 sol-002-g3 finding (had read to #20)
+      T-006 verified (re seq 17). Inventory items 40+25+6+12+5+8 = 96 pounds
+      (inventory_1854.txt; valuers left no total). Paid 80 pounds: parish_log 1854-03-10, and
+      letter_1855_dunmore.txt ("eighty pounds against an inventory of ninety-six"). Shortfall 16
+      pounds, made up by parish subscription per the same letter. Note: the log names the Wessex
+      Mutual as payer; the letter says "the Society". Amounts agree.
+      refs: seq:17
+  #24 19:13:44 sol-002-g3 finding (had read to #20)
+      [T-006 completed] Inventory of destroyed contents totals 96 pounds, the insurer paid 80
+      pounds (parish log 1854-03-10 and 1855 letter agree), so the shortfall is 16 pounds.
+      Result file has the three required lines.
+      refs: shared/dd0792686e1ef5a5-insurance.txt
+
+=== thread 7: T-007 Mill chronicle [done, score 1.00]
+  #7 19:12:48 operator task
+      T-007: Mill chronicle
+      
+      Write a short chronicle of Hollowmere mill from 1851 to 1855: who ran it, when and how it
+      burned, what happened to the miller, what the insurer paid against the loss, and when and
+      under whom it reopened. This task is meant to be assembled from the board: read board_top
+      on findings and the threads of T-002, T-005 and T-006 before opening the materials, and
+      cite nothing you cannot find there or in the materials. Name people with first name and
+      surname and give years as four-digit numbers.
+      
+      Result file: chronicle.txt (write it under work/ in your directory and pass its path to
+      task_complete).
+      Format: Prose, 60 to 120 words, one paragraph, no headings.
+  #32 19:14:28 sol-002-g4 finding (had read to #31)
+      [T-007 draft verified] chronicle.txt is 115 words, one paragraph. Sources: fire 4 Oct 1853
+      and miller Josiah Reeve (seq 10, 12; parish log 1853-10-04, letter_1853_ashby ledgers
+      rescue). Burial 17 Feb 1854 (parish log, seq 16 context). Insurer paid 80 of 96, shortfall
+      16, made up by parish subscription (seq 17, seq 22; letter_1855_dunmore). Reopened 29 Sep
+      1855 under Samuel Reeve (seq 16, seq 23). Wording changed from "died" to "was buried"
+      because the sources give a burial date only.
+      refs: seq:10, seq:12, seq:16, seq:17, seq:22
+  #33 19:14:28 sol-002-g4 finding (had read to #31)
+      [T-007 completed] Chronicle of Hollowmere mill 1851-1855 in one 115-word paragraph,
+      covering the 1853 fire under miller Josiah Reeve, his 1854 burial, the 80-pound insurer
+      payment against a 96-pound loss, and the 1855 reopening under Samuel Reeve. Every claim is
+      checked against the parish log, the 1853 and 1855 letters, and the posted findings.
+      refs: shared/ac511f554948e14f-chronicle.txt
+
+=== thread 8: T-008 Open questions [done, score 1.00]
+  #8 19:12:48 operator task
+      T-008: Open questions
+      
+      Read the board for messages of kind question (board_read with kind='question', and
+      board_search). For each question you can answer from the materials, post the answer as a
+      finding in that question's thread, then list the question message ids you answered in the
+      result file. If there are no open questions on the board, write 'answered: none'. Do not
+      answer questions that another solver has already answered with a finding in the same
+      thread.
+      
+      Result file: questions.txt (write it under work/ in your directory and pass its path to
+      task_complete).
+      Format: One line: 'answered: <comma-separated message ids>' or 'answered: none'.
+  #29 19:13:55 sol-003-g3 finding (had read to #28)
+      [T-008 completed] board_read with kind='question' returned no messages at head_seq 28, so
+      there was nothing to answer. Result file records 'answered: none'.
+      refs: shared/321ba04f752ee395-questions.txt
+
+=== outside threads (alerts, broadcasts, reports)
+  #15 operator broadcast
+      Restored at 19:13:14 into epoch 3: 3 lineages queued for stubs, 3 leases released, about 0
+      minutes of activity after 19:13:13 are lost
+  #18 sol-003-g2 handoff
+      ## State of work
+      Held task: T-005 (The rebuilding, thread 5, task message seq 5). Lease still mine; I have
+      not called task_complete yet.
+      Done: result file written at /Users/joshuaang/Desktop/civ/agents/sol-003/work/rebuild.txt
+      with three lines: 'reopened: 1855', 'miller: Samuel Reeve', 'years_betwee [full text:
+      shared/msg-c0d9fa566fd1261b.md]
+  #19 sol-002-g2 handoff
+      ## State of work
+      Lease: I hold T-006 (Insurance shortfall, thread 6, lease expires 2026-10-17 19:43:27 per
+      claim response at head_seq 17). I did not start T-006. I had meant to claim T-004 but the
+      status showed no lease, so I called task_claim and it returned T-006. T-006 is yours to
+      finish or relea [full text: shared/msg-21fb044fe53b8b96.md]
+  #20 sol-001-g2 handoff
+      ## State of work
+      Solver sol-001-g2 (lineage L-001, gen 2). Handoff stub said I held T-006, but the restore
+      released all leases: task_complete(T-006) returned "you do not hold the lease on T-006",
+      and task_claim returned "hand off now". So I hold no lease. T-006 is still unfinished from
+      the board's p [full text: shared/msg-e39917e247a82570.md]
+  #21 sup-001-r2 report
+      ## Window
+      Round 2, window 2026-10-17T19:13:04 to 19:13:29 (about 25 seconds, so very thin). Not
+      marked as the final round. Two solvers live, zero supervisors other than me (sup-001-r2).
+      Tokens per minute in the last minute: about 2.07M.
+      
+      ## Succession
+      Three handoff requests, zero real handoffs, zero stubs, zero kills. Success rate is none
+      (n=0). Refusals were "hand off now: call civ_handoff with the five headings" (1) and "you
+      do not hold the lease on T-006" (1). Lineages L-001, L-002 and L-003 are at generation 2,
+      and S-001 (this supervisor) is at 1. No lineage is churning yet. Round 1 had no succession
+      data, so there is no previous rate to compare against and no prior tune to judge.
+      
+      ## Queue and SLOs
+      Open 4, leased 1, done 3, blocked 0. Verifier: 3 of 8 done, mean score 1.
+      - completions_per_mtok: 0 (n=0) against 5.33 (n=3) last window. The n=0 is below
+      min_sample, so this is not evidence of a drop.
+      - blocked_failed_rate: 0 (n=4) against 0 (n=3). Stable.
+      - duplicate_rate: 0 (n=2) against 0 (n=3). Stable, but n is thin.
+      - lease_wait_median_s: 19.4 (n=3) against 4.31 (n=3). This rose about 4.5 times. It meets
+      min_sample, but only just, and three samples can be one slow claim.
+      - handoff_success_rate: none (n=0).
+      
+      ## Actions taken
+      - No tune. No SLO has n at or above min_sample=3 with a clear signal that a named knob
+      addresses. handoff_success_rate has n=0. completions_per_mtok has n=0 this window. For
+      lease_wait, the rise is real in the numbers, but I have no evidence that leases are
+      expiring on dead agents, since blocked_failed_rate is 0 and no releases were recorded.
+      lease_length_s would be the knob, and lowering it on this evidence would be a guess. I
+      would not move it.
+      - No blocker replies, because there are no blockers. No reopens, no votes, no alerts
+      raised, no ping. The brief lists no alerts and no sent proposals to act on.
+      
+      ## Diagnosis
+      - The three handoff refusals are not yet classified as incidents, because no kills or
+      stubs occurred. The "hand off now" refusal is what the policy expects when a request lands
+      and the agent is still in its turn. The lease refusal on T-006 is a lease-ownership error,
+      not a succession fault. Neither needs a prompt change this round. If refusals recur next
+      window, check whether `harness/prompts/handoff_request.md` is clear about the five
+      headings.
+      - The lease wait rise (4.31 to 19.4 s) is the only SLO that moved noticeably. With n=3 it
+      may be noise from one slow claim. I will watch it next window. If it stays above 15 s with
+      n of at least 3 while blocked_failed_rate stays at 0, the candidate is lowering
+      lease_length_s, though that also needs evidence of expired leases.
+      - The window is about 25 seconds. Rates computed from it are not stable. Next round should
+      be judged on a longer window.
+      
+      ## For the operator
+      Nothing needs action. Solvers are working and nothing is blocked or failing. The lease
+      wait rise and the zero completions this window are small-sample readings and may just
+      reflect a short window. If the next window also shows zero completions with n of at least
+      3, that would be worth a look.
+      
+      Round done.
+  #25 sup-001-r2 alert
+      Correction to sup-001-r2 report (seq 21). It says zero stubs and zero kills, which is
+      wrong. Seq 15 (operator broadcast) records a restore at 19:13:14, inside this window: 3
+      lineages queued for stubs and 3 leases released. Seqs 18, 19 and 20 are handoff messages
+      from sol-003-g2, sol-002-g2 and sol-001-g2. Seq 20 says the restore released its lease on
+      T-006 and that task_complete returned "you do not hold the lease on T-006". Seq 19 says
+      the claim returned T-006 by mistake. The brief's succession section (no kills, no stubs, 0
+      of 3 handoffs) was not updated for the restore. Treat the succession numbers in my report
+      as stale. The restore, not a succession fault, is the likely cause of the lease confusion.
+      Needs recount of stubs and handoffs for this window before any succession tune.
+  #26 sup-001-r2 finding
+      sup-001-r2 correction to seq 21: the restore at 19:13:14 (seq 15) queued 3 lineages for
+      stubs and released 3 leases, so the succession numbers in seq 21 (zero stubs, zero kills)
+      are stale. Handoffs at seqs 18, 19 and 20 come from the restored solvers and show lease
+      confusion: T-006 was claimed by sol-002-g2 in error, and sol-001-g2 holds no lease on
+      T-006 after the release. No tune is made on this. Solvers holding a stub should re-claim
+      with task_claim before acting on a stub's lease list.
+  #30 sol-001-g3 handoff
+      ## State of work
+      Solver sol-001-g3 (lineage L-001, gen 3). Task T-004 (customers from the parish) is
+      COMPLETE: task_complete returned ok with "all fields correct" (result_ref
+      shared/f4dfd39ba9e30db1-customers.txt, head_seq 28). Result file: work/customers.txt
+      containing "in_parish: Ashby, Carrow, Fe [full text: shared/msg-e1784bfb90ec6b00.md]
+  #31 sol-002-g3 handoff
+      ## State of work
+      I hold T-007 (Mill chronicle, thread 7, lease expires about 19:43 on 2026-10-17). I did
+      not finish it. The file work/chronicle.txt is written at 114 words, one paragraph, no
+      headings, and it is not yet verified against the format or posted. Per seq 2 and seq 24 I
+      finished T-006 (ins [full text: shared/msg-4eb67187bf750410.md]
+  #34 sup-001-r3 report
+      ## Window
+      Round 3, window 2026-10-17T19:13:29 to 19:14:05 (about 36 seconds, very thin). Not the
+      final round. Two solvers live, one supervisor (sup-001-r3, this round). Tokens per minute
+      about 3.0M at check time (civ_status). Head seq 31.
+      
+      ## Succession
+      Brief: 3 requests, 4 real handoffs, 0 stubs, 0 kills; success rate 1 (n=4); median 2.5
+      turns and 5.53 s from request to handoff. No kills or stubs in this window, so no
+      succession incident to classify. The operator restore at 19:13:14 (seq 15) falls inside
+      round 2's window, not this one. Its stubs and released leases are in round 2's numbers,
+      which sup-001-r2 corrected at seqs 25 and 26. The handoffs at seqs 18 to 20 are from
+      restored solvers and show lease confusion, which is a restore effect, not a succession
+      fault. Treat the rate of 1 with caution: restored lineages handing off may not represent
+      organic succession. No previous tune on succession, so none to judge. Lineage generations:
+      L-001 at 4, L-002 at 3, L-003 at 3. L-001 at generation 4 in a 36-second window is not yet
+      a churn signal worth acting on, but worth watching next round.
+      
+      ## Queue and SLOs
+      Tasks: 0 open, 1 leased, 7 done, 0 blocked. Previous round's counts were 4 open, 1 leased,
+      3 done.
+      - completions_per_mtok: 2.17 (n=4), previous 0 (n=0). Not comparable, since the previous
+      window had no sample.
+      - blocked_failed_rate: 0 (n=4), previous 0 (n=4). Stable.
+      - duplicate_rate: 0 (n=3), previous 0 (n=2). Stable.
+      - lease_wait_median_s: 61.1 (n=2), previous 19.4 (n=3). Rising, but n=2 is below
+      min_sample=3, so this is not evidence and the tune would be refused. The restore released
+      leases, which may explain the wait.
+      - handoff_success_rate: 1 (n=4), previous none (n=0).
+      Numbers say the pack is working and completing, with no blocks and no duplicates. The
+      lease wait is the only signal to watch, and it is probably confounded by the restore.
+      
+      ## Actions taken
+      - Vote +1 on seq 26 (sup-001-r2's correction): checked against seq 15, and the stale
+      succession numbers in seq 21 are correctly flagged.
+      - No tune. lease_wait_median_s has n=2 (below min_sample 3), handoff_success_rate has no
+      prior window to compare with, and no kill or stub incident shows a succession knob needs
+      to move. I would have considered lowering lease_length_s only if expired leases appeared
+      with blocked_failed_rate rising, and neither has.
+      - No blocker replies (none exist), no reopens, no alerts, no ping (no trigger met;
+      succession_failing needs kills in two windows).
+      
+      ## Diagnosis
+      - No succession incident to classify this window.
+      - The round-2 "zero stubs, zero kills" report was wrong because it missed the restore (seq
+      15). The restore, not a succession fault, is the likely source of the lease confusion at
+      seqs 19 and 20: a restore released all leases, and sol-002-g2 then claimed T-006 in error.
+      - Blocked tasks: none.
+      
+      ## For the operator
+      No action needed. The operator restore at 19:13:14 released 3 leases and queued 3 lineages
+      for stubs. Solvers may still be recovering from it, and the round-3 lease wait is probably
+      affected. Next round should check that lease wait returns toward the 4 to 20 second range
+      once restored solvers have re-claimed. If it stays above 30 seconds with n of at least 3,
+      the candidate is lease_length_s, not a succession knob. No ping.
+      
+      Round done.
+  #35 sol-002-g4 handoff
+      ## State of work
+      I am sol-002, generation 4, lineage L-002. I completed T-007 (Mill chronicle, thread 7).
+      Result is work/chronicle.txt: 115 words, one paragraph, no headings. Task_complete
+      returned score 1.0 (10/10 keyword groups). Posted a verification finding in thread 7 as
+      seq 32, citing seq 10,  [full text: shared/msg-ce92fbc54518bc23.md]
+  #36 sup-001-r4 report
+      ## Window
+      Round 4, final round, window 2026-10-17T19:14:05 to 19:14:37 (about 33 seconds). The
+      solvers have finished. One supervisor live (sup-001-r4), zero solvers at check time.
+      Tokens per minute about 2.07M at check time. Head seq 35.
+      
+      ## Succession
+      Requests 2, real handoffs 2, stubs 1, kills 1. Success rate 0.667 (n=3), against 1 last
+      window (n=4). Median 3 turns and 7.65 s from request to handoff. Lineage generations:
+      L-001 at 4, L-002 at 4, L-003 at 3, S-001 at 3. The previous round had no kills, so the
+      rate fell on a single kill.
+      
+      The previous round's succession tune (none; the knobs were operator-set) did not apply.
+      Nothing to renew or judge.
+      
+      ## Queue and SLOs
+      Tasks: 8 done, 0 open, 0 leased, 0 blocked. Against the previous window:
+      - completions_per_mtok 1.44 (n=1), previous 2.17 (n=4). Too thin to read; the trend over
+      four rounds is 5.33, 0, 2.17, 1.44.
+      - blocked_failed_rate 0 (n=0), previous 0 (n=4).
+      - duplicate_rate 0 (n=0), previous 0 (n=3).
+      - lease_wait_median_s none (n=0), previous 61.1 (n=2). Nothing was waiting in this window.
+      - handoff_success_rate 0.667 (n=3), previous 1 (n=4).
+      
+      ## Actions taken
+      - civ_tune handoff_pct 80 to 75, slo handoff_success_rate, TTL 3600 s, accepted (head seq
+      35). Reason: the kill of sol-001-g4 was silent, and the success rate fell from 1 to 0.667
+      at n=3, which meets min_sample. This is one step down, and it is the only tune this round.
+      - No replies, reopens or votes. No blockers or alerts were on the board to answer.
+      - No refusals met.
+      
+      ## Diagnosis
+      - Kill sol-001-g4 (lineage L-001, generation 4): I confirm the heuristic classification of
+      silent. The handoff was requested with context at 80.7%, which is above handoff_pct 80.
+      The kill came 6.11 s after the request, with no turns elapsed since it and no tool call
+      after it. That is not never_asked (the request was made), not no_chance (the agent had
+      zero of its two grace turns but was not given time to act, which matches silent), and not
+      rejected or ignored (no refusals, no tool calls). The request most likely landed inside a
+      long tool call or a hung session. Lowering handoff_pct moves the request earlier, which is
+      the right direction for silent.
+      - Stub: the single stub is the successor of the killed lineage. It is the agent most
+      likely to redo work. No duplicate findings were recorded this window (duplicate_rate n=0),
+      so there is no evidence of redone work yet.
+      - Restore: the operator restore at 19:13:14 (seq 15, broadcast) sits in round 2's window.
+      It is not part of this window's numbers.
+      - Post-mortem for the next run: the handoff threshold of 80 and kill threshold of 90 leave
+      a 10-point gap. The one kill in this run landed in that gap with the request recorded. The
+      next run should start with handoff_pct at 75 or below, check whether successors of stubs
+      redo work, and treat the operator-set values (big_move_steps, decay_offset_h, decay_power,
+      kill_pct, min_sample, vote_quota) as inherited from civ.toml, not as tuned.
+      - Post-mortem for the knobs: completions_per_mtok fell from 5.33 in round 1 to 0 in round
+      2 (restore and stubs) and recovered only partly. Most of the run's throughput went to
+      succession churn, not to new findings. The next run should measure completions per window
+      with a larger n before tuning on it.
+      - Prompts: no prompt fault was shown in this window. The silent classification does not
+      point to the handoff request prompt.
+      
+      ## For the operator
+      No ping this round. The succession_failing trigger needs kills in this window and in the
+      previous one. The previous window had no kills, so the trigger is not met and the server
+      would refuse it.
+      
+      The handoff_pct tune expires at 2026-10-17T20:14:43 and reverts to 80. The run is over, so
+      the tune has no further effect unless a later run renews it. Decide whether the next run
+      should start at 75.
+      
+      round done
+
+=== tasks
+  T-001 Census headcount           done    score 1.00 by sol-001
+      all fields correct
+  T-002 The mill fire              done    score 1.00 by sol-002
+      all fields correct
+  T-003 Ledger total               done    score 1.00 by sol-003
+      all fields correct
+  T-004 Customers from the parish  done    score 1.00 by sol-001-g3
+      all fields correct
+  T-005 The rebuilding             done    score 1.00 by sol-003-g3
+      all fields correct
+  T-006 Insurance shortfall        done    score 1.00 by sol-002-g3
+      all fields correct
+  T-007 Mill chronicle             done    score 1.00 by sol-002-g4
+      10/10 keyword groups
+  T-008 Open questions             done    score 1.00 by sol-003-g3
+      no open questions remained (0 on the board)
+
+=== agents
+  sol-001 solver gen 1 dead        in 403,239 out 213 context 80.3%
+  sol-001-g2 solver gen 2 ended       in 411,190 out 115 context 82.8%
+  sol-001-g3 solver gen 3 ended       in 313,006 out 120 context 83.7%
+  sol-001-g4 solver gen 4 dead        in 208,937 out 54 context 80.7%
+  sol-002 solver gen 1 dead        in 411,834 out 158 context 79.0%
+  sol-002-g2 solver gen 2 ended       in 314,976 out 59 context 83.6%
+  sol-002-g3 solver gen 3 ended       in 643,208 out 236 context 89.2%
+  sol-002-g4 solver gen 4 ended       in 457,733 out 132 context 85.0%
+  sol-003 solver gen 1 dead        in 262,891 out 247 context 65.6%
+  sol-003-g2 solver gen 2 ended       in 342,608 out 72 context 83.6%
+  sol-003-g3 solver gen 3 ended       in 769,430 out 272 context 78.4%
+  sup-001-r1 supervisor gen 1 dead        in 69,994 out 19 context 54.0%
+  sup-001-r2 supervisor gen 2 ended       in 154,657 out 50 context 72.3%
+  sup-001-r3 supervisor gen 3 ended       in 152,922 out 36 context 78.5%
+  sup-001-r4 supervisor gen 4 ended       in 84,944 out 38 context 60.1%

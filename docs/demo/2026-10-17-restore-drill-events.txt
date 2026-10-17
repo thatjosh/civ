@@ -1,0 +1,595 @@
+1 | 19:12:48.547181 | operator | task.created | {"task_id": "T-001", "thread_id": 1}
+2 | 19:12:48.551105 | operator | task.created | {"task_id": "T-002", "thread_id": 2}
+3 | 19:12:48.553139 | operator | task.created | {"task_id": "T-003", "thread_id": 3}
+4 | 19:12:48.553857 | operator | task.created | {"task_id": "T-004", "thread_id": 4}
+5 | 19:12:48.554389 | operator | task.created | {"task_id": "T-005", "thread_id": 5}
+6 | 19:12:48.554837 | operator | task.created | {"task_id": "T-006", "thread_id": 6}
+7 | 19:12:48.555273 | operator | task.created | {"task_id": "T-007", "thread_id": 7}
+8 | 19:12:48.555691 | operator | task.created | {"task_id": "T-008", "thread_id": 8}
+9 | 19:12:49.087674 | operator | knob.preset | {"to": 80.0, "from": 80.0, "knob": "handoff_pct", "reason": "civ.toml"}
+10 | 19:12:49.089815 | operator | knob.preset | {"to": 90.0, "from": 90.0, "knob": "kill_pct", "reason": "civ.toml"}
+11 | 19:12:49.090922 | operator | knob.preset | {"to": 2.0, "from": 2.0, "knob": "kill_grace_turns", "reason": "civ.toml"}
+12 | 19:12:49.091406 | operator | knob.preset | {"to": 2.0, "from": 2.0, "knob": "decay_offset_h", "reason": "civ.toml"}
+13 | 19:12:49.091893 | operator | knob.preset | {"to": 1.5, "from": 1.5, "knob": "decay_power", "reason": "civ.toml"}
+14 | 19:12:49.092577 | operator | knob.preset | {"to": 1.0, "from": 1.0, "knob": "vote_quota", "reason": "civ.toml"}
+15 | 19:12:49.093018 | operator | knob.preset | {"to": 3.0, "from": 3.0, "knob": "min_sample", "reason": "civ.toml"}
+16 | 19:12:49.093468 | operator | knob.preset | {"to": 2.0, "from": 2.0, "knob": "big_move_steps", "reason": "civ.toml"}
+17 | 19:12:49.101551 | sol-001 | agent.spawned | {"role": "solver", "generation": 1, "lineage_id": "L-001"}
+18 | 19:12:49.102323 | sol-001 | agent.options | {"role": "solver", "model": "claude-haiku-5-5", "generation": 1, "lineage_id": "L-001"}
+19 | 19:12:49.557605 | sol-001 | agent.init | {"model": "claude-haiku-5-5", "mcp_servers": {"civ": "connected"}}
+20 | 19:12:50.456811 | sol-001 | agent.turn | {"turn": 1, "tokens_in": 9896, "tokens_out": 24, "context_pct": 32.987, "output_tokens": 24, "context_tokens": 9896}
+21 | 19:12:50.475772 | sol-001 | task.claimed | {"task_id": "T-001"}
+22 | 19:12:50.693777 | sol-001 | agent.compaction_state | {"problem": false, "handoff_pct": 80.0, "threshold_pct": null, "auto_compact_enabled": false}
+23 | 19:12:51.103327 | sol-002 | agent.spawned | {"role": "solver", "generation": 1, "lineage_id": "L-002"}
+24 | 19:12:51.104749 | sol-002 | agent.options | {"role": "solver", "model": "claude-haiku-5-5", "generation": 1, "lineage_id": "L-002"}
+25 | 19:12:51.587755 | sol-002 | agent.init | {"model": "claude-haiku-5-5", "mcp_servers": {"civ": "connected"}}
+26 | 19:12:51.705127 | sol-001 | agent.turn | {"turn": 2, "tokens_in": 13715, "tokens_out": 10, "context_pct": 45.717, "output_tokens": 10, "context_tokens": 13715}
+27 | 19:12:51.804868 | sol-001 | agent.turn | {"turn": 3, "tokens_in": 13715, "tokens_out": 10, "context_pct": 45.717, "output_tokens": 10, "context_tokens": 13715}
+28 | 19:12:51.807411 | sol-001 | tool.board_read | {"n": 1, "thread_id": 1}
+29 | 19:12:51.928492 | sol-001 | agent.turn | {"turn": 4, "tokens_in": 13715, "tokens_out": 10, "context_pct": 45.717, "output_tokens": 10, "context_tokens": 13715}
+30 | 19:12:51.9324 | sol-001 | tool.board_top | {"n": 0, "kind": "finding", "window_s": 86400.0}
+31 | 19:12:52.355298 | sol-001 | agent.turn | {"turn": 5, "tokens_in": 13715, "tokens_out": 10, "context_pct": 45.717, "output_tokens": 10, "context_tokens": 13715}
+32 | 19:12:52.379363 | sol-001 | agent.context_probe | {"cli_pct": 1, "arith_pct": 45.717, "probe_pct": 46.997, "total_tokens": 14099}
+33 | 19:12:52.837765 | sol-002 | agent.turn | {"turn": 1, "tokens_in": 9896, "tokens_out": 24, "context_pct": 32.987, "output_tokens": 24, "context_tokens": 9896}
+34 | 19:12:52.856701 | sol-002 | task.claimed | {"task_id": "T-002"}
+35 | 19:12:53.106116 | sol-003 | agent.spawned | {"role": "solver", "generation": 1, "lineage_id": "L-003"}
+36 | 19:12:53.108118 | sol-003 | agent.options | {"role": "solver", "model": "claude-haiku-5-5", "generation": 1, "lineage_id": "L-003"}
+37 | 19:12:53.110306 | sol-002 | agent.compaction_state | {"problem": false, "handoff_pct": 80.0, "threshold_pct": null, "auto_compact_enabled": false}
+38 | 19:12:54.112704 | sol-002 | agent.turn | {"turn": 2, "tokens_in": 13689, "tokens_out": 3, "context_pct": 45.63, "output_tokens": 3, "context_tokens": 13689}
+39 | 19:12:54.175394 | sol-003 | agent.init | {"model": "claude-haiku-5-5", "mcp_servers": {"civ": "connected", "claude.ai Gmail": "needs-auth", "claude.ai Claude Docs": "connected", "claude.ai Google Drive": "needs-auth", "claude.ai Google Calendar": "needs-auth"}}
+40 | 19:12:54.180302 | sol-002 | agent.turn | {"turn": 3, "tokens_in": 13689, "tokens_out": 3, "context_pct": 45.63, "output_tokens": 3, "context_tokens": 13689}
+41 | 19:12:54.182813 | sol-002 | tool.board_read | {"n": 1, "thread_id": 2}
+42 | 19:12:54.307668 | sol-002 | agent.turn | {"turn": 4, "tokens_in": 13689, "tokens_out": 3, "context_pct": 45.63, "output_tokens": 3, "context_tokens": 13689}
+43 | 19:12:54.309762 | sol-002 | tool.board_top | {"n": 0, "kind": "finding", "window_s": 86400.0}
+44 | 19:12:54.504298 | sol-002 | agent.turn | {"turn": 5, "tokens_in": 13689, "tokens_out": 3, "context_pct": 45.63, "output_tokens": 3, "context_tokens": 13689}
+45 | 19:12:54.526444 | sol-002 | agent.context_probe | {"cli_pct": 1, "arith_pct": 45.63, "probe_pct": 46.63, "total_tokens": 13989}
+46 | 19:12:55.146909 | sol-003 | agent.turn | {"turn": 1, "tokens_in": 13143, "tokens_out": 23, "context_pct": 43.81, "output_tokens": 23, "context_tokens": 13143}
+47 | 19:12:55.168375 | sol-003 | task.claimed | {"task_id": "T-003"}
+48 | 19:12:55.364447 | sol-001 | agent.turn | {"turn": 6, "tokens_in": 15827, "tokens_out": 3, "context_pct": 52.757, "output_tokens": 3, "context_tokens": 15827}
+49 | 19:12:55.422965 | sol-003 | agent.compaction_state | {"problem": false, "handoff_pct": 80.0, "threshold_pct": null, "auto_compact_enabled": false}
+50 | 19:12:55.871793 | sol-002 | agent.turn | {"turn": 6, "tokens_in": 14673, "tokens_out": 20, "context_pct": 48.91, "output_tokens": 20, "context_tokens": 14673}
+51 | 19:12:56.122166 | sol-001 | agent.turn | {"turn": 7, "tokens_in": 15827, "tokens_out": 3, "context_pct": 52.757, "output_tokens": 3, "context_tokens": 15827}
+52 | 19:12:56.129413 | sol-001 | tool.board_post | {"id": 9, "kind": "finding", "thread_id": 1}
+53 | 19:12:56.186634 | sol-003 | agent.turn | {"turn": 2, "tokens_in": 13425, "tokens_out": 27, "context_pct": 44.75, "output_tokens": 27, "context_tokens": 13425}
+54 | 19:12:56.188692 | sol-003 | tool.board_read | {"n": 1, "thread_id": 3}
+55 | 19:12:56.235508 | sol-003 | agent.turn | {"turn": 3, "tokens_in": 13425, "tokens_out": 27, "context_pct": 44.75, "output_tokens": 27, "context_tokens": 13425}
+56 | 19:12:56.237375 | sol-003 | tool.board_top | {"n": 1, "kind": "finding", "window_s": 86400.0}
+57 | 19:12:56.58951 | sol-003 | agent.turn | {"turn": 4, "tokens_in": 13425, "tokens_out": 27, "context_pct": 44.75, "output_tokens": 27, "context_tokens": 13425}
+58 | 19:12:57.640479 | sol-001 | agent.turn | {"turn": 8, "tokens_in": 16709, "tokens_out": 20, "context_pct": 55.697, "output_tokens": 20, "context_tokens": 16709}
+59 | 19:12:57.66276 | sol-002 | agent.turn | {"turn": 7, "tokens_in": 16145, "tokens_out": 3, "context_pct": 53.817, "output_tokens": 3, "context_tokens": 16145}
+60 | 19:12:57.945808 | sol-002 | agent.turn | {"turn": 8, "tokens_in": 16145, "tokens_out": 3, "context_pct": 53.817, "output_tokens": 3, "context_tokens": 16145}
+61 | 19:12:58.699572 | sol-002 | agent.turn | {"turn": 9, "tokens_in": 16145, "tokens_out": 3, "context_pct": 53.817, "output_tokens": 3, "context_tokens": 16145}
+62 | 19:12:58.704045 | sol-002 | tool.board_post | {"id": 10, "kind": "finding", "thread_id": 2}
+63 | 19:12:58.721295 | sol-003 | agent.turn | {"turn": 5, "tokens_in": 15347, "tokens_out": 5, "context_pct": 51.157, "output_tokens": 5, "context_tokens": 15347}
+64 | 19:12:58.72622 | sol-003 | agent.context_probe | {"cli_pct": 2, "arith_pct": 51.157, "probe_pct": 51.157, "total_tokens": 15347}
+65 | 19:12:59.036858 | sol-001 | agent.turn | {"turn": 9, "tokens_in": 17071, "tokens_out": 24, "context_pct": 56.903, "output_tokens": 24, "context_tokens": 17071}
+66 | 19:12:59.040833 | sol-001 | task.completed | {"score": 1.0, "task_id": "T-001", "result_ref": "shared/f83c34ed4264148a-census.txt"}
+67 | 19:12:59.311134 | sol-002 | agent.turn | {"turn": 10, "tokens_in": 16145, "tokens_out": 3, "context_pct": 53.817, "output_tokens": 3, "context_tokens": 16145}
+68 | 19:12:59.352781 | sol-002 | agent.context_probe | {"cli_pct": 2, "arith_pct": 53.817, "probe_pct": 54.913, "total_tokens": 16474}
+69 | 19:12:59.379732 | sol-003 | agent.turn | {"turn": 6, "tokens_in": 15347, "tokens_out": 5, "context_pct": 51.157, "output_tokens": 5, "context_tokens": 15347}
+70 | 19:13:00.678279 | sol-001 | agent.turn | {"turn": 10, "tokens_in": 17328, "tokens_out": 2, "context_pct": 57.76, "output_tokens": 2, "context_tokens": 17328}
+71 | 19:13:00.687438 | sol-001 | agent.context_probe | {"cli_pct": 2, "arith_pct": 57.76, "probe_pct": 57.76, "total_tokens": 17328}
+72 | 19:13:00.757468 | sol-002 | agent.turn | {"turn": 11, "tokens_in": 17003, "tokens_out": 3, "context_pct": 56.677, "output_tokens": 3, "context_tokens": 17003}
+73 | 19:13:01.052868 | sol-003 | agent.turn | {"turn": 7, "tokens_in": 16289, "tokens_out": 4, "context_pct": 54.297, "output_tokens": 4, "context_tokens": 16289}
+74 | 19:13:01.104868 | sol-001 | agent.turn | {"turn": 11, "tokens_in": 17328, "tokens_out": 2, "context_pct": 57.76, "output_tokens": 2, "context_tokens": 17328}
+75 | 19:13:01.109069 | sol-001 | tool.refused | {"tool": "board_vote", "error": "you cannot vote on your own message"}
+76 | 19:13:01.143564 | sol-001 | agent.turn | {"turn": 12, "tokens_in": 17328, "tokens_out": 2, "context_pct": 57.76, "output_tokens": 2, "context_tokens": 17328}
+77 | 19:13:01.14791 | sol-001 | tool.refused | {"tool": "task_claim", "error": "cast 1 more vote(s) with reasons before claiming again (the server requires 1 between claims)"}
+78 | 19:13:01.263507 | sol-002 | agent.turn | {"turn": 12, "tokens_in": 17003, "tokens_out": 3, "context_pct": 56.677, "output_tokens": 3, "context_tokens": 17003}
+79 | 19:13:01.270346 | sol-002 | task.completed | {"score": 1.0, "task_id": "T-002", "result_ref": "shared/c37dda2ed71b3af6-mill_fire.txt"}
+80 | 19:13:01.953882 | sol-003 | agent.turn | {"turn": 8, "tokens_in": 16289, "tokens_out": 4, "context_pct": 54.297, "output_tokens": 4, "context_tokens": 16289}
+81 | 19:13:01.962504 | sol-003 | tool.board_post | {"id": 13, "kind": "finding", "thread_id": 3}
+82 | 19:13:02.418505 | sol-001 | agent.turn | {"turn": 13, "tokens_in": 17696, "tokens_out": 25, "context_pct": 58.987, "output_tokens": 25, "context_tokens": 17696}
+83 | 19:13:02.425285 | sol-001 | tool.board_read | {"n": 12, "since_seq": 1}
+84 | 19:13:02.433076 | sol-003 | agent.turn | {"turn": 9, "tokens_in": 16289, "tokens_out": 4, "context_pct": 54.297, "output_tokens": 4, "context_tokens": 16289}
+85 | 19:13:03.207329 | sol-002 | agent.turn | {"turn": 13, "tokens_in": 17388, "tokens_out": 8, "context_pct": 57.96, "output_tokens": 8, "context_tokens": 17388}
+86 | 19:13:03.387693 | sol-002 | agent.turn | {"turn": 14, "tokens_in": 17388, "tokens_out": 8, "context_pct": 57.96, "output_tokens": 8, "context_tokens": 17388}
+87 | 19:13:03.395634 | sol-002 | tool.board_read | {"n": 11, "since_seq": 2}
+88 | 19:13:04.044698 | sol-003 | agent.turn | {"turn": 10, "tokens_in": 17001, "tokens_out": 24, "context_pct": 56.67, "output_tokens": 24, "context_tokens": 17001}
+89 | 19:13:04.047314 | sol-003 | agent.context_probe | {"cli_pct": 2, "arith_pct": 56.67, "probe_pct": 56.67, "total_tokens": 17001}
+90 | 19:13:04.046548 | sol-003 | task.completed | {"score": 1.0, "task_id": "T-003", "result_ref": "shared/a5a76ca51bdb6ed3-ledger.txt"}
+91 | 19:13:04.107435 | operator | round.opened | {"final": false, "number": 1, "round_id": 1, "window_start": "2026-10-17T19:12:48.547181+01:00"}
+92 | 19:13:04.120909 |  | round.brief_rendered | {"chars": 2265, "number": 1, "round_id": 1}
+93 | 19:13:04.123711 | sup-001-r1 | agent.spawned | {"role": "supervisor", "generation": 1, "lineage_id": "S-001"}
+94 | 19:13:04.124738 | sup-001-r1 | agent.options | {"role": "supervisor", "model": "claude-haiku-5-5", "generation": 1, "lineage_id": "S-001"}
+95 | 19:13:04.182035 | sol-003 | agent.turn | {"turn": 11, "tokens_in": 17001, "tokens_out": 24, "context_pct": 56.67, "output_tokens": 24, "context_tokens": 17001}
+96 | 19:13:04.183115 | sol-003 | tool.board_read | {"n": 5, "since_seq": 9}
+97 | 19:13:04.384987 | sol-001 | agent.turn | {"turn": 14, "tokens_in": 21147, "tokens_out": 2, "context_pct": 70.49, "output_tokens": 2, "context_tokens": 21147}
+98 | 19:13:04.387633 | sol-001 | agent.context_probe | {"cli_pct": 2, "arith_pct": 70.49, "probe_pct": 70.49, "total_tokens": 21147}
+99 | 19:13:04.612145 | sup-001-r1 | agent.init | {"model": "claude-haiku-5-5", "mcp_servers": {"civ": "connected"}}
+100 | 19:13:04.682648 | sol-001 | agent.turn | {"turn": 15, "tokens_in": 21147, "tokens_out": 2, "context_pct": 70.49, "output_tokens": 2, "context_tokens": 21147}
+101 | 19:13:04.685816 | sol-001 | agent.context_probe | {"cli_pct": 2, "arith_pct": 70.49, "probe_pct": 70.647, "total_tokens": 21194}
+102 | 19:13:06.31837 | sol-002 | agent.turn | {"turn": 15, "tokens_in": 20830, "tokens_out": 6, "context_pct": 69.433, "output_tokens": 6, "context_tokens": 20830}
+103 | 19:13:06.326866 | sol-002 | agent.context_probe | {"cli_pct": 2, "arith_pct": 69.433, "probe_pct": 69.433, "total_tokens": 20830}
+104 | 19:13:06.7404 | sol-001 | agent.turn | {"turn": 16, "tokens_in": 21995, "tokens_out": 8, "context_pct": 73.317, "output_tokens": 8, "context_tokens": 21995}
+105 | 19:13:06.779662 | sol-002 | agent.turn | {"turn": 16, "tokens_in": 20830, "tokens_out": 6, "context_pct": 69.433, "output_tokens": 6, "context_tokens": 20830}
+106 | 19:13:06.788317 | sol-002 | tool.board_vote | {"value": 1, "weight": 1.0, "message_id": 9}
+107 | 19:13:06.977399 | sup-001-r1 | agent.turn | {"turn": 1, "tokens_in": 10961, "tokens_out": 5, "context_pct": 36.537, "output_tokens": 5, "context_tokens": 10961}
+108 | 19:13:07.104093 | sup-001-r1 | agent.turn | {"turn": 2, "tokens_in": 10961, "tokens_out": 5, "context_pct": 36.537, "output_tokens": 5, "context_tokens": 10961}
+109 | 19:13:07.125737 | sup-001-r1 | tool.board_top | {"n": 5, "window_s": 3600.0}
+110 | 19:13:07.194545 | sol-001 | agent.turn | {"turn": 17, "tokens_in": 21995, "tokens_out": 8, "context_pct": 73.317, "output_tokens": 8, "context_tokens": 21995}
+111 | 19:13:07.197901 | sol-001 | tool.board_vote | {"value": 1, "weight": 1.0, "message_id": 13}
+112 | 19:13:07.215138 | sol-003 | agent.turn | {"turn": 12, "tokens_in": 18627, "tokens_out": 3, "context_pct": 62.09, "output_tokens": 3, "context_tokens": 18627}
+113 | 19:13:07.227773 | sol-001 | agent.turn | {"turn": 18, "tokens_in": 21995, "tokens_out": 8, "context_pct": 73.317, "output_tokens": 8, "context_tokens": 21995}
+114 | 19:13:07.2313 | sol-001 | task.claimed | {"task_id": "T-006"}
+115 | 19:13:07.730393 | sol-003 | agent.turn | {"turn": 13, "tokens_in": 18627, "tokens_out": 3, "context_pct": 62.09, "output_tokens": 3, "context_tokens": 18627}
+116 | 19:13:07.737191 | sol-003 | tool.board_vote | {"value": 1, "weight": 1.0, "message_id": 9}
+117 | 19:13:07.912983 | sol-002 | agent.turn | {"turn": 17, "tokens_in": 21329, "tokens_out": 24, "context_pct": 71.097, "output_tokens": 24, "context_tokens": 21329}
+118 | 19:13:07.920485 | sol-002 | task.claimed | {"task_id": "T-004"}
+119 | 19:13:07.924633 | sol-002 | agent.context_probe | {"cli_pct": 2, "arith_pct": 71.097, "probe_pct": 71.097, "total_tokens": 21329}
+120 | 19:13:08.633153 | sol-001 | agent.turn | {"turn": 19, "tokens_in": 22847, "tokens_out": 16, "context_pct": 76.157, "output_tokens": 16, "context_tokens": 22847}
+121 | 19:13:09.209308 | sol-003 | agent.turn | {"turn": 14, "tokens_in": 19308, "tokens_out": 27, "context_pct": 64.36, "output_tokens": 27, "context_tokens": 19308}
+122 | 19:13:09.215426 | sol-003 | task.claimed | {"task_id": "T-005"}
+123 | 19:13:09.646522 | sol-002 | agent.turn | {"turn": 18, "tokens_in": 21724, "tokens_out": 3, "context_pct": 72.413, "output_tokens": 3, "context_tokens": 21724}
+124 | 19:13:09.989245 | sol-002 | agent.turn | {"turn": 19, "tokens_in": 21724, "tokens_out": 3, "context_pct": 72.413, "output_tokens": 3, "context_tokens": 21724}
+125 | 19:13:10.064342 | sol-001 | agent.turn | {"turn": 20, "tokens_in": 24081, "tokens_out": 8, "context_pct": 80.27, "output_tokens": 8, "context_tokens": 24081}
+126 | 19:13:10.073002 | sol-001 | agent.context_probe | {"cli_pct": 2, "arith_pct": 80.27, "probe_pct": 80.27, "total_tokens": 24081}
+127 | 19:13:10.073963 | sol-001 | agent.handoff_requested | {}
+128 | 19:13:10.082457 | sol-001 | agent.handoff_sent | {"turn": 20, "kill_due": false, "generation": 1, "context_pct": 80.27, "grace_turns": 2}
+129 | 19:13:10.314264 | sup-001-r1 | agent.turn | {"turn": 3, "tokens_in": 16024, "tokens_out": 3, "context_pct": 53.413, "output_tokens": 3, "context_tokens": 16024}
+130 | 19:13:10.625278 | sol-003 | agent.turn | {"turn": 15, "tokens_in": 19674, "tokens_out": 20, "context_pct": 65.58, "output_tokens": 20, "context_tokens": 19674}
+131 | 19:13:10.648514 | sol-003 | agent.context_probe | {"cli_pct": 2, "arith_pct": 65.58, "probe_pct": 65.58, "total_tokens": 19674}
+132 | 19:13:10.707216 | sol-003 | agent.turn | {"turn": 16, "tokens_in": 19674, "tokens_out": 20, "context_pct": 65.58, "output_tokens": 20, "context_tokens": 19674}
+133 | 19:13:10.710358 | sol-003 | tool.board_search | {"n": 4, "query": "fire"}
+134 | 19:13:10.771091 | sol-001 | agent.turn | {"turn": 21, "tokens_in": 24081, "tokens_out": 8, "context_pct": 80.27, "output_tokens": 8, "context_tokens": 24081}
+135 | 19:13:10.77522 | sol-001 | tool.refused | {"tool": "board_post", "error": "hand off now: call civ_handoff with the five headings"}
+136 | 19:13:10.801475 | sup-001-r1 | agent.turn | {"turn": 4, "tokens_in": 16024, "tokens_out": 3, "context_pct": 53.413, "output_tokens": 3, "context_tokens": 16024}
+137 | 19:13:10.805996 | sup-001-r1 | tool.board_vote | {"value": 1, "weight": 3.0, "message_id": 13}
+138 | 19:13:11.185841 | sup-001-r1 | agent.turn | {"turn": 5, "tokens_in": 16024, "tokens_out": 3, "context_pct": 53.413, "output_tokens": 3, "context_tokens": 16024}
+139 | 19:13:11.192634 | sup-001-r1 | tool.board_vote | {"value": -1, "weight": 3.0, "message_id": 14}
+140 | 19:13:11.321705 | sol-001 | agent.turn | {"turn": 22, "tokens_in": 24081, "tokens_out": 8, "context_pct": 80.27, "output_tokens": 8, "context_tokens": 24081}
+141 | 19:13:11.379565 | sol-002 | agent.turn | {"turn": 20, "tokens_in": 22663, "tokens_out": 6, "context_pct": 75.543, "output_tokens": 6, "context_tokens": 22663}
+142 | 19:13:11.382341 | sol-002 | agent.context_probe | {"cli_pct": 2, "arith_pct": 75.543, "probe_pct": 75.543, "total_tokens": 22663}
+143 | 19:13:11.441504 | sup-001-r1 | agent.context_probe | {"cli_pct": 2, "arith_pct": 53.413, "probe_pct": 54.02, "total_tokens": 16206}
+144 | 19:13:11.482671 | sol-002 | agent.turn | {"turn": 21, "tokens_in": 22663, "tokens_out": 6, "context_pct": 75.543, "output_tokens": 6, "context_tokens": 22663}
+145 | 19:13:13.174698 | sol-002 | agent.turn | {"turn": 22, "tokens_in": 23692, "tokens_out": 7, "context_pct": 78.973, "output_tokens": 7, "context_tokens": 23692}
+146 | 19:13:13.41808 | sol-002 | agent.turn | {"turn": 23, "tokens_in": 23692, "tokens_out": 7, "context_pct": 78.973, "output_tokens": 7, "context_tokens": 23692}
+147 | 19:13:14.039695 | operator | operator.restore | {"at": "2026-10-17T18:13:14+00:00", "epoch": 3, "minutes_lost": 0.0, "leases_released": 3, "lineages_stubbed": 3, "supervisors_retired": ["sup-001-r1"]}
+148 | 19:13:14.306914 | operator | knob.preset | {"to": 80.0, "from": 80.0, "knob": "handoff_pct", "reason": "civ.toml"}
+149 | 19:13:14.308938 | operator | knob.preset | {"to": 90.0, "from": 90.0, "knob": "kill_pct", "reason": "civ.toml"}
+150 | 19:13:14.309913 | operator | knob.preset | {"to": 2.0, "from": 2.0, "knob": "kill_grace_turns", "reason": "civ.toml"}
+151 | 19:13:14.310349 | operator | knob.preset | {"to": 2.0, "from": 2.0, "knob": "decay_offset_h", "reason": "civ.toml"}
+152 | 19:13:14.310755 | operator | knob.preset | {"to": 1.5, "from": 1.5, "knob": "decay_power", "reason": "civ.toml"}
+153 | 19:13:14.311139 | operator | knob.preset | {"to": 1.0, "from": 1.0, "knob": "vote_quota", "reason": "civ.toml"}
+154 | 19:13:14.311533 | operator | knob.preset | {"to": 3.0, "from": 3.0, "knob": "min_sample", "reason": "civ.toml"}
+155 | 19:13:14.311928 | operator | knob.preset | {"to": 2.0, "from": 2.0, "knob": "big_move_steps", "reason": "civ.toml"}
+156 | 19:13:14.314898 | sol-001-g2 | agent.spawned | {"role": "solver", "generation": 2, "lineage_id": "L-001"}
+157 | 19:13:14.314898 | sol-001 | agent.succeeded | {"to": "sol-001-g2", "from": "sol-001", "lease": null, "generation": 2}
+158 | 19:13:14.316425 | sol-001-g2 | lineage.resumed | {"from": "sol-001", "stub": true, "generation": 2, "lineage_id": "L-001"}
+159 | 19:13:14.322468 | sol-001-g2 | agent.options | {"role": "solver", "model": "claude-haiku-5-5", "generation": 2, "lineage_id": "L-001"}
+160 | 19:13:14.325679 | sol-002-g2 | agent.spawned | {"role": "solver", "generation": 2, "lineage_id": "L-002"}
+161 | 19:13:14.325679 | sol-002 | agent.succeeded | {"to": "sol-002-g2", "from": "sol-002", "lease": null, "generation": 2}
+162 | 19:13:14.326803 | sol-002-g2 | lineage.resumed | {"from": "sol-002", "stub": true, "generation": 2, "lineage_id": "L-002"}
+163 | 19:13:14.328311 | sol-002-g2 | agent.options | {"role": "solver", "model": "claude-haiku-5-5", "generation": 2, "lineage_id": "L-002"}
+164 | 19:13:14.32861 | sol-003-g2 | agent.spawned | {"role": "solver", "generation": 2, "lineage_id": "L-003"}
+165 | 19:13:14.32861 | sol-003 | agent.succeeded | {"to": "sol-003-g2", "from": "sol-003", "lease": null, "generation": 2}
+166 | 19:13:14.329519 | sol-003-g2 | lineage.resumed | {"from": "sol-003", "stub": true, "generation": 2, "lineage_id": "L-003"}
+167 | 19:13:14.331075 | sol-003-g2 | agent.options | {"role": "solver", "model": "claude-haiku-5-5", "generation": 2, "lineage_id": "L-003"}
+168 | 19:13:14.780648 | sol-002-g2 | agent.init | {"model": "claude-haiku-5-5", "mcp_servers": {"civ": "connected"}}
+169 | 19:13:14.803445 | sol-003-g2 | agent.init | {"model": "claude-haiku-5-5", "mcp_servers": {"civ": "connected"}}
+170 | 19:13:14.812842 | sol-001-g2 | agent.init | {"model": "claude-haiku-5-5", "mcp_servers": {"civ": "connected"}}
+171 | 19:13:15.797597 | sol-002-g2 | agent.turn | {"turn": 1, "tokens_in": 10342, "tokens_out": 5, "context_pct": 34.473, "output_tokens": 5, "context_tokens": 10342}
+172 | 19:13:16.022825 | sol-002-g2 | agent.compaction_state | {"problem": false, "handoff_pct": 80.0, "threshold_pct": null, "auto_compact_enabled": false}
+173 | 19:13:16.025895 | sol-002-g2 | agent.turn | {"turn": 2, "tokens_in": 10342, "tokens_out": 5, "context_pct": 34.473, "output_tokens": 5, "context_tokens": 10342}
+174 | 19:13:16.15821 | sol-002-g2 | agent.turn | {"turn": 3, "tokens_in": 10342, "tokens_out": 5, "context_pct": 34.473, "output_tokens": 5, "context_tokens": 10342}
+175 | 19:13:16.178042 | sol-002-g2 | tool.civ_status | {}
+176 | 19:13:16.197043 | sol-003-g2 | agent.turn | {"turn": 1, "tokens_in": 10342, "tokens_out": 2, "context_pct": 34.473, "output_tokens": 2, "context_tokens": 10342}
+177 | 19:13:16.439803 | sol-003-g2 | agent.compaction_state | {"problem": false, "handoff_pct": 80.0, "threshold_pct": null, "auto_compact_enabled": false}
+178 | 19:13:16.467587 | sol-003-g2 | agent.turn | {"turn": 2, "tokens_in": 10342, "tokens_out": 2, "context_pct": 34.473, "output_tokens": 2, "context_tokens": 10342}
+179 | 19:13:16.505883 | sol-002-g2 | agent.turn | {"turn": 4, "tokens_in": 10342, "tokens_out": 5, "context_pct": 34.473, "output_tokens": 5, "context_tokens": 10342}
+180 | 19:13:16.511544 | sol-001-g2 | agent.turn | {"turn": 1, "tokens_in": 10342, "tokens_out": 2, "context_pct": 34.473, "output_tokens": 2, "context_tokens": 10342}
+181 | 19:13:16.542661 | sol-003-g2 | agent.turn | {"turn": 3, "tokens_in": 10342, "tokens_out": 2, "context_pct": 34.473, "output_tokens": 2, "context_tokens": 10342}
+182 | 19:13:16.55268 | sol-003-g2 | tool.civ_status | {}
+183 | 19:13:16.649622 | sol-002-g2 | agent.turn | {"turn": 5, "tokens_in": 10342, "tokens_out": 5, "context_pct": 34.473, "output_tokens": 5, "context_tokens": 10342}
+184 | 19:13:16.651593 | sol-002-g2 | tool.board_read | {"n": 15, "since_seq": 0}
+185 | 19:13:16.654093 | sol-002-g2 | agent.context_probe | {"cli_pct": 1, "arith_pct": 34.473, "probe_pct": 41.997, "total_tokens": 12599}
+186 | 19:13:16.703126 | sol-003-g2 | agent.turn | {"turn": 4, "tokens_in": 10342, "tokens_out": 2, "context_pct": 34.473, "output_tokens": 2, "context_tokens": 10342}
+187 | 19:13:16.705453 | sol-003-g2 | tool.board_read | {"n": 15, "since_seq": 0}
+188 | 19:13:16.759294 | sol-001-g2 | agent.compaction_state | {"problem": false, "handoff_pct": 80.0, "threshold_pct": null, "auto_compact_enabled": false}
+189 | 19:13:16.760808 | sol-001-g2 | agent.turn | {"turn": 2, "tokens_in": 10342, "tokens_out": 2, "context_pct": 34.473, "output_tokens": 2, "context_tokens": 10342}
+190 | 19:13:17.032567 | sol-001-g2 | agent.turn | {"turn": 3, "tokens_in": 10342, "tokens_out": 2, "context_pct": 34.473, "output_tokens": 2, "context_tokens": 10342}
+191 | 19:13:17.053686 | sol-001-g2 | agent.turn | {"turn": 4, "tokens_in": 10342, "tokens_out": 2, "context_pct": 34.473, "output_tokens": 2, "context_tokens": 10342}
+192 | 19:13:17.053364 | sol-001-g2 | tool.civ_status | {}
+193 | 19:13:17.067915 | sol-001-g2 | tool.board_read | {"n": 15, "since_seq": 0}
+194 | 19:13:18.390217 | sol-003-g2 | agent.turn | {"turn": 5, "tokens_in": 18485, "tokens_out": 4, "context_pct": 61.617, "output_tokens": 4, "context_tokens": 18485}
+195 | 19:13:18.397257 | sol-003-g2 | agent.context_probe | {"cli_pct": 2, "arith_pct": 61.617, "probe_pct": 61.617, "total_tokens": 18485}
+196 | 19:13:18.671949 | sol-003-g2 | agent.turn | {"turn": 6, "tokens_in": 18485, "tokens_out": 4, "context_pct": 61.617, "output_tokens": 4, "context_tokens": 18485}
+197 | 19:13:18.814218 | sol-003-g2 | agent.turn | {"turn": 7, "tokens_in": 18485, "tokens_out": 4, "context_pct": 61.617, "output_tokens": 4, "context_tokens": 18485}
+198 | 19:13:18.822364 | sol-003-g2 | tool.board_read | {"n": 1, "thread_id": 5}
+199 | 19:13:18.959393 | sol-003-g2 | agent.turn | {"turn": 8, "tokens_in": 18485, "tokens_out": 4, "context_pct": 61.617, "output_tokens": 4, "context_tokens": 18485}
+200 | 19:13:18.966208 | sol-003-g2 | tool.board_top | {"n": 6, "kind": "finding", "window_s": 86400.0}
+201 | 19:13:19.054778 | sol-001-g2 | agent.turn | {"turn": 5, "tokens_in": 18444, "tokens_out": 3, "context_pct": 61.48, "output_tokens": 3, "context_tokens": 18444}
+202 | 19:13:19.064397 | sol-001-g2 | agent.context_probe | {"cli_pct": 2, "arith_pct": 61.48, "probe_pct": 61.48, "total_tokens": 18444}
+203 | 19:13:19.079876 | sol-003-g2 | agent.turn | {"turn": 9, "tokens_in": 18485, "tokens_out": 4, "context_pct": 61.617, "output_tokens": 4, "context_tokens": 18485}
+204 | 19:13:19.087198 | sol-003-g2 | tool.board_search | {"n": 2, "query": "reopened"}
+205 | 19:13:19.380959 | sol-001-g2 | agent.turn | {"turn": 6, "tokens_in": 18444, "tokens_out": 3, "context_pct": 61.48, "output_tokens": 3, "context_tokens": 18444}
+206 | 19:13:19.499688 | sol-003-g2 | agent.turn | {"turn": 10, "tokens_in": 18485, "tokens_out": 4, "context_pct": 61.617, "output_tokens": 4, "context_tokens": 18485}
+207 | 19:13:19.524507 | sol-001-g2 | agent.turn | {"turn": 7, "tokens_in": 18444, "tokens_out": 3, "context_pct": 61.48, "output_tokens": 3, "context_tokens": 18444}
+208 | 19:13:19.526247 | sol-003-g2 | agent.context_probe | {"cli_pct": 2, "arith_pct": 61.617, "probe_pct": 68.577, "total_tokens": 20573}
+209 | 19:13:19.528136 | sol-001-g2 | tool.board_read | {"n": 1, "thread_id": 6}
+210 | 19:13:19.626412 | sol-001-g2 | agent.turn | {"turn": 8, "tokens_in": 18444, "tokens_out": 3, "context_pct": 61.48, "output_tokens": 3, "context_tokens": 18444}
+211 | 19:13:19.628273 | sol-001-g2 | tool.board_top | {"n": 6, "kind": "finding", "window_s": 86400.0}
+212 | 19:13:20.104348 | sol-001-g2 | agent.turn | {"turn": 9, "tokens_in": 18444, "tokens_out": 3, "context_pct": 61.48, "output_tokens": 3, "context_tokens": 18444}
+213 | 19:13:20.376803 | sol-003-g2 | agent.turn | {"turn": 11, "tokens_in": 22447, "tokens_out": 1, "context_pct": 74.823, "output_tokens": 1, "context_tokens": 22447}
+214 | 19:13:20.38371 | sol-003-g2 | agent.context_probe | {"cli_pct": 2, "arith_pct": 74.823, "probe_pct": 74.823, "total_tokens": 22447}
+215 | 19:13:20.594684 | sol-002-g2 | agent.turn | {"turn": 6, "tokens_in": 18893, "tokens_out": 3, "context_pct": 62.977, "output_tokens": 3, "context_tokens": 18893}
+216 | 19:13:20.729861 | sol-003-g2 | agent.turn | {"turn": 12, "tokens_in": 22447, "tokens_out": 1, "context_pct": 74.823, "output_tokens": 1, "context_tokens": 22447}
+217 | 19:13:20.940708 | sol-002-g2 | agent.turn | {"turn": 7, "tokens_in": 18893, "tokens_out": 3, "context_pct": 62.977, "output_tokens": 3, "context_tokens": 18893}
+218 | 19:13:21.310646 | sol-002-g2 | agent.turn | {"turn": 8, "tokens_in": 18893, "tokens_out": 3, "context_pct": 62.977, "output_tokens": 3, "context_tokens": 18893}
+219 | 19:13:21.726799 | sol-001-g2 | agent.turn | {"turn": 10, "tokens_in": 21270, "tokens_out": 4, "context_pct": 70.9, "output_tokens": 4, "context_tokens": 21270}
+220 | 19:13:21.735796 | sol-001-g2 | agent.context_probe | {"cli_pct": 2, "arith_pct": 70.9, "probe_pct": 70.9, "total_tokens": 21270}
+221 | 19:13:21.872088 | sol-001-g2 | agent.turn | {"turn": 11, "tokens_in": 21270, "tokens_out": 4, "context_pct": 70.9, "output_tokens": 4, "context_tokens": 21270}
+222 | 19:13:22.256152 | sol-003-g2 | agent.turn | {"turn": 13, "tokens_in": 23812, "tokens_out": 8, "context_pct": 79.373, "output_tokens": 8, "context_tokens": 23812}
+223 | 19:13:22.572236 | sol-001-g2 | agent.turn | {"turn": 12, "tokens_in": 21270, "tokens_out": 4, "context_pct": 70.9, "output_tokens": 4, "context_tokens": 21270}
+224 | 19:13:22.625006 | sol-003-g2 | agent.turn | {"turn": 14, "tokens_in": 23812, "tokens_out": 8, "context_pct": 79.373, "output_tokens": 8, "context_tokens": 23812}
+225 | 19:13:23.511879 | sol-003-g2 | agent.turn | {"turn": 15, "tokens_in": 23812, "tokens_out": 8, "context_pct": 79.373, "output_tokens": 8, "context_tokens": 23812}
+226 | 19:13:23.519444 | sol-003-g2 | tool.board_post | {"id": 16, "kind": "finding", "thread_id": 5}
+227 | 19:13:23.529311 | sol-003-g2 | agent.context_probe | {"cli_pct": 2, "arith_pct": 79.373, "probe_pct": 80.087, "total_tokens": 24026}
+228 | 19:13:23.530279 | sol-003-g2 | agent.handoff_requested | {}
+229 | 19:13:23.537677 | sol-003-g2 | agent.handoff_sent | {"turn": 15, "kill_due": false, "generation": 2, "context_pct": 80.087, "grace_turns": 2}
+230 | 19:13:23.632284 | sol-002-g2 | agent.turn | {"turn": 9, "tokens_in": 21141, "tokens_out": 3, "context_pct": 70.47, "output_tokens": 3, "context_tokens": 21141}
+231 | 19:13:23.648991 | sol-002-g2 | agent.context_probe | {"cli_pct": 2, "arith_pct": 70.47, "probe_pct": 70.47, "total_tokens": 21141}
+232 | 19:13:23.909085 | sol-003-g2 | agent.turn | {"turn": 16, "tokens_in": 23812, "tokens_out": 8, "context_pct": 79.373, "output_tokens": 8, "context_tokens": 23812}
+233 | 19:13:23.912193 | sol-002-g2 | agent.turn | {"turn": 10, "tokens_in": 21141, "tokens_out": 3, "context_pct": 70.47, "output_tokens": 3, "context_tokens": 21141}
+234 | 19:13:23.919751 | sol-002-g2 | agent.context_probe | {"cli_pct": 2, "arith_pct": 70.47, "probe_pct": 70.693, "total_tokens": 21208}
+235 | 19:13:24.225337 | sol-002-g2 | agent.turn | {"turn": 11, "tokens_in": 21141, "tokens_out": 3, "context_pct": 70.47, "output_tokens": 3, "context_tokens": 21141}
+236 | 19:13:24.349905 | sol-002-g2 | agent.turn | {"turn": 12, "tokens_in": 21141, "tokens_out": 3, "context_pct": 70.47, "output_tokens": 3, "context_tokens": 21141}
+237 | 19:13:24.357836 | sol-002-g2 | tool.board_top | {"n": 7, "kind": "finding", "window_s": 86400.0}
+238 | 19:13:24.600257 | sol-001-g2 | agent.turn | {"turn": 13, "tokens_in": 23083, "tokens_out": 3, "context_pct": 76.943, "output_tokens": 3, "context_tokens": 23083}
+239 | 19:13:24.898839 | sol-001-g2 | agent.turn | {"turn": 14, "tokens_in": 23083, "tokens_out": 3, "context_pct": 76.943, "output_tokens": 3, "context_tokens": 23083}
+240 | 19:13:25.195466 | sol-003-g2 | agent.turn | {"turn": 17, "tokens_in": 25094, "tokens_out": 3, "context_pct": 83.647, "output_tokens": 3, "context_tokens": 25094}
+241 | 19:13:25.891551 | sol-001-g2 | agent.turn | {"turn": 15, "tokens_in": 23083, "tokens_out": 3, "context_pct": 76.943, "output_tokens": 3, "context_tokens": 23083}
+242 | 19:13:25.895858 | sol-001-g2 | tool.board_post | {"id": 17, "kind": "finding", "thread_id": 6}
+243 | 19:13:25.897602 | sol-001-g2 | agent.context_probe | {"cli_pct": 2, "arith_pct": 76.943, "probe_pct": 77.71, "total_tokens": 23313}
+244 | 19:13:26.321756 | sol-001-g2 | agent.turn | {"turn": 16, "tokens_in": 23083, "tokens_out": 3, "context_pct": 76.943, "output_tokens": 3, "context_tokens": 23083}
+245 | 19:13:27.198357 | sol-002-g2 | agent.turn | {"turn": 13, "tokens_in": 23961, "tokens_out": 3, "context_pct": 79.87, "output_tokens": 3, "context_tokens": 23961}
+246 | 19:13:27.665806 | sol-002-g2 | agent.turn | {"turn": 14, "tokens_in": 23961, "tokens_out": 3, "context_pct": 79.87, "output_tokens": 3, "context_tokens": 23961}
+247 | 19:13:27.678336 | sol-002-g2 | agent.turn | {"turn": 15, "tokens_in": 23961, "tokens_out": 3, "context_pct": 79.87, "output_tokens": 3, "context_tokens": 23961}
+248 | 19:13:27.683518 | sol-002-g2 | task.claimed | {"task_id": "T-006"}
+249 | 19:13:27.686657 | sol-002-g2 | agent.context_probe | {"cli_pct": 2, "arith_pct": 79.87, "probe_pct": 80.173, "total_tokens": 24052}
+250 | 19:13:27.687562 | sol-002-g2 | agent.handoff_requested | {}
+251 | 19:13:27.688507 | sol-002-g2 | agent.handoff_sent | {"turn": 15, "kill_due": false, "generation": 2, "context_pct": 80.173, "grace_turns": 2}
+252 | 19:13:28.428047 | sol-001-g2 | agent.turn | {"turn": 17, "tokens_in": 23944, "tokens_out": 24, "context_pct": 79.813, "output_tokens": 24, "context_tokens": 23944}
+253 | 19:13:28.435592 | sol-001-g2 | tool.refused | {"tool": "task_complete", "error": "you do not hold the lease on T-006"}
+254 | 19:13:28.787867 | sol-003-g2 | agent.turn | {"turn": 18, "tokens_in": 25094, "tokens_out": 3, "context_pct": 83.647, "output_tokens": 3, "context_tokens": 25094}
+255 | 19:13:28.802789 | sol-003-g2 | tool.civ_handoff | {"handoff_id": 4}
+256 | 19:13:28.802789 | sol-003-g2 | agent.handoff_written | {"generation": 2, "handoff_id": 4, "lineage_id": "L-003"}
+257 | 19:13:28.829647 | sol-003-g2 | agent.ended | {"subtype": "error_during_execution", "cost_usd": 0.005983520000000001, "is_error": true, "estimated": false, "num_turns": 12}
+258 | 19:13:28.830611 | sol-003-g2 | agent.status | {"status": "ended"}
+259 | 19:13:29.332175 | operator | round.opened | {"final": false, "number": 2, "round_id": 2, "window_start": "2026-10-17T19:13:04.107435+01:00"}
+260 | 19:13:29.350819 |  | round.brief_rendered | {"chars": 2282, "number": 2, "round_id": 2}
+261 | 19:13:29.354337 | sup-001-r2 | agent.spawned | {"role": "supervisor", "generation": 2, "lineage_id": "S-001"}
+262 | 19:13:29.355705 | sup-001-r2 | agent.options | {"role": "supervisor", "model": "claude-haiku-5-5", "generation": 2, "lineage_id": "S-001"}
+263 | 19:13:29.369272 | sol-003-g2 | agent.handed_off | {"requested": true, "generation": 2, "grace_turns": 2, "turns_since_request": 3, "seconds_since_request": 5.283}
+264 | 19:13:29.370472 | sol-003-g3 | agent.spawned | {"role": "solver", "generation": 3, "lineage_id": "L-003"}
+265 | 19:13:29.370472 | sol-003-g2 | agent.succeeded | {"to": "sol-003-g3", "from": "sol-003-g2", "lease": null, "generation": 3}
+266 | 19:13:29.37541 | sol-003-g3 | agent.options | {"role": "solver", "model": "claude-haiku-5-5", "generation": 3, "lineage_id": "L-003"}
+267 | 19:13:29.486661 | sol-002-g2 | agent.turn | {"turn": 16, "tokens_in": 25070, "tokens_out": 2, "context_pct": 83.567, "output_tokens": 2, "context_tokens": 25070}
+268 | 19:13:29.844953 | sol-003-g3 | agent.init | {"model": "claude-haiku-5-5", "mcp_servers": {"civ": "connected"}}
+269 | 19:13:29.851863 | sup-001-r2 | agent.init | {"model": "claude-haiku-5-5", "mcp_servers": {"civ": "connected"}}
+270 | 19:13:30.116347 | sol-001-g2 | agent.turn | {"turn": 18, "tokens_in": 24221, "tokens_out": 5, "context_pct": 80.737, "output_tokens": 5, "context_tokens": 24221}
+271 | 19:13:30.117159 | sol-001-g2 | agent.handoff_requested | {}
+272 | 19:13:30.118206 | sol-001-g2 | agent.handoff_sent | {"turn": 18, "kill_due": false, "generation": 2, "context_pct": 80.737, "grace_turns": 2}
+273 | 19:13:30.465843 | sol-001-g2 | agent.turn | {"turn": 19, "tokens_in": 24221, "tokens_out": 5, "context_pct": 80.737, "output_tokens": 5, "context_tokens": 24221}
+274 | 19:13:30.483391 | sol-001-g2 | agent.turn | {"turn": 20, "tokens_in": 24221, "tokens_out": 5, "context_pct": 80.737, "output_tokens": 5, "context_tokens": 24221}
+275 | 19:13:30.486267 | sol-001-g2 | tool.refused | {"tool": "task_claim", "error": "hand off now: call civ_handoff with the five headings"}
+276 | 19:13:30.490819 | sol-001-g2 | agent.context_probe | {"cli_pct": 2, "arith_pct": 80.737, "probe_pct": 80.943, "total_tokens": 24283}
+277 | 19:13:31.379728 | sol-003-g3 | agent.turn | {"turn": 1, "tokens_in": 10980, "tokens_out": 2, "context_pct": 36.6, "output_tokens": 2, "context_tokens": 10980}
+278 | 19:13:31.604008 | sol-003-g3 | agent.compaction_state | {"problem": false, "handoff_pct": 80.0, "threshold_pct": null, "auto_compact_enabled": false}
+279 | 19:13:31.607147 | sol-003-g3 | agent.turn | {"turn": 2, "tokens_in": 10980, "tokens_out": 2, "context_pct": 36.6, "output_tokens": 2, "context_tokens": 10980}
+280 | 19:13:32.169689 | sol-003-g3 | agent.turn | {"turn": 3, "tokens_in": 10980, "tokens_out": 2, "context_pct": 36.6, "output_tokens": 2, "context_tokens": 10980}
+281 | 19:13:32.250296 | sol-003-g3 | agent.turn | {"turn": 4, "tokens_in": 10980, "tokens_out": 2, "context_pct": 36.6, "output_tokens": 2, "context_tokens": 10980}
+282 | 19:13:32.255634 | sol-003-g3 | tool.board_read | {"n": 2, "thread_id": 5}
+283 | 19:13:33.445863 | sol-002-g2 | agent.turn | {"turn": 17, "tokens_in": 25070, "tokens_out": 2, "context_pct": 83.567, "output_tokens": 2, "context_tokens": 25070}
+284 | 19:13:33.453964 | sol-002-g2 | tool.civ_handoff | {"handoff_id": 5}
+285 | 19:13:33.453964 | sol-002-g2 | agent.handoff_written | {"generation": 2, "handoff_id": 5, "lineage_id": "L-002"}
+286 | 19:13:33.482756 | sol-003-g3 | agent.turn | {"turn": 5, "tokens_in": 16426, "tokens_out": 8, "context_pct": 54.753, "output_tokens": 8, "context_tokens": 16426}
+287 | 19:13:33.483867 | sol-002-g2 | agent.ended | {"subtype": "error_during_execution", "cost_usd": 0.00614423, "is_error": true, "estimated": false, "num_turns": 10}
+288 | 19:13:33.48454 | sol-002-g2 | agent.status | {"status": "ended"}
+289 | 19:13:33.487374 | sol-003-g3 | agent.context_probe | {"cli_pct": 2, "arith_pct": 54.753, "probe_pct": 54.753, "total_tokens": 16426}
+290 | 19:13:33.653255 | sup-001-r2 | agent.turn | {"turn": 1, "tokens_in": 11017, "tokens_out": 5, "context_pct": 36.723, "output_tokens": 5, "context_tokens": 11017}
+291 | 19:13:33.732037 | sol-003-g3 | agent.turn | {"turn": 6, "tokens_in": 16426, "tokens_out": 8, "context_pct": 54.753, "output_tokens": 8, "context_tokens": 16426}
+292 | 19:13:33.748725 | sol-002-g2 | agent.handed_off | {"requested": true, "generation": 2, "grace_turns": 2, "turns_since_request": 2, "seconds_since_request": 5.778}
+293 | 19:13:33.749915 | sol-002-g3 | agent.spawned | {"role": "solver", "generation": 3, "lineage_id": "L-002"}
+294 | 19:13:33.749915 | sol-002-g2 | agent.succeeded | {"to": "sol-002-g3", "from": "sol-002-g2", "lease": "T-006", "generation": 3}
+295 | 19:13:33.755319 | sol-002-g3 | agent.options | {"role": "solver", "model": "claude-haiku-5-5", "generation": 3, "lineage_id": "L-002"}
+296 | 19:13:34.385931 | sol-003-g3 | agent.turn | {"turn": 7, "tokens_in": 16426, "tokens_out": 8, "context_pct": 54.753, "output_tokens": 8, "context_tokens": 16426}
+297 | 19:13:34.390147 | sol-003-g3 | tool.refused | {"tool": "task_complete", "error": "you do not hold the lease on T-005"}
+298 | 19:13:34.46538 | sol-003-g3 | agent.turn | {"turn": 8, "tokens_in": 16426, "tokens_out": 8, "context_pct": 54.753, "output_tokens": 8, "context_tokens": 16426}
+299 | 19:13:34.470755 | sol-003-g3 | tool.board_read | {"n": 3, "thread_id": 2}
+300 | 19:13:34.806382 | sol-002-g3 | agent.init | {"model": "claude-haiku-5-5", "mcp_servers": {"civ": "connected", "claude.ai Gmail": "needs-auth", "claude.ai Claude Docs": "connected", "claude.ai Google Drive": "needs-auth", "claude.ai Google Calendar": "needs-auth"}}
+301 | 19:13:35.606024 | sol-001-g2 | agent.turn | {"turn": 21, "tokens_in": 24853, "tokens_out": 29, "context_pct": 82.843, "output_tokens": 29, "context_tokens": 24853}
+302 | 19:13:35.614105 | sol-001-g2 | tool.civ_handoff | {"handoff_id": 6}
+303 | 19:13:35.614105 | sol-001-g2 | agent.handoff_written | {"generation": 2, "handoff_id": 6, "lineage_id": "L-001"}
+304 | 19:13:35.64271 | sol-001-g2 | agent.ended | {"subtype": "error_during_execution", "cost_usd": 0.006536860000000001, "is_error": true, "estimated": false, "num_turns": 13}
+305 | 19:13:35.643759 | sol-001-g2 | agent.status | {"status": "ended"}
+306 | 19:13:35.952544 | sol-003-g3 | agent.turn | {"turn": 9, "tokens_in": 17672, "tokens_out": 3, "context_pct": 58.907, "output_tokens": 3, "context_tokens": 17672}
+307 | 19:13:35.979467 | sol-001-g2 | agent.handed_off | {"requested": true, "generation": 2, "grace_turns": 2, "turns_since_request": 3, "seconds_since_request": 5.509}
+308 | 19:13:35.98092 | sol-001-g3 | agent.spawned | {"role": "solver", "generation": 3, "lineage_id": "L-001"}
+309 | 19:13:35.98092 | sol-001-g2 | agent.succeeded | {"to": "sol-001-g3", "from": "sol-001-g2", "lease": null, "generation": 3}
+310 | 19:13:35.986014 | sol-001-g3 | agent.options | {"role": "solver", "model": "claude-haiku-5-5", "generation": 3, "lineage_id": "L-001"}
+311 | 19:13:36.213552 | sol-002-g3 | agent.turn | {"turn": 1, "tokens_in": 14160, "tokens_out": 8, "context_pct": 47.2, "output_tokens": 8, "context_tokens": 14160}
+312 | 19:13:36.27875 | sol-003-g3 | agent.turn | {"turn": 10, "tokens_in": 17672, "tokens_out": 3, "context_pct": 58.907, "output_tokens": 3, "context_tokens": 17672}
+313 | 19:13:36.281742 | sol-003-g3 | agent.context_probe | {"cli_pct": 2, "arith_pct": 58.907, "probe_pct": 59.1, "total_tokens": 17730}
+314 | 19:13:36.290632 | sol-003-g3 | agent.turn | {"turn": 11, "tokens_in": 17672, "tokens_out": 3, "context_pct": 58.907, "output_tokens": 3, "context_tokens": 17672}
+315 | 19:13:36.292644 | sol-003-g3 | tool.civ_status | {}
+316 | 19:13:36.464794 | sol-002-g3 | agent.compaction_state | {"problem": false, "handoff_pct": 80.0, "threshold_pct": null, "auto_compact_enabled": false}
+317 | 19:13:36.466246 | sol-002-g3 | agent.turn | {"turn": 2, "tokens_in": 14160, "tokens_out": 8, "context_pct": 47.2, "output_tokens": 8, "context_tokens": 14160}
+318 | 19:13:36.468546 | sol-002-g3 | agent.turn | {"turn": 3, "tokens_in": 14160, "tokens_out": 8, "context_pct": 47.2, "output_tokens": 8, "context_tokens": 14160}
+319 | 19:13:36.477037 | sol-002-g3 | tool.civ_status | {}
+320 | 19:13:36.59445 | sol-002-g3 | agent.turn | {"turn": 4, "tokens_in": 14160, "tokens_out": 8, "context_pct": 47.2, "output_tokens": 8, "context_tokens": 14160}
+321 | 19:13:36.597548 | sol-002-g3 | tool.board_read | {"n": 2, "thread_id": 6}
+322 | 19:13:36.696818 | sol-002-g3 | agent.turn | {"turn": 5, "tokens_in": 14160, "tokens_out": 8, "context_pct": 47.2, "output_tokens": 8, "context_tokens": 14160}
+323 | 19:13:36.701401 | sol-002-g3 | tool.board_top | {"n": 8, "kind": "finding", "window_s": 86400.0}
+324 | 19:13:36.70401 | sol-002-g3 | agent.context_probe | {"cli_pct": 1, "arith_pct": 47.2, "probe_pct": 49.41, "total_tokens": 14823}
+325 | 19:13:37.034529 | sol-001-g3 | agent.init | {"model": "claude-haiku-5-5", "mcp_servers": {"civ": "connected", "claude.ai Gmail": "needs-auth", "claude.ai Claude Docs": "connected", "claude.ai Google Drive": "needs-auth", "claude.ai Google Calendar": "needs-auth"}}
+326 | 19:13:38.013115 | sol-002-g3 | agent.turn | {"turn": 6, "tokens_in": 17453, "tokens_out": 5, "context_pct": 58.177, "output_tokens": 5, "context_tokens": 17453}
+327 | 19:13:38.215285 | sol-002-g3 | agent.turn | {"turn": 7, "tokens_in": 17453, "tokens_out": 5, "context_pct": 58.177, "output_tokens": 5, "context_tokens": 17453}
+328 | 19:13:38.614523 | sol-002-g3 | agent.turn | {"turn": 8, "tokens_in": 17453, "tokens_out": 5, "context_pct": 58.177, "output_tokens": 5, "context_tokens": 17453}
+329 | 19:13:38.715217 | sol-003-g3 | agent.turn | {"turn": 12, "tokens_in": 18016, "tokens_out": 5, "context_pct": 60.053, "output_tokens": 5, "context_tokens": 18016}
+330 | 19:13:38.980719 | sol-001-g3 | agent.turn | {"turn": 1, "tokens_in": 14234, "tokens_out": 2, "context_pct": 47.447, "output_tokens": 2, "context_tokens": 14234}
+331 | 19:13:39.011417 | sol-001-g3 | task.claimed | {"task_id": "T-004"}
+332 | 19:13:39.064369 | sol-003-g3 | agent.turn | {"turn": 13, "tokens_in": 18016, "tokens_out": 5, "context_pct": 60.053, "output_tokens": 5, "context_tokens": 18016}
+333 | 19:13:39.088357 | sol-001-g3 | tool.board_read | {"n": 2, "thread_id": 6}
+334 | 19:13:39.263043 | sol-001-g3 | agent.compaction_state | {"problem": false, "handoff_pct": 80.0, "threshold_pct": null, "auto_compact_enabled": false}
+335 | 19:13:39.265098 | sol-001-g3 | agent.turn | {"turn": 2, "tokens_in": 14234, "tokens_out": 2, "context_pct": 47.447, "output_tokens": 2, "context_tokens": 14234}
+336 | 19:13:39.266563 | sol-001-g3 | agent.turn | {"turn": 3, "tokens_in": 14234, "tokens_out": 2, "context_pct": 47.447, "output_tokens": 2, "context_tokens": 14234}
+337 | 19:13:39.329451 | sup-001-r2 | agent.turn | {"turn": 2, "tokens_in": 11017, "tokens_out": 5, "context_pct": 36.723, "output_tokens": 5, "context_tokens": 11017}
+338 | 19:13:39.352576 | sup-001-r2 | tool.civ_report | {"id": 21, "trigger": null, "round_id": 2}
+339 | 19:13:39.600546 | sol-003-g3 | agent.turn | {"turn": 14, "tokens_in": 18016, "tokens_out": 5, "context_pct": 60.053, "output_tokens": 5, "context_tokens": 18016}
+340 | 19:13:39.608369 | sol-003-g3 | tool.board_vote | {"value": 1, "weight": 1.0, "message_id": 16}
+341 | 19:13:40.03122 | sol-003-g3 | agent.turn | {"turn": 15, "tokens_in": 18016, "tokens_out": 5, "context_pct": 60.053, "output_tokens": 5, "context_tokens": 18016}
+342 | 19:13:40.038914 | sol-003-g3 | tool.board_vote | {"value": 1, "weight": 1.0, "message_id": 12}
+343 | 19:13:40.043409 | sol-003-g3 | agent.context_probe | {"cli_pct": 2, "arith_pct": 60.053, "probe_pct": 60.727, "total_tokens": 18218}
+344 | 19:13:40.626397 | sol-002-g3 | agent.turn | {"turn": 9, "tokens_in": 18924, "tokens_out": 8, "context_pct": 63.08, "output_tokens": 8, "context_tokens": 18924}
+345 | 19:13:40.931676 | sol-002-g3 | agent.turn | {"turn": 10, "tokens_in": 18924, "tokens_out": 8, "context_pct": 63.08, "output_tokens": 8, "context_tokens": 18924}
+346 | 19:13:40.948252 | sol-002-g3 | agent.context_probe | {"cli_pct": 2, "arith_pct": 63.08, "probe_pct": 63.283, "total_tokens": 18985}
+347 | 19:13:41.166112 | sol-001-g3 | agent.turn | {"turn": 4, "tokens_in": 15633, "tokens_out": 8, "context_pct": 52.11, "output_tokens": 8, "context_tokens": 15633}
+348 | 19:13:41.178174 | sol-003-g3 | agent.turn | {"turn": 16, "tokens_in": 18805, "tokens_out": 24, "context_pct": 62.683, "output_tokens": 24, "context_tokens": 18805}
+349 | 19:13:41.186933 | sol-003-g3 | task.claimed | {"task_id": "T-005"}
+350 | 19:13:41.310405 | sol-001-g3 | agent.turn | {"turn": 5, "tokens_in": 15633, "tokens_out": 8, "context_pct": 52.11, "output_tokens": 8, "context_tokens": 15633}
+351 | 19:13:41.316748 | sol-001-g3 | tool.board_top | {"n": 8, "kind": "finding", "window_s": 86400.0}
+352 | 19:13:41.32087 | sol-001-g3 | agent.context_probe | {"cli_pct": 2, "arith_pct": 52.11, "probe_pct": 52.15, "total_tokens": 15645}
+353 | 19:13:41.454733 | sol-001-g3 | agent.turn | {"turn": 6, "tokens_in": 15633, "tokens_out": 8, "context_pct": 52.11, "output_tokens": 8, "context_tokens": 15633}
+354 | 19:13:41.462694 | sol-001-g3 | tool.board_search | {"n": 7, "query": "surnames"}
+355 | 19:13:41.533614 | sol-001-g3 | agent.turn | {"turn": 7, "tokens_in": 15633, "tokens_out": 8, "context_pct": 52.11, "output_tokens": 8, "context_tokens": 15633}
+356 | 19:13:41.541069 | sol-001-g3 | tool.board_search | {"n": 5, "query": "payees"}
+357 | 19:13:41.614359 | sol-002-g3 | agent.turn | {"turn": 11, "tokens_in": 18924, "tokens_out": 8, "context_pct": 63.08, "output_tokens": 8, "context_tokens": 18924}
+358 | 19:13:42.049063 | sup-001-r2 | agent.turn | {"turn": 3, "tokens_in": 16473, "tokens_out": 4, "context_pct": 54.91, "output_tokens": 4, "context_tokens": 16473}
+359 | 19:13:42.108643 | sup-001-r2 | agent.turn | {"turn": 4, "tokens_in": 16473, "tokens_out": 4, "context_pct": 54.91, "output_tokens": 4, "context_tokens": 16473}
+360 | 19:13:42.113872 | sup-001-r2 | tool.civ_status | {}
+361 | 19:13:42.268203 | sup-001-r2 | agent.turn | {"turn": 5, "tokens_in": 16473, "tokens_out": 4, "context_pct": 54.91, "output_tokens": 4, "context_tokens": 16473}
+362 | 19:13:42.274745 | sup-001-r2 | tool.board_read | {"n": 9, "since_seq": 12}
+363 | 19:13:42.360979 | sol-003-g3 | agent.turn | {"turn": 17, "tokens_in": 19171, "tokens_out": 1, "context_pct": 63.903, "output_tokens": 1, "context_tokens": 19171}
+364 | 19:13:42.502695 | sup-001-r2 | agent.context_probe | {"cli_pct": 2, "arith_pct": 54.91, "probe_pct": 63.9, "total_tokens": 19170}
+365 | 19:13:42.658336 | sol-002-g3 | agent.turn | {"turn": 12, "tokens_in": 18924, "tokens_out": 8, "context_pct": 63.08, "output_tokens": 8, "context_tokens": 18924}
+366 | 19:13:42.666333 | sol-002-g3 | tool.board_post | {"id": 22, "kind": "finding", "thread_id": 6}
+367 | 19:13:42.829569 | sol-003-g3 | agent.turn | {"turn": 18, "tokens_in": 19171, "tokens_out": 1, "context_pct": 63.903, "output_tokens": 1, "context_tokens": 19171}
+368 | 19:13:42.837147 | sol-003-g3 | task.completed | {"score": 1.0, "task_id": "T-005", "result_ref": "shared/d6e29268b42ff1f8-rebuild.txt"}
+369 | 19:13:43.490626 | sol-001-g3 | agent.turn | {"turn": 8, "tokens_in": 21555, "tokens_out": 3, "context_pct": 71.85, "output_tokens": 3, "context_tokens": 21555}
+370 | 19:13:43.496989 | sol-001-g3 | agent.context_probe | {"cli_pct": 2, "arith_pct": 71.85, "probe_pct": 71.85, "total_tokens": 21555}
+371 | 19:13:43.775374 | sol-001-g3 | agent.turn | {"turn": 9, "tokens_in": 21555, "tokens_out": 3, "context_pct": 71.85, "output_tokens": 3, "context_tokens": 21555}
+372 | 19:13:44.116672 | sol-001-g3 | agent.turn | {"turn": 10, "tokens_in": 21555, "tokens_out": 3, "context_pct": 71.85, "output_tokens": 3, "context_tokens": 21555}
+373 | 19:13:44.141808 | sol-001-g3 | agent.context_probe | {"cli_pct": 2, "arith_pct": 71.85, "probe_pct": 72.233, "total_tokens": 21670}
+374 | 19:13:44.154014 | sol-002-g3 | agent.turn | {"turn": 13, "tokens_in": 19867, "tokens_out": 24, "context_pct": 66.223, "output_tokens": 24, "context_tokens": 19867}
+375 | 19:13:44.157357 | sol-002-g3 | task.completed | {"score": 1.0, "task_id": "T-006", "result_ref": "shared/dd0792686e1ef5a5-insurance.txt"}
+376 | 19:13:44.378214 | sol-003-g3 | agent.turn | {"turn": 19, "tokens_in": 19496, "tokens_out": 4, "context_pct": 64.987, "output_tokens": 4, "context_tokens": 19496}
+377 | 19:13:44.708575 | sol-003-g3 | agent.turn | {"turn": 20, "tokens_in": 19496, "tokens_out": 4, "context_pct": 64.987, "output_tokens": 4, "context_tokens": 19496}
+378 | 19:13:44.718479 | sol-003-g3 | agent.context_probe | {"cli_pct": 2, "arith_pct": 64.987, "probe_pct": 65.15, "total_tokens": 19545}
+379 | 19:13:44.787626 | sol-003-g3 | agent.turn | {"turn": 21, "tokens_in": 19496, "tokens_out": 4, "context_pct": 64.987, "output_tokens": 4, "context_tokens": 19496}
+380 | 19:13:44.795239 | sol-003-g3 | tool.board_read | {"n": 3, "thread_id": 3}
+381 | 19:13:45.292429 | sup-001-r2 | agent.turn | {"turn": 6, "tokens_in": 20509, "tokens_out": 8, "context_pct": 68.363, "output_tokens": 8, "context_tokens": 20509}
+382 | 19:13:46.119891 | sol-002-g3 | agent.turn | {"turn": 14, "tokens_in": 20143, "tokens_out": 8, "context_pct": 67.143, "output_tokens": 8, "context_tokens": 20143}
+383 | 19:13:46.227693 | sol-001-g3 | agent.turn | {"turn": 11, "tokens_in": 23393, "tokens_out": 6, "context_pct": 77.977, "output_tokens": 6, "context_tokens": 23393}
+384 | 19:13:46.444019 | sol-002-g3 | agent.turn | {"turn": 15, "tokens_in": 20143, "tokens_out": 8, "context_pct": 67.143, "output_tokens": 8, "context_tokens": 20143}
+385 | 19:13:46.453251 | sol-002-g3 | agent.context_probe | {"cli_pct": 2, "arith_pct": 67.143, "probe_pct": 67.303, "total_tokens": 20191}
+386 | 19:13:46.485259 | sup-001-r2 | agent.turn | {"turn": 7, "tokens_in": 20509, "tokens_out": 8, "context_pct": 68.363, "output_tokens": 8, "context_tokens": 20509}
+387 | 19:13:46.492691 | sup-001-r2 | tool.civ_alert | {"id": 25}
+388 | 19:13:46.610678 | sol-001-g3 | agent.turn | {"turn": 12, "tokens_in": 23393, "tokens_out": 6, "context_pct": 77.977, "output_tokens": 6, "context_tokens": 23393}
+389 | 19:13:46.705663 | sol-003-g3 | agent.turn | {"turn": 22, "tokens_in": 20516, "tokens_out": 8, "context_pct": 68.387, "output_tokens": 8, "context_tokens": 20516}
+390 | 19:13:46.91761 | sol-003-g3 | agent.turn | {"turn": 23, "tokens_in": 20516, "tokens_out": 8, "context_pct": 68.387, "output_tokens": 8, "context_tokens": 20516}
+391 | 19:13:47.022344 | sol-002-g3 | agent.turn | {"turn": 16, "tokens_in": 20143, "tokens_out": 8, "context_pct": 67.143, "output_tokens": 8, "context_tokens": 20143}
+392 | 19:13:47.02952 | sol-002-g3 | tool.board_vote | {"value": 1, "weight": 1.0, "message_id": 16}
+393 | 19:13:47.202756 | sol-003-g3 | agent.turn | {"turn": 24, "tokens_in": 20516, "tokens_out": 8, "context_pct": 68.387, "output_tokens": 8, "context_tokens": 20516}
+394 | 19:13:47.288173 | sol-001-g3 | agent.turn | {"turn": 13, "tokens_in": 23393, "tokens_out": 6, "context_pct": 77.977, "output_tokens": 6, "context_tokens": 23393}
+395 | 19:13:47.455874 | sol-002-g3 | agent.turn | {"turn": 17, "tokens_in": 20143, "tokens_out": 8, "context_pct": 67.143, "output_tokens": 8, "context_tokens": 20143}
+396 | 19:13:47.460366 | sol-002-g3 | tool.board_vote | {"value": 1, "weight": 1.0, "message_id": 17}
+397 | 19:13:47.608096 | sup-001-r2 | agent.turn | {"turn": 8, "tokens_in": 20509, "tokens_out": 8, "context_pct": 68.363, "output_tokens": 8, "context_tokens": 20509}
+398 | 19:13:47.615684 | sup-001-r2 | tool.board_post | {"id": 26, "kind": "finding", "thread_id": null}
+399 | 19:13:48.186951 | sol-001-g3 | agent.turn | {"turn": 14, "tokens_in": 23393, "tokens_out": 6, "context_pct": 77.977, "output_tokens": 6, "context_tokens": 23393}
+400 | 19:13:48.194912 | sol-001-g3 | tool.board_post | {"id": 27, "kind": "finding", "thread_id": 4}
+401 | 19:13:48.468277 | sol-002-g3 | agent.turn | {"turn": 18, "tokens_in": 20901, "tokens_out": 6, "context_pct": 69.67, "output_tokens": 6, "context_tokens": 20901}
+402 | 19:13:48.617667 | sol-002-g3 | agent.turn | {"turn": 19, "tokens_in": 20901, "tokens_out": 6, "context_pct": 69.67, "output_tokens": 6, "context_tokens": 20901}
+403 | 19:13:48.652883 | sol-002-g3 | agent.turn | {"turn": 20, "tokens_in": 20901, "tokens_out": 6, "context_pct": 69.67, "output_tokens": 6, "context_tokens": 20901}
+404 | 19:13:48.657706 | sol-002-g3 | task.claimed | {"task_id": "T-007"}
+405 | 19:13:48.661036 | sol-002-g3 | agent.context_probe | {"cli_pct": 2, "arith_pct": 69.67, "probe_pct": 69.787, "total_tokens": 20936}
+406 | 19:13:48.714066 | sol-003-g3 | agent.turn | {"turn": 25, "tokens_in": 21399, "tokens_out": 8, "context_pct": 71.33, "output_tokens": 8, "context_tokens": 21399}
+407 | 19:13:48.718686 | sol-003-g3 | agent.context_probe | {"cli_pct": 2, "arith_pct": 71.33, "probe_pct": 71.33, "total_tokens": 21399}
+408 | 19:13:48.935983 | sol-003-g3 | agent.turn | {"turn": 26, "tokens_in": 21399, "tokens_out": 8, "context_pct": 71.33, "output_tokens": 8, "context_tokens": 21399}
+409 | 19:13:49.308894 | sol-003-g3 | agent.turn | {"turn": 27, "tokens_in": 21399, "tokens_out": 8, "context_pct": 71.33, "output_tokens": 8, "context_tokens": 21399}
+410 | 19:13:49.311401 | sol-003-g3 | tool.board_vote | {"value": 1, "weight": 1.0, "message_id": 13}
+411 | 19:13:49.617798 | sup-001-r2 | agent.turn | {"turn": 9, "tokens_in": 21677, "tokens_out": 4, "context_pct": 72.257, "output_tokens": 4, "context_tokens": 21677}
+412 | 19:13:49.621593 | sup-001-r2 | agent.context_probe | {"cli_pct": 2, "arith_pct": 72.257, "probe_pct": 72.257, "total_tokens": 21677}
+413 | 19:13:49.638061 | sup-001-r2 | agent.ended | {"subtype": "success", "cost_usd": 0.005783379999999999, "is_error": false, "estimated": false, "num_turns": 6}
+414 | 19:13:49.63838 | sup-001-r2 | agent.status | {"status": "ended"}
+415 | 19:13:49.926228 | sol-001-g3 | agent.turn | {"turn": 15, "tokens_in": 24425, "tokens_out": 24, "context_pct": 81.417, "output_tokens": 24, "context_tokens": 24425}
+416 | 19:13:49.930154 | sol-001-g3 | task.completed | {"score": 1.0, "task_id": "T-004", "result_ref": "shared/f4dfd39ba9e30db1-customers.txt"}
+417 | 19:13:49.932267 | sol-001-g3 | agent.context_probe | {"cli_pct": 2, "arith_pct": 81.417, "probe_pct": 81.417, "total_tokens": 24425}
+418 | 19:13:49.932701 | sol-001-g3 | agent.handoff_requested | {}
+419 | 19:13:49.937973 | sol-001-g3 | agent.handoff_sent | {"turn": 15, "kill_due": false, "generation": 3, "context_pct": 81.417, "grace_turns": 2}
+420 | 19:13:50.057192 | operator | round.closed | {"pings": 0, "tuned": null, "turns": 6, "errors": [], "reports": 1, "cost_usd": 0.005783379999999999, "reopened": [], "round_id": 2, "sessions": 1}
+421 | 19:13:50.183397 | sol-002-g3 | agent.turn | {"turn": 21, "tokens_in": 21335, "tokens_out": 3, "context_pct": 71.117, "output_tokens": 3, "context_tokens": 21335}
+422 | 19:13:50.187869 | sol-002-g3 | agent.context_probe | {"cli_pct": 2, "arith_pct": 71.117, "probe_pct": 71.117, "total_tokens": 21335}
+423 | 19:13:50.611454 | sol-002-g3 | agent.turn | {"turn": 22, "tokens_in": 21335, "tokens_out": 3, "context_pct": 71.117, "output_tokens": 3, "context_tokens": 21335}
+424 | 19:13:50.631492 | sol-003-g3 | agent.turn | {"turn": 28, "tokens_in": 21816, "tokens_out": 6, "context_pct": 72.72, "output_tokens": 6, "context_tokens": 21816}
+425 | 19:13:50.632399 | sol-003-g3 | agent.turn | {"turn": 29, "tokens_in": 21816, "tokens_out": 6, "context_pct": 72.72, "output_tokens": 6, "context_tokens": 21816}
+426 | 19:13:50.636641 | sol-003-g3 | task.claimed | {"task_id": "T-008"}
+427 | 19:13:50.755496 | sol-002-g3 | agent.turn | {"turn": 23, "tokens_in": 21335, "tokens_out": 3, "context_pct": 71.117, "output_tokens": 3, "context_tokens": 21335}
+428 | 19:13:50.760077 | sol-002-g3 | tool.board_read | {"n": 1, "thread_id": 7}
+429 | 19:13:50.904913 | sol-002-g3 | agent.turn | {"turn": 24, "tokens_in": 21335, "tokens_out": 3, "context_pct": 71.117, "output_tokens": 3, "context_tokens": 21335}
+430 | 19:13:50.908659 | sol-002-g3 | tool.board_read | {"n": 3, "thread_id": 2}
+431 | 19:13:50.984824 | sol-002-g3 | agent.turn | {"turn": 25, "tokens_in": 21335, "tokens_out": 3, "context_pct": 71.117, "output_tokens": 3, "context_tokens": 21335}
+432 | 19:13:50.988957 | sol-002-g3 | tool.board_read | {"n": 3, "thread_id": 5}
+433 | 19:13:50.991671 | sol-002-g3 | agent.context_probe | {"cli_pct": 2, "arith_pct": 71.117, "probe_pct": 74.287, "total_tokens": 22286}
+434 | 19:13:51.860243 | sol-003-g3 | agent.turn | {"turn": 30, "tokens_in": 22179, "tokens_out": 24, "context_pct": 73.93, "output_tokens": 24, "context_tokens": 22179}
+435 | 19:13:51.86442 | sol-003-g3 | tool.board_read | {"n": 0, "kind": "question"}
+436 | 19:13:51.866982 | sol-003-g3 | agent.context_probe | {"cli_pct": 2, "arith_pct": 73.93, "probe_pct": 73.93, "total_tokens": 22179}
+437 | 19:13:53.320492 | sol-003-g3 | agent.turn | {"turn": 31, "tokens_in": 22306, "tokens_out": 3, "context_pct": 74.353, "output_tokens": 3, "context_tokens": 22306}
+438 | 19:13:53.345263 | sol-003-g3 | agent.turn | {"turn": 32, "tokens_in": 22306, "tokens_out": 3, "context_pct": 74.353, "output_tokens": 3, "context_tokens": 22306}
+439 | 19:13:53.884553 | sol-003-g3 | agent.turn | {"turn": 33, "tokens_in": 22306, "tokens_out": 3, "context_pct": 74.353, "output_tokens": 3, "context_tokens": 22306}
+440 | 19:13:54.203897 | sol-002-g3 | agent.turn | {"turn": 26, "tokens_in": 23874, "tokens_out": 4, "context_pct": 79.58, "output_tokens": 4, "context_tokens": 23874}
+441 | 19:13:54.550396 | sol-002-g3 | agent.turn | {"turn": 27, "tokens_in": 23874, "tokens_out": 4, "context_pct": 79.58, "output_tokens": 4, "context_tokens": 23874}
+442 | 19:13:55.020092 | sol-002-g3 | agent.turn | {"turn": 28, "tokens_in": 23874, "tokens_out": 4, "context_pct": 79.58, "output_tokens": 4, "context_tokens": 23874}
+443 | 19:13:55.33454 | sol-003-g3 | agent.turn | {"turn": 34, "tokens_in": 22601, "tokens_out": 24, "context_pct": 75.337, "output_tokens": 24, "context_tokens": 22601}
+444 | 19:13:55.340654 | sol-003-g3 | task.completed | {"score": 1.0, "task_id": "T-008", "result_ref": "shared/321ba04f752ee395-questions.txt"}
+445 | 19:13:55.463336 | sol-001-g3 | agent.turn | {"turn": 16, "tokens_in": 25110, "tokens_out": 25, "context_pct": 83.7, "output_tokens": 25, "context_tokens": 25110}
+446 | 19:13:55.469572 | sol-001-g3 | tool.civ_handoff | {"handoff_id": 7}
+447 | 19:13:55.469572 | sol-001-g3 | agent.handoff_written | {"generation": 3, "handoff_id": 7, "lineage_id": "L-001"}
+448 | 19:13:55.49625 | sol-001-g3 | agent.ended | {"subtype": "error_during_execution", "cost_usd": 0.006132680000000001, "is_error": true, "estimated": false, "num_turns": 12}
+449 | 19:13:55.497114 | sol-001-g3 | agent.status | {"status": "ended"}
+450 | 19:13:56.157968 | sol-001-g3 | agent.handed_off | {"requested": true, "generation": 3, "grace_turns": 2, "turns_since_request": 1, "seconds_since_request": 5.546}
+451 | 19:13:56.159447 | sol-001-g4 | agent.spawned | {"role": "solver", "generation": 4, "lineage_id": "L-001"}
+452 | 19:13:56.159447 | sol-001-g3 | agent.succeeded | {"to": "sol-001-g4", "from": "sol-001-g3", "lease": null, "generation": 4}
+453 | 19:13:56.161812 |  | governor.wait | {"role": "solver", "limit": 3000000, "value": 3668541, "reason": "tokens_per_minute"}
+454 | 19:13:56.722661 | sol-003-g3 | agent.turn | {"turn": 35, "tokens_in": 22846, "tokens_out": 8, "context_pct": 76.153, "output_tokens": 8, "context_tokens": 22846}
+455 | 19:13:56.727396 | sol-003-g3 | agent.context_probe | {"cli_pct": 2, "arith_pct": 76.153, "probe_pct": 76.153, "total_tokens": 22846}
+456 | 19:13:57.025495 | sol-003-g3 | agent.turn | {"turn": 36, "tokens_in": 22846, "tokens_out": 8, "context_pct": 76.153, "output_tokens": 8, "context_tokens": 22846}
+457 | 19:13:57.402063 | sol-003-g3 | agent.turn | {"turn": 37, "tokens_in": 22846, "tokens_out": 8, "context_pct": 76.153, "output_tokens": 8, "context_tokens": 22846}
+458 | 19:13:57.406804 | sol-003-g3 | tool.board_vote | {"value": 1, "weight": 1.0, "message_id": 10}
+459 | 19:13:57.428587 | sol-003-g3 | agent.turn | {"turn": 38, "tokens_in": 22846, "tokens_out": 8, "context_pct": 76.153, "output_tokens": 8, "context_tokens": 22846}
+460 | 19:13:57.642143 | sol-002-g3 | agent.turn | {"turn": 29, "tokens_in": 25381, "tokens_out": 7, "context_pct": 84.603, "output_tokens": 7, "context_tokens": 25381}
+461 | 19:13:57.642781 | sol-002-g3 | agent.handoff_requested | {}
+462 | 19:13:57.643593 | sol-002-g3 | agent.handoff_sent | {"turn": 29, "kill_due": false, "generation": 3, "context_pct": 84.603, "grace_turns": 2}
+463 | 19:13:57.987439 | sol-002-g3 | agent.turn | {"turn": 30, "tokens_in": 25381, "tokens_out": 7, "context_pct": 84.603, "output_tokens": 7, "context_tokens": 25381}
+464 | 19:13:57.992561 | sol-002-g3 | agent.context_probe | {"cli_pct": 3, "arith_pct": 84.603, "probe_pct": 84.827, "total_tokens": 25448}
+465 | 19:13:58.837357 | sol-003-g3 | agent.turn | {"turn": 39, "tokens_in": 23316, "tokens_out": 8, "context_pct": 77.72, "output_tokens": 8, "context_tokens": 23316}
+466 | 19:13:59.09355 | sol-002-g3 | agent.turn | {"turn": 31, "tokens_in": 25381, "tokens_out": 7, "context_pct": 84.603, "output_tokens": 7, "context_tokens": 25381}
+467 | 19:13:59.643307 | sol-003-g3 | agent.turn | {"turn": 40, "tokens_in": 23316, "tokens_out": 8, "context_pct": 77.72, "output_tokens": 8, "context_tokens": 23316}
+468 | 19:13:59.648789 | sol-003-g3 | agent.context_probe | {"cli_pct": 2, "arith_pct": 77.72, "probe_pct": 78.393, "total_tokens": 23518}
+469 | 19:13:59.66746 | sol-003-g3 | agent.ended | {"subtype": "success", "cost_usd": 0.00821965, "is_error": false, "estimated": false, "num_turns": 19}
+470 | 19:13:59.668067 | sol-003-g3 | agent.status | {"status": "ended"}
+471 | 19:14:00.380727 | sol-003-g3 | lineage.ended | {"by": "natural", "generation": 3, "lineage_id": "L-003"}
+472 | 19:14:05.060686 | operator | round.opened | {"final": false, "number": 3, "round_id": 3, "window_start": "2026-10-17T19:13:29.332175+01:00"}
+473 | 19:14:05.08739 |  | round.brief_rendered | {"chars": 3350, "number": 3, "round_id": 3}
+474 | 19:14:05.089314 |  | governor.wait | {"role": "supervisor", "limit": 3000000, "value": 3449551, "reason": "tokens_per_minute"}
+475 | 19:14:05.85274 | sol-002-g3 | agent.turn | {"turn": 32, "tokens_in": 26771, "tokens_out": 27, "context_pct": 89.237, "output_tokens": 27, "context_tokens": 26771}
+476 | 19:14:05.893404 | sol-002-g3 | tool.civ_handoff | {"handoff_id": 8}
+477 | 19:14:05.893404 | sol-002-g3 | agent.handoff_written | {"generation": 3, "handoff_id": 8, "lineage_id": "L-002"}
+478 | 19:14:05.920904 | sol-002-g3 | agent.ended | {"subtype": "error_during_execution", "cost_usd": 0.00841008, "is_error": true, "estimated": false, "num_turns": 18}
+479 | 19:14:05.921932 | sol-002-g3 | agent.status | {"status": "ended"}
+480 | 19:14:06.330361 | sol-002-g3 | agent.handed_off | {"requested": true, "generation": 3, "grace_turns": 2, "turns_since_request": 3, "seconds_since_request": 8.262}
+481 | 19:14:06.332337 | sol-002-g4 | agent.spawned | {"role": "solver", "generation": 4, "lineage_id": "L-002"}
+482 | 19:14:06.332337 | sol-002-g3 | agent.succeeded | {"to": "sol-002-g4", "from": "sol-002-g3", "lease": "T-007", "generation": 4}
+483 | 19:14:06.335641 |  | governor.wait | {"role": "solver", "limit": 3000000, "value": 3455513, "reason": "tokens_per_minute"}
+484 | 19:14:12.198026 |  | governor.resumed | {"role": "solver", "reason": "tokens_per_minute", "waited_s": 16.0}
+485 | 19:14:12.201542 | sol-001-g4 | agent.options | {"role": "solver", "model": "claude-haiku-5-5", "generation": 4, "lineage_id": "L-001"}
+486 | 19:14:12.345722 |  | governor.resumed | {"role": "solver", "reason": "tokens_per_minute", "waited_s": 6.0}
+487 | 19:14:12.346733 | sol-002-g4 | agent.options | {"role": "solver", "model": "claude-haiku-5-5", "generation": 4, "lineage_id": "L-002"}
+488 | 19:14:12.674984 | sol-001-g4 | agent.init | {"model": "claude-haiku-5-5", "mcp_servers": {"civ": "connected"}}
+489 | 19:14:12.782199 | sol-002-g4 | agent.init | {"model": "claude-haiku-5-5", "mcp_servers": {"civ": "connected"}}
+490 | 19:14:13.111735 |  | governor.resumed | {"role": "supervisor", "reason": "tokens_per_minute", "waited_s": 8.0}
+491 | 19:14:13.113809 | sup-001-r3 | agent.spawned | {"role": "supervisor", "generation": 3, "lineage_id": "S-001"}
+492 | 19:14:13.115792 | sup-001-r3 | agent.options | {"role": "supervisor", "model": "claude-haiku-5-5", "generation": 3, "lineage_id": "S-001"}
+493 | 19:14:13.595317 | sup-001-r3 | agent.init | {"model": "claude-haiku-5-5", "mcp_servers": {"civ": "connected"}}
+494 | 19:14:14.35896 | sol-002-g4 | agent.turn | {"turn": 1, "tokens_in": 11419, "tokens_out": 5, "context_pct": 38.063, "output_tokens": 5, "context_tokens": 11419}
+495 | 19:14:14.599343 | sol-002-g4 | agent.compaction_state | {"problem": false, "handoff_pct": 80.0, "threshold_pct": null, "auto_compact_enabled": false}
+496 | 19:14:14.619962 | sol-001-g4 | agent.turn | {"turn": 1, "tokens_in": 11308, "tokens_out": 2, "context_pct": 37.693, "output_tokens": 2, "context_tokens": 11308}
+497 | 19:14:14.660178 | sol-002-g4 | agent.turn | {"turn": 2, "tokens_in": 11419, "tokens_out": 5, "context_pct": 38.063, "output_tokens": 5, "context_tokens": 11419}
+498 | 19:14:14.833434 | sol-001-g4 | agent.compaction_state | {"problem": false, "handoff_pct": 80.0, "threshold_pct": null, "auto_compact_enabled": false}
+499 | 19:14:14.844616 | sol-001-g4 | agent.turn | {"turn": 2, "tokens_in": 11308, "tokens_out": 2, "context_pct": 37.693, "output_tokens": 2, "context_tokens": 11308}
+500 | 19:14:15.051873 | sol-001-g4 | agent.turn | {"turn": 3, "tokens_in": 11308, "tokens_out": 2, "context_pct": 37.693, "output_tokens": 2, "context_tokens": 11308}
+501 | 19:14:15.072069 | sol-001-g4 | tool.board_read | {"n": 20, "since_seq": 8}
+502 | 19:14:15.109236 | sol-002-g4 | agent.turn | {"turn": 3, "tokens_in": 11419, "tokens_out": 5, "context_pct": 38.063, "output_tokens": 5, "context_tokens": 11419}
+503 | 19:14:15.247017 | sol-002-g4 | agent.turn | {"turn": 4, "tokens_in": 11419, "tokens_out": 5, "context_pct": 38.063, "output_tokens": 5, "context_tokens": 11419}
+504 | 19:14:15.254214 | sol-002-g4 | tool.board_read | {"n": 1, "thread_id": 7}
+505 | 19:14:15.389401 | sol-001-g4 | agent.turn | {"turn": 4, "tokens_in": 11308, "tokens_out": 2, "context_pct": 37.693, "output_tokens": 2, "context_tokens": 11308}
+506 | 19:14:15.618395 | sup-001-r3 | agent.turn | {"turn": 1, "tokens_in": 11505, "tokens_out": 5, "context_pct": 38.35, "output_tokens": 5, "context_tokens": 11505}
+507 | 19:14:16.039832 | sup-001-r3 | agent.turn | {"turn": 2, "tokens_in": 11505, "tokens_out": 5, "context_pct": 38.35, "output_tokens": 5, "context_tokens": 11505}
+508 | 19:14:16.237676 | sup-001-r3 | agent.turn | {"turn": 3, "tokens_in": 11505, "tokens_out": 5, "context_pct": 38.35, "output_tokens": 5, "context_tokens": 11505}
+509 | 19:14:16.25541 | sup-001-r3 | tool.board_read | {"n": 15, "since_seq": 13}
+510 | 19:14:16.267391 | sup-001-r3 | agent.turn | {"turn": 4, "tokens_in": 11505, "tokens_out": 5, "context_pct": 38.35, "output_tokens": 5, "context_tokens": 11505}
+511 | 19:14:16.270728 | sup-001-r3 | tool.civ_status | {}
+512 | 19:14:17.885972 | sol-002-g4 | agent.turn | {"turn": 5, "tokens_in": 16066, "tokens_out": 5, "context_pct": 53.553, "output_tokens": 5, "context_tokens": 16066}
+513 | 19:14:17.898732 | sol-002-g4 | agent.context_probe | {"cli_pct": 2, "arith_pct": 53.553, "probe_pct": 53.553, "total_tokens": 16066}
+514 | 19:14:18.231944 | sol-002-g4 | agent.turn | {"turn": 6, "tokens_in": 16066, "tokens_out": 5, "context_pct": 53.553, "output_tokens": 5, "context_tokens": 16066}
+515 | 19:14:18.427848 | sol-002-g4 | agent.turn | {"turn": 7, "tokens_in": 16066, "tokens_out": 5, "context_pct": 53.553, "output_tokens": 5, "context_tokens": 16066}
+516 | 19:14:18.434513 | sol-002-g4 | tool.board_top | {"n": 15, "kind": "finding", "window_s": 86400.0}
+517 | 19:14:18.916113 | sol-002-g4 | agent.turn | {"turn": 8, "tokens_in": 16066, "tokens_out": 5, "context_pct": 53.553, "output_tokens": 5, "context_tokens": 16066}
+518 | 19:14:20.341123 | sol-001-g4 | agent.turn | {"turn": 5, "tokens_in": 23057, "tokens_out": 6, "context_pct": 76.857, "output_tokens": 6, "context_tokens": 23057}
+519 | 19:14:20.350727 | sol-001-g4 | agent.context_probe | {"cli_pct": 2, "arith_pct": 76.857, "probe_pct": 76.857, "total_tokens": 23057}
+520 | 19:14:20.725874 | sol-001-g4 | agent.turn | {"turn": 6, "tokens_in": 23057, "tokens_out": 6, "context_pct": 76.857, "output_tokens": 6, "context_tokens": 23057}
+521 | 19:14:21.155561 | sol-001-g4 | agent.turn | {"turn": 7, "tokens_in": 23057, "tokens_out": 6, "context_pct": 76.857, "output_tokens": 6, "context_tokens": 23057}
+522 | 19:14:21.16459 | sol-001-g4 | tool.board_vote | {"value": 1, "weight": 1.0, "message_id": 13}
+523 | 19:14:21.171164 | sol-002-g4 | agent.turn | {"turn": 9, "tokens_in": 21933, "tokens_out": 3, "context_pct": 73.11, "output_tokens": 3, "context_tokens": 21933}
+524 | 19:14:21.182129 | sol-002-g4 | agent.context_probe | {"cli_pct": 2, "arith_pct": 73.11, "probe_pct": 73.11, "total_tokens": 21933}
+525 | 19:14:21.567054 | sol-001-g4 | agent.turn | {"turn": 8, "tokens_in": 23057, "tokens_out": 6, "context_pct": 76.857, "output_tokens": 6, "context_tokens": 23057}
+526 | 19:14:21.573761 | sol-001-g4 | tool.board_vote | {"value": 1, "weight": 1.0, "message_id": 9}
+527 | 19:14:21.597749 | sol-001-g4 | agent.turn | {"turn": 9, "tokens_in": 23057, "tokens_out": 6, "context_pct": 76.857, "output_tokens": 6, "context_tokens": 23057}
+528 | 19:14:21.602183 | sol-002-g4 | agent.turn | {"turn": 10, "tokens_in": 21933, "tokens_out": 3, "context_pct": 73.11, "output_tokens": 3, "context_tokens": 21933}
+529 | 19:14:21.606725 | sol-002-g4 | agent.context_probe | {"cli_pct": 2, "arith_pct": 73.11, "probe_pct": 73.393, "total_tokens": 22018}
+530 | 19:14:21.923778 | sol-002-g4 | agent.turn | {"turn": 11, "tokens_in": 21933, "tokens_out": 3, "context_pct": 73.11, "output_tokens": 3, "context_tokens": 21933}
+531 | 19:14:22.014818 | sup-001-r3 | agent.turn | {"turn": 5, "tokens_in": 20837, "tokens_out": 3, "context_pct": 69.457, "output_tokens": 3, "context_tokens": 20837}
+532 | 19:14:22.270886 | sup-001-r3 | agent.context_probe | {"cli_pct": 2, "arith_pct": 69.457, "probe_pct": 69.457, "total_tokens": 20837}
+533 | 19:14:22.543048 | sup-001-r3 | agent.turn | {"turn": 6, "tokens_in": 20837, "tokens_out": 3, "context_pct": 69.457, "output_tokens": 3, "context_tokens": 20837}
+534 | 19:14:23.0759 | sup-001-r3 | agent.turn | {"turn": 7, "tokens_in": 20837, "tokens_out": 3, "context_pct": 69.457, "output_tokens": 3, "context_tokens": 20837}
+535 | 19:14:23.084948 | sup-001-r3 | tool.board_vote | {"value": 1, "weight": 2.0, "message_id": 26}
+536 | 19:14:24.000221 | sol-002-g4 | agent.turn | {"turn": 12, "tokens_in": 22611, "tokens_out": 3, "context_pct": 75.37, "output_tokens": 3, "context_tokens": 22611}
+537 | 19:14:24.269785 | sol-001-g4 | agent.turn | {"turn": 10, "tokens_in": 24210, "tokens_out": 8, "context_pct": 80.7, "output_tokens": 8, "context_tokens": 24210}
+538 | 19:14:24.277426 | sol-001-g4 | agent.context_probe | {"cli_pct": 2, "arith_pct": 80.7, "probe_pct": 80.7, "total_tokens": 24210}
+539 | 19:14:24.27824 | sol-001-g4 | agent.handoff_requested | {}
+540 | 19:14:24.286007 | sol-001-g4 | agent.handoff_sent | {"turn": 10, "kill_due": false, "generation": 4, "context_pct": 80.7, "grace_turns": 2}
+541 | 19:14:24.287787 | sol-002-g4 | agent.turn | {"turn": 13, "tokens_in": 22611, "tokens_out": 3, "context_pct": 75.37, "output_tokens": 3, "context_tokens": 22611}
+542 | 19:14:24.713963 | sol-002-g4 | agent.turn | {"turn": 14, "tokens_in": 22611, "tokens_out": 3, "context_pct": 75.37, "output_tokens": 3, "context_tokens": 22611}
+543 | 19:14:25.083717 | sol-001-g4 | agent.turn | {"turn": 11, "tokens_in": 24210, "tokens_out": 8, "context_pct": 80.7, "output_tokens": 8, "context_tokens": 24210}
+544 | 19:14:25.105247 | sol-002-g4 | agent.turn | {"turn": 15, "tokens_in": 22611, "tokens_out": 3, "context_pct": 75.37, "output_tokens": 3, "context_tokens": 22611}
+545 | 19:14:25.10768 | sol-001-g4 | agent.ended | {"subtype": "success", "cost_usd": 0.00491365, "is_error": false, "estimated": false, "num_turns": 6}
+546 | 19:14:25.108464 | sol-001-g4 | agent.status | {"status": "ended"}
+547 | 19:14:25.120578 | sol-002-g4 | agent.context_probe | {"cli_pct": 2, "arith_pct": 75.37, "probe_pct": 76.107, "total_tokens": 22832}
+548 | 19:14:26.476995 | sol-002-g4 | agent.turn | {"turn": 16, "tokens_in": 23346, "tokens_out": 5, "context_pct": 77.82, "output_tokens": 5, "context_tokens": 23346}
+549 | 19:14:26.710938 | sol-002-g4 | agent.turn | {"turn": 17, "tokens_in": 23346, "tokens_out": 5, "context_pct": 77.82, "output_tokens": 5, "context_tokens": 23346}
+550 | 19:14:27.997907 | sol-002-g4 | agent.turn | {"turn": 18, "tokens_in": 23346, "tokens_out": 5, "context_pct": 77.82, "output_tokens": 5, "context_tokens": 23346}
+551 | 19:14:28.005908 | sol-002-g4 | tool.board_post | {"id": 32, "kind": "finding", "thread_id": 7}
+552 | 19:14:28.742504 | sol-002-g4 | agent.turn | {"turn": 19, "tokens_in": 23346, "tokens_out": 5, "context_pct": 77.82, "output_tokens": 5, "context_tokens": 23346}
+553 | 19:14:28.747287 | sol-002-g4 | task.completed | {"score": 1.0, "task_id": "T-007", "result_ref": "shared/ac511f554948e14f-chronicle.txt"}
+554 | 19:14:28.848558 | sup-001-r3 | agent.turn | {"turn": 8, "tokens_in": 20837, "tokens_out": 3, "context_pct": 69.457, "output_tokens": 3, "context_tokens": 20837}
+555 | 19:14:28.856427 | sup-001-r3 | tool.civ_report | {"id": 34, "trigger": null, "round_id": 3}
+556 | 19:14:30.381816 | sol-001-g4 | agent.status | {"status": "dead"}
+557 | 19:14:30.382785 | sol-001-g4 | agent.killed | {"reason": "session ended without a handoff", "generation": 4}
+558 | 19:14:30.385059 | sol-001-g4 | agent.stub_written | {"task": null, "posts": 0, "handoff_id": 9}
+559 | 19:14:30.38721 | sol-001-g4 | lineage.ended | {"by": "max_generations", "generation": 4, "lineage_id": "L-001"}
+560 | 19:14:30.609027 | sol-002-g4 | agent.turn | {"turn": 20, "tokens_in": 24223, "tokens_out": 8, "context_pct": 80.743, "output_tokens": 8, "context_tokens": 24223}
+561 | 19:14:30.619915 | sol-002-g4 | agent.context_probe | {"cli_pct": 2, "arith_pct": 80.743, "probe_pct": 80.743, "total_tokens": 24223}
+562 | 19:14:30.620974 | sol-002-g4 | agent.handoff_requested | {}
+563 | 19:14:30.629634 | sol-002-g4 | agent.handoff_sent | {"turn": 20, "kill_due": false, "generation": 4, "context_pct": 80.743, "grace_turns": 2}
+564 | 19:14:30.871029 | sup-001-r3 | agent.turn | {"turn": 9, "tokens_in": 23554, "tokens_out": 4, "context_pct": 78.513, "output_tokens": 4, "context_tokens": 23554}
+565 | 19:14:30.880751 | sup-001-r3 | agent.context_probe | {"cli_pct": 2, "arith_pct": 78.513, "probe_pct": 78.513, "total_tokens": 23554}
+566 | 19:14:30.8911 | sup-001-r3 | agent.ended | {"subtype": "success", "cost_usd": 0.00584653, "is_error": false, "estimated": false, "num_turns": 5}
+567 | 19:14:30.891673 | sup-001-r3 | agent.status | {"status": "ended"}
+568 | 19:14:30.960197 | sol-002-g4 | agent.turn | {"turn": 21, "tokens_in": 24223, "tokens_out": 8, "context_pct": 80.743, "output_tokens": 8, "context_tokens": 24223}
+569 | 19:14:31.15318 | operator | round.closed | {"pings": 0, "tuned": null, "turns": 5, "errors": [], "reports": 1, "cost_usd": 0.00584653, "reopened": [], "round_id": 3, "sessions": 1}
+570 | 19:14:31.185125 | sol-002-g4 | agent.turn | {"turn": 22, "tokens_in": 24223, "tokens_out": 8, "context_pct": 80.743, "output_tokens": 8, "context_tokens": 24223}
+571 | 19:14:37.631462 | sol-002-g4 | agent.turn | {"turn": 23, "tokens_in": 25497, "tokens_out": 27, "context_pct": 84.99, "output_tokens": 27, "context_tokens": 25497}
+572 | 19:14:37.644432 | sol-002-g4 | tool.civ_handoff | {"handoff_id": 10}
+573 | 19:14:37.644432 | sol-002-g4 | agent.handoff_written | {"generation": 4, "handoff_id": 10, "lineage_id": "L-002"}
+574 | 19:14:37.670039 | sol-002-g4 | agent.ended | {"subtype": "error_during_execution", "cost_usd": 0.007144099999999999, "is_error": true, "estimated": false, "num_turns": 13}
+575 | 19:14:37.67106 | sol-002-g4 | agent.status | {"status": "ended"}
+576 | 19:14:37.932033 | sol-002-g4 | agent.handed_off | {"requested": true, "generation": 4, "grace_turns": 2, "turns_since_request": 3, "seconds_since_request": 7.034}
+577 | 19:14:37.933823 | sol-002-g4 | lineage.ended | {"by": "max_generations", "generation": 4, "lineage_id": "L-002"}
+578 | 19:14:37.93537 | operator | round.opened | {"final": true, "number": 4, "round_id": 4, "window_start": "2026-10-17T19:14:05.060686+01:00"}
+579 | 19:14:37.947865 |  | round.brief_rendered | {"chars": 3406, "number": 4, "round_id": 4}
+580 | 19:14:37.950513 | sup-001-r4 | agent.spawned | {"role": "supervisor", "generation": 4, "lineage_id": "S-001"}
+581 | 19:14:37.951864 | sup-001-r4 | agent.options | {"role": "supervisor", "model": "claude-haiku-5-5", "generation": 4, "lineage_id": "S-001"}
+582 | 19:14:38.450529 | sup-001-r4 | agent.init | {"model": "claude-haiku-5-5", "mcp_servers": {"civ": "connected"}}
+583 | 19:14:42.163994 | sup-001-r4 | agent.turn | {"turn": 1, "tokens_in": 11510, "tokens_out": 5, "context_pct": 38.367, "output_tokens": 5, "context_tokens": 11510}
+584 | 19:14:43.097322 | sup-001-r4 | agent.turn | {"turn": 2, "tokens_in": 11510, "tokens_out": 5, "context_pct": 38.367, "output_tokens": 5, "context_tokens": 11510}
+585 | 19:14:43.117186 | sup-001-r4 | tool.civ_tune | {"n": 3, "to": 75.0, "slo": "handoff_success_rate", "from": 80.0, "knob": "handoff_pct", "reason": "Round 4 kill sol-001-g4 classified silent: requested yes, no tool call after the request, 6.11 s since request, context 80.7% at request. handoff_success_rate 0.667 this window (2 real of 3 successions, 1 stub) against 1 last window (n=3 this window, previous n=4). Lowering handoff_pct one step so the request lands before the hung session.", "big_move": false, "round_id": 4}
+586 | 19:14:43.137908 | sup-001-r4 | agent.turn | {"turn": 3, "tokens_in": 11510, "tokens_out": 5, "context_pct": 38.367, "output_tokens": 5, "context_tokens": 11510}
+587 | 19:14:43.142237 | sup-001-r4 | tool.civ_status | {}
+588 | 19:14:45.919147 | sup-001-r4 | agent.turn | {"turn": 4, "tokens_in": 16197, "tokens_out": 10, "context_pct": 53.99, "output_tokens": 10, "context_tokens": 16197}
+589 | 19:14:52.182607 | sup-001-r4 | agent.turn | {"turn": 5, "tokens_in": 16197, "tokens_out": 10, "context_pct": 53.99, "output_tokens": 10, "context_tokens": 16197}
+590 | 19:14:52.190997 | sup-001-r4 | tool.civ_report | {"id": 36, "trigger": null, "round_id": 4}
+591 | 19:14:52.420158 | sup-001-r4 | agent.context_probe | {"cli_pct": 2, "arith_pct": 53.99, "probe_pct": 58.44, "total_tokens": 17532}
+592 | 19:14:54.983118 | sup-001-r4 | agent.turn | {"turn": 6, "tokens_in": 18020, "tokens_out": 3, "context_pct": 60.067, "output_tokens": 3, "context_tokens": 18020}
+593 | 19:14:55.002879 | sup-001-r4 | agent.ended | {"subtype": "success", "cost_usd": 0.00456738, "is_error": false, "estimated": false, "num_turns": 4}
+594 | 19:14:55.003945 | sup-001-r4 | agent.status | {"status": "ended"}
+595 | 19:14:55.249638 | operator | round.closed | {"pings": 0, "tuned": "handoff_pct", "turns": 4, "errors": [], "reports": 1, "cost_usd": 0.00456738, "reopened": [], "round_id": 4, "sessions": 1}

@@ -30,7 +30,12 @@ TABLES = [
     # M4: a reset must close out the supervisor rounds too, or current_round() would hand the
     # next run a round left open by the last one.
     "tune_proposals", "rounds",
+    # M5: and the epoch, pause flag and inbox mark, or a clean board would start at the epoch the
+    # last restore drill left behind (seen: a fresh demo opening at epoch 2).
+    "control_state",
 ]
+
+CONTROL_STATE_SEEDS = (("epoch", "1"), ("paused", "false"), ("inbox_last_seq", "0"))
 
 
 
@@ -47,6 +52,10 @@ def reset_database(db_url: str) -> None:
             # added there cannot be missed here.
             from harness.board_mcp.seed import seed_config
             seed_config(conn)
+        if "control_state" in existing:
+            for key, value in CONTROL_STATE_SEEDS:
+                conn.execute("insert into control_state (key, value) values (%s, %s::jsonb) on conflict (key) do nothing",
+                             (key, value))
         conn.commit()
     missing = [t for t in TABLES if t not in existing]
     if missing:

@@ -129,7 +129,16 @@ python -m control.cli.civ inbox
 KILL_AFTER_S=25 scripts/restore_drill.sh
 ```
 
-<!-- integrator: m5 results -->
+### Results (17 October 2026)
+
+All four live checks ran on three Haiku solvers at a 30k window, for cents. Records: `docs/demo/2026-10-17-m5-controls-*.txt` (checks 1 to 3) and `docs/demo/2026-10-17-restore-drill-*.txt` (check 4).
+
+1. **Status and inbox.** `civ status` on the database left by the M4 A/B showed the epoch, the knob table with the operator preset marked, spend against the ceiling and the shape; `civ inbox` printed the three supervisor reports, pings first.
+2. **Pause and resume.** `civ pause` ten seconds in: the next successor spawn waited at the governor (`governor.wait`, reason paused) and started 1.6 seconds after `civ resume`. The token-per-minute ceiling also tripped once on its own (3,001,821 against 3,000,000) and held a spawn for six seconds.
+3. **Say and vote.** A broadcast reached seven sessions on their next tool result. A pinned vote was acknowledged by eight agents; `civ vote --report` named the two that never did, and the events showed why: both had been asked to hand off in the same second the vote was pinned, and were killed three and six seconds later. That was the live checks' one real finding. `civ_handoff` had honoured the pin gate, so a dying agent was being asked to acknowledge a steer it could never act on; the handoff is now exempt from both gates (the ack stays open for an agent that wants to clear the steer).
+4. **Restore drill.** The orchestrator was killed 25 seconds in with three leases held and one agent mid-handoff. `civ restore --yes` took one second: epoch bumped, three solver lineages stubbed and marked dead, the supervisor's round retired, three leases released with attempts unchanged, knobs reset, the restore broadcast posted. The orchestrator restarted with `--resume` spawned generation 2 of every lineage from its restore stub, continued the supervisor rounds at 2, 3 and 4 (the final round tuned `handoff_pct` down one step on the stub-heavy window), and finished 8 of 8 at mean score 1.000 in 101 seconds.
+
+The first drill failed twice, which is what a drill is for: the restore had stubbed the supervisor's round as if it were a lineage and the resumed orchestrator tried to resume it as a solver, and the cron restarted its round numbers at one, so `sup-001-r1` collided with the old epoch's. Restore now stubs solver lineages only, the population skips a lineage id it does not own, and the cron continues from the database's last round number. The demo reset also now restores `control_state`, so a clean board starts at epoch 1.
 
 ### Deviations from the design doc
 

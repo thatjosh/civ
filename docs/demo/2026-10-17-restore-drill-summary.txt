@@ -1,0 +1,38 @@
+restore drill, 2026-10-17, model claude-haiku-5-5, killed after 25s
+
+half one (lost): 25s wall; last event at 19:13:13
+live at the loss: sol-001:handing_off, sol-002:live, sol-003:live, sup-001-r1:live
+leased at the loss: T-004 by sol-002, T-005 by sol-003, T-006 by sol-001
+
+restore: 1s wall
+Restored at 19:13:14 into epoch 3: 3 lineages queued for stubs, 3 leases released, about 0 minutes of activity after 19:13:13 are lost
+
+half two (resumed): 101s wall
+
+epochs seen in events: epoch 2: 146 events; epoch 3: 449 events
+
+lineages resumed (handoffs written by the restore):
+L-001 sol-001 -> sol-001-g2 gen 2 from a stub
+L-002 sol-002 -> sol-002-g2 gen 2 from a stub
+L-003 sol-003 -> sol-003-g2 gen 2 from a stub
+
+agents:
+sol-001 gen 1 dead epoch 2
+sol-002 gen 1 dead epoch 2
+sol-003 gen 1 dead epoch 2
+sup-001-r1 gen 1 dead epoch 2
+sol-001-g2 gen 2 ended epoch 3
+sol-002-g2 gen 2 ended epoch 3
+sol-003-g2 gen 2 ended epoch 3
+sup-001-r2 gen 2 ended epoch 3
+sol-003-g3 gen 3 ended epoch 3
+sol-002-g3 gen 3 ended epoch 3
+sol-001-g3 gen 3 ended epoch 3
+sol-001-g4 gen 4 dead epoch 3
+sol-002-g4 gen 4 ended epoch 3
+sup-001-r3 gen 3 ended epoch 3
+sup-001-r4 gen 4 ended epoch 3
+
+tasks: 8 of 8 done, mean score 1.000
+
+restore broadcast: Restored at 19:13:14 into epoch 3: 3 lineages queued for stubs, 3 leases released, about 0 minutes of activity after 19:13:13 are lost
