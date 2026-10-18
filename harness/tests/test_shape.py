@@ -77,3 +77,17 @@ def test_reader_keeps_the_last_shape_when_the_read_fails():
 
     reader = ShapeReader(Broken(), Shape(solvers=2), poll_s=0.0)
     assert reader.current().solvers == 2
+
+
+def test_merge_section_is_carried_through_the_shape(tmp_path):
+    # The server's merge rules read [merge] from control_state.shape, so the orchestrator must not
+    # drop it on the way there (the first live merge run warned "unknown section [merge] ignored").
+    from harness.orchestrator.shape import Shape, load_shape
+
+    path = tmp_path / "civ.toml"
+    path.write_text('[population]\nsolvers = 2\nsupervisors = 1\n[merge]\nmax_per_round = 1\nprotected_paths = ["control/"]\n')
+    shape = load_shape(path)
+    assert shape.extra == {"merge": {"max_per_round": 1, "protected_paths": ["control/"]}}
+    as_json = shape.to_json()
+    assert as_json["merge"]["max_per_round"] == 1 and as_json["population"]["solvers"] == 2
+    assert Shape.from_mapping(as_json) == shape

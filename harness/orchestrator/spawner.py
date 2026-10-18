@@ -334,7 +334,10 @@ class Spawner:
         )
         cwd = self.prepare_directory(agent_id, ctx, cwd)
         if token is None:
-            token = self._op.register_agent(agent_id, role, lineage_id=lineage_id, cwd=str(cwd), generation=generation)
+            # The row carries the version too, not only the identity block, because that is what
+            # the dashboard and the brief read; the first live merge run showed every agent as "dev".
+            token = self._op.register_agent(agent_id, role, lineage_id=lineage_id, cwd=str(cwd), generation=generation,
+                                            harness_version=ctx.harness_version)
         system_prompt = (
             self._prompts.supervisor_prompt(ctx, brief or "") if role == "supervisor" else self._prompts.solver_prompt(ctx)
         )

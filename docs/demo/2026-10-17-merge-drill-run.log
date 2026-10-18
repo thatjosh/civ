@@ -1,0 +1,69 @@
+nothing to apply
+nothing to apply
+nothing to apply
+bootstrap: ready (postgresql://127.0.0.1:5432/civ)
+merge drill, 2026-10-17
+head before: c3219ea; harness/VERSION before: 0.1.0
+
+reset postgresql://127.0.0.1:5432/civ and cleared agents/ and shared/
+seeded 8 task(s), 0 already present: T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008
+round 1 opened
+
+seeding the three proposals as sol-901:
+  01-handoff-request-wording.diff: proposal #9 ref shared/619ed5cac00c8f64-01-handoff-request-wording.diff
+  02-breaks-a-test.diff: proposal #10 ref shared/a82039d380d41a7f-02-breaks-a-test.diff
+  03-touches-spawner.diff: proposal #11 ref shared/fdfeee61266070a8-03-touches-spawner.diff
+
+civ_merge on the first two proposals, as sup-901-r1:
+  proposal #9: {"ok": true, "merge_id": 1, "status": "queued"}
+  proposal #10: {"ok": true, "merge_id": 2, "status": "queued"}
+
+merger, first pass:
+2026-10-17 22:32:07,662 __main__ INFO merge 1: merged (merged as 3747fb65e643: civ merge: proposal #9 by sup-901-r1 (harness/prompts/handoff_request.md))
+2026-10-17 22:32:20,556 __main__ INFO merge 2: failed (tests failed (exit 1):)
+merge #1: merged 0.1.0 -> 0.1.1 3747fb65e643 merged as 3747fb65e643: civ merge: proposal #9 by sup-901-r1 (harness/prompts/handoff_request.md)
+merge #2: failed tests failed (exit 1):
+
+merges:
+  1 | 9 | merged | harness/prompts/handoff_request.md | merged as 3747fb65e643: civ merge: proposal #9 by sup-901-r1 (harness/prompts/handoff_request.md) | 0.1.0 | 0.1.1 | 3747fb65
+  2 | 10 | failed | harness/board_mcp/stub.py | tests failed (exit 1):
+  ........................................................................ [ 20%]
+  .......ss................................................ |  |  | 
+
+civ_merge on the protected proposal, as sup-901-r1 (the failed merge no longer counts against the cap):
+  proposal #11: {"ok": true, "merge_id": 3, "status": "queued_for_operator", "paths": ["harness/orchestrator/spawner.py"]}
+
+civ merge --list:
+  #3 proposal #11 queued_for_operator harness/orchestrator/spawner.py
+
+operator approves merge #3:
+  merge #3 approved; the merger will run it
+
+merger, second pass:
+2026-10-17 22:32:35,350 __main__ INFO merge 3: merged (merged as 7b3d40357678: civ merge: proposal #11 by sup-901-r1 (harness/orchestrator/spawner.py))
+merge #3: merged 0.1.1 -> 0.1.2 7b3d40357678 merged as 7b3d40357678: civ merge: proposal #11 by sup-901-r1 (harness/orchestrator/spawner.py)
+
+merges:
+  1 | 9 | merged | harness/prompts/handoff_request.md | merged as 3747fb65e643: civ merge: proposal #9 by sup-901-r1 (harness/prompts/handoff_request.md) | 0.1.0 | 0.1.1 | 3747fb65
+  2 | 10 | failed | harness/board_mcp/stub.py | tests failed (exit 1):
+  ........................................................................ [ 20%]
+  .......ss................................................ |  |  | 
+  3 | 11 | merged | harness/orchestrator/spawner.py | merged as 7b3d40357678: civ merge: proposal #11 by sup-901-r1 (harness/orchestrator/spawner.py) | 0.1.1 | 0.1.2 | 7b3d4035
+
+harness/VERSION after: 0.1.2
+git log after:
+  7b3d403 civ merge: proposal #11 by sup-901-r1 (harness/orchestrator/spawner.py)
+  3747fb6 civ merge: proposal #9 by sup-901-r1 (harness/prompts/handoff_request.md)
+  c3219ea Merge gate honours an operator approval; the drill queues the protected proposal after the first pass
+
+reverting the drill's commits:
+  reverted 7b3d4035
+  reverted 3747fb65
+
+harness/VERSION final: 0.1.0
+git log final:
+  b37c339 Revert "civ merge: proposal #9 by sup-901-r1 (harness/prompts/handoff_request.md)"
+  7799102 Revert "civ merge: proposal #11 by sup-901-r1 (harness/orchestrator/spawner.py)"
+  7b3d403 civ merge: proposal #11 by sup-901-r1 (harness/orchestrator/spawner.py)
+
+drill: saved /Users/joshuaang/Desktop/civ/docs/demo/2026-10-17-merge-drill-summary.txt and the events beside it

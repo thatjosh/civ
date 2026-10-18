@@ -308,3 +308,17 @@ async def test_handed_off_session_reports_its_real_cost(tmp_path):
     assert outcome.cost_usd == pytest.approx(0.07) and not outcome.cost_estimated
     ends = [e for e in op.events if e[1] == "agent.ended"]
     assert [e[0] for e in ends] == ["sol-030", "sol-030-g2"]
+
+
+async def test_spawn_and_successor_rows_carry_the_harness_version(tmp_path):
+    # harness/VERSION is read at every spawn and written to the agents row, for the first
+    # generation and for successors alike, so a merge's bump shows up on the next spawn.
+    (tmp_path / "harness").mkdir()
+    (tmp_path / "harness" / "VERSION").write_text("0.9.3\n")
+    first = FakeClient([init_message(), assistant(850), assistant(860)])
+    second = FakeClient([init_message(), result()])
+    runner, op, _ = make(tmp_path, [first, second])
+    first.on_query = handoff_on_request(op, "sol-040")
+    await runner.run("L-040", "sol-040")
+    assert [a["harness_version"] for a in op.registered] == ["0.9.3", "0.9.3"]
+    assert op.succeeded_versions == ["0.9.3"]

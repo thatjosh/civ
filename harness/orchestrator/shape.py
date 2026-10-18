@@ -14,7 +14,7 @@ import logging
 import time
 import tomllib
 from collections.abc import Callable
-from dataclasses import asdict, dataclass, fields, replace
+from dataclasses import asdict, dataclass, field, fields, replace
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +28,8 @@ SECTIONS: dict[str, tuple[str, ...]] = {
     "voting": ("decay_offset_h", "decay_power", "operator_pin_s"),
     "governance": ("vote_quota", "min_sample", "big_move_steps", "ttl_default_s"),
 }
+# Sections carried through untouched (see Shape.extra).
+PASSTHROUGH_SECTIONS = ("merge",)
 # The keys that are also soft knobs. These are seeded into the config table at launch; the
 # rest are read by the orchestrator, the CLI or the server directly from the shape.
 KNOB_KEYS = ("handoff_pct", "kill_pct", "kill_grace_turns", "decay_offset_h", "decay_power",
@@ -50,6 +52,9 @@ class Shape:
     min_sample: int = 3
     big_move_steps: int = 2
     ttl_default_s: int = 3600
+    # Sections the orchestrator does not interpret but must carry through to control_state, because
+    # other readers take them from there: the server's merge rules read [merge] from the shape.
+    extra: dict[str, Any] = field(default_factory=dict)
 
     def knob_seeds(self) -> dict[str, float]:
         return {key: float(getattr(self, key)) for key in KNOB_KEYS}
@@ -57,7 +62,7 @@ class Shape:
     def to_json(self) -> dict[str, Any]:
         """The nested civ.toml structure, which is what control_state.shape holds."""
         flat = asdict(self)
-        return {section: {key: flat[key] for key in keys} for section, keys in SECTIONS.items()}
+        return {**{section: {key: flat[key] for key in keys} for section, keys in SECTIONS.items()}, **self.extra}
 
     @classmethod
     def from_mapping(cls, data: dict[str, Any], source: str = "civ.toml") -> "Shape":
@@ -77,10 +82,15 @@ class Shape:
                     log.warning("%s: unknown key %s.%s ignored", source, section, key)
                     continue
                 values[key] = _coerce(known[key], key, value, source)
+        extra: dict[str, Any] = {}
         for section in data:
-            if section not in SECTIONS and section != "written_at":
+            if section in SECTIONS or section == "written_at":
+                continue
+            if section in PASSTHROUGH_SECTIONS and isinstance(data[section], dict):
+                extra[section] = dict(data[section])
+            else:
                 log.warning("%s: unknown section [%s] ignored", source, section)
-        return cls(**values)
+        return cls(**values, extra=extra)
 
     def changes_from(self, other: "Shape") -> dict[str, tuple[Any, Any]]:
         """key -> (old, new) for every field that differs, for the reshape report."""

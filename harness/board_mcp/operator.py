@@ -152,7 +152,7 @@ class Operator:
                         {"handoff_id": handoff_id, "posts": len(posts), "task": task["id"] if task else None})
         return handoff_id
 
-    def succeed(self, from_agent: str, to_agent: str, cwd: str) -> str:
+    def succeed(self, from_agent: str, to_agent: str, cwd: str, harness_version: str | None = None) -> str:
         """Register the successor of from_agent and hand it everything that outlives a session:
         the lineage, the directory, and the lease. Returns the successor's token.
 
@@ -174,7 +174,9 @@ class Operator:
                 insert into agents (id, role, generation, lineage_id, harness_version, cwd, token)
                 values (%s, %s, %s, %s, %s, %s, %s)
                 """,
-                (to_agent, pred["role"], generation, pred["lineage_id"], pred["harness_version"], cwd, token),
+                # A successor is a new spawn, so it carries the current harness version when the
+                # runner passes one (a merge may have bumped it since its predecessor was born).
+                (to_agent, pred["role"], generation, pred["lineage_id"], harness_version or pred["harness_version"], cwd, token),
             )
             if pred["status"] in ("live", "handing_off"):
                 # A predecessor still marked active here never wrote its handoff (the kill path);

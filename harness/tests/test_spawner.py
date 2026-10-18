@@ -207,7 +207,7 @@ async def test_supervisor_role_gets_its_own_tools_directory_prompt_and_kickoff(t
 
     res = await spawner.spawn("sup-001-r1", "S-001", generation=1, role="supervisor", brief="## Round 1\n\nBRIEF BODY", cwd=cwd)
 
-    assert op.registered == [{"id": "sup-001-r1", "role": "supervisor", "lineage_id": "S-001", "cwd": str(cwd.resolve()), "generation": 1}]
+    assert op.registered == [{"id": "sup-001-r1", "role": "supervisor", "lineage_id": "S-001", "cwd": str(cwd.resolve()), "generation": 1, "harness_version": "dev"}]
     assert json.loads((cwd / "identity.json").read_text())["role"] == "supervisor"
     call = q.calls[0]
     assert call["prompt"].startswith(SUPERVISOR_KICKOFF) and "shared" in call["prompt"] and "materials" not in call["prompt"]

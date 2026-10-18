@@ -43,8 +43,10 @@ class FakeOperator:
 
     # --- M2 surface ---------------------------------------------------------
 
-    def register_agent(self, agent_id: str, role: str, lineage_id: str, cwd: str, generation: int = 1) -> str:
-        self.registered.append({"id": agent_id, "role": role, "lineage_id": lineage_id, "cwd": cwd, "generation": generation})
+    def register_agent(self, agent_id: str, role: str, lineage_id: str, cwd: str, generation: int = 1,
+                       harness_version: str = "dev") -> str:
+        self.registered.append({"id": agent_id, "role": role, "lineage_id": lineage_id, "cwd": cwd,
+                                "generation": generation, "harness_version": harness_version})
         return f"tok-{agent_id}"
 
     def set_agent_usage(self, agent_id: str, tokens_in: int, tokens_out: int, context_pct: float) -> None:
@@ -92,15 +94,17 @@ class FakeOperator:
         self.events.append((agent_id, "agent.stub_written", {"handoff_id": handoff_id}))
         return handoff_id
 
-    def succeed(self, from_agent: str, to_agent: str, cwd: str) -> str:
+    def succeed(self, from_agent: str, to_agent: str, cwd: str, harness_version: str | None = None) -> str:
         lineage_id = self._lineage_of(from_agent)
         generation = self._generation_of(from_agent) + 1
         self.succeeded.append((from_agent, to_agent, cwd))
+        self.succeeded_versions = getattr(self, "succeeded_versions", []) + [harness_version]
         rows = self.handoffs.get(lineage_id) or []
         if rows:
             rows[-1]["to_agent"] = to_agent
         self.events.append((from_agent, "agent.succeeded", {"to": to_agent}))
-        return self.register_agent(to_agent, "solver", lineage_id=lineage_id, cwd=cwd, generation=generation)
+        return self.register_agent(to_agent, "solver", lineage_id=lineage_id, cwd=cwd, generation=generation,
+                                   harness_version=harness_version or "dev")
 
     def lineage_state(self, lineage_id: str) -> dict[str, Any]:
         agents = [a for a in self.registered if a["lineage_id"] == lineage_id]

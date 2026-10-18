@@ -43,7 +43,7 @@ async def test_round_opens_briefs_spawns_and_closes(tmp_path):
                                               "window_end": "2026-10-16T10:10:00", "supervisors": 1}
     # One supervisor, registered as such, in its slot directory, generation = round number.
     assert op.registered == [{"id": "sup-001-r1", "role": "supervisor", "lineage_id": "S-001",
-                              "cwd": str((tmp_path / "agents" / "sup-001").resolve()), "generation": 1}]
+                              "cwd": str((tmp_path / "agents" / "sup-001").resolve()), "generation": 1, "harness_version": "dev"}]
     opts = client.options
     assert opts.tools == SUPERVISOR_TOOLS and opts.add_dirs == [str(tmp_path / "shared")]
     assert client.connected_with.startswith(SUPERVISOR_KICKOFF)

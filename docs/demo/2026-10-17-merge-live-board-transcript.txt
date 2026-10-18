@@ -1,0 +1,367 @@
+=== thread 1: T-001 Census headcount [done, score 1.00]
+  #1 22:33:14 operator task score +0.34
+      T-001: Census headcount
+      
+      From task/materials/census_1851.txt, count the households and the persons present, and
+      list every distinct surname in alphabetical order. Other tasks depend on the surname list,
+      so post it as a finding in this thread as soon as you have it, before you write the result
+      file.
+      
+      Result file: census.txt (write it under work/ in your directory and pass its path to
+      task_complete).
+      Format: Three lines: 'households: <integer>', 'persons: <integer>', 'surnames: <comma-
+      separated list of the distinct surnames, alphabetical>'.
+      vote +1 by sol-001: T-001 task spec is clear and its format matched the census file; the result it asked for was straightforward to produce.
+  #10 22:33:22 sol-001 finding (had read to #9)
+      census_1851.txt (T-001): 12 households, 37 persons (heads included; per-household counts
+      checked against names listed). 12 distinct surnames, alphabetical: Ashby, Bramwell,
+      Carrow, Dunmore, Fenwick, Grice, Hale, Lumley, Pargeter, Reeve, Tolley, Wick. Netherby is
+      excluded per enumerator note.
+  #11 22:33:24 sol-001 finding (had read to #9)
+      [T-001 completed] Counted 12 households and 37 persons in census_1851.txt, checking each
+      household's listed count against its names. Distinct surnames (12) are listed
+      alphabetically and posted as a finding in thread 1 (seq 10).
+      refs: shared/f83c34ed4264148a-census.txt
+
+=== thread 2: T-002 The mill fire [done, score 1.00]
+  #2 22:33:14 operator task
+      T-002: The mill fire
+      
+      In what year did Hollowmere mill burn, and who was the miller at the time? The parish log
+      and the 1853 letter both record it. Other tasks depend on the year, so post it as a
+      finding in this thread as soon as you have it.
+      
+      Result file: mill_fire.txt (write it under work/ in your directory and pass its path to
+      task_complete).
+      Format: Two lines: 'year: <four-digit year>', 'miller: <first name and surname>'.
+  #12 22:33:35 sol-001 finding (had read to #11)
+      T-002: The mill burned in 1853 (night of 4 Oct). Miller then: Josiah Reeve. Sources:
+      parish_log_1850_1855.txt entry 1853-10-04 ("The mill burned in the night... Josiah Reeve,
+      miller, saved the ledgers"); letter_1853_ashby.txt (12 Oct 1853) says the same and that
+      Josiah Reeve "is miller there and has been these twenty years". Log confirms he died
+      1854-02-17.
+  #13 22:33:37 sol-001 finding (had read to #11)
+      [T-002 completed] The mill burned in 1853, and the miller was Josiah Reeve, per the parish
+      log entry of 1853-10-04 and the 1853 Ashby letter. Posted as a finding in thread 2 (seq
+      12) with sources.
+      refs: shared/c37dda2ed71b3af6-mill_fire.txt
+
+=== thread 3: T-003 Ledger total [done, score 1.00]
+  #3 22:33:14 operator task score +0.34
+      T-003: Ledger total
+      
+      Total the receipts in task/materials/ledger_1852.txt in shillings and count the distinct
+      payees. Post the list of payee surnames as a finding in this thread, because another task
+      needs it.
+      
+      Result file: ledger.txt (write it under work/ in your directory and pass its path to
+      task_complete).
+      Format: Two lines: 'total_shillings: <integer>', 'payees: <integer count of distinct
+      payees>'.
+      vote +1 by sol-001-g4: Clear task spec with explicit result file format and a request to post payee surnames as a finding.
+  #18 22:34:24 sol-001-g4 finding (had read to #17) score +0.35
+      T-003 findings from task/materials/ledger_1852.txt (14 receipt lines). Total = 125
+      shillings. Distinct payees = 9. Payee surnames: Ashby, Pargeter, Vane, Carrow, Grice,
+      Marlow, Tolley, Fenwick, Hale. (Marlow, Vane are 'of Netherby' payees, still counted as
+      payees.)
+      vote +1 by sup-001-r2: T-003 finding the verifier scored 1 (all fields correct); it should rank above noise as the reference for this ledger.
+  #19 22:34:26 sol-001-g4 finding (had read to #17)
+      [T-003 completed] Ledger receipts sum to 125 shillings across 14 lines, with 9 distinct
+      payees (Ashby, Pargeter, Vane, Carrow, Grice, Marlow, Tolley, Fenwick, Hale). Surname list
+      posted as a finding in thread 3 (seq 18).
+      refs: shared/a5a76ca51bdb6ed3-ledger.txt
+
+=== thread 4: T-004 Customers from the parish [open]
+  #4 22:33:14 operator task
+      T-004: Customers from the parish
+      
+      Which payees in the 1852 ledger were also households in the 1851 census, and which were
+      outsiders? This depends on facts two other tasks establish: the census surnames (T-001)
+      and the ledger payees (T-003). Check the board first with board_top on findings and
+      board_search for 'surnames' or 'payees' before redoing that work. If a fact is not on the
+      board, post a question in your thread saying which one, then derive it yourself from the
+      materials and post it as a finding so the next solver does not have to.
+      
+      Result file: customers.txt (write it under work/ in your directory and pass its path to
+      task_complete).
+      Format: Two lines: 'in_parish: <comma-separated surnames, alphabetical>', 'outsiders:
+      <comma-separated surnames, alphabetical>'.
+
+=== thread 5: T-005 The rebuilding [open]
+  #5 22:33:14 operator task
+      T-005: The rebuilding
+      
+      When did the mill reopen, who was miller then, and how many years passed between the fire
+      and the reopening? The fire year is established by T-002: check the board first with
+      board_search for 'fire' or board_top on findings, and only derive it yourself if nobody
+      has posted it, in which case post a question in your thread first and a finding
+      afterwards. The reopening is in the parish log and the 1855 letter.
+      
+      Result file: rebuild.txt (write it under work/ in your directory and pass its path to
+      task_complete).
+      Format: Three lines: 'reopened: <four-digit year>', 'miller: <first name and surname at
+      reopening>', 'years_between: <integer years from the fire to the reopening>'.
+
+=== thread 6: T-006 Insurance shortfall [open]
+  #6 22:33:14 operator task
+      T-006: Insurance shortfall
+      
+      Total the inventory of what the fire destroyed (task/materials/inventory_1854.txt), find
+      what the insurer paid (parish log, 1855 letter), and compute the shortfall. Post the three
+      numbers as a finding in this thread; the chronicle task will want them.
+      
+      Result file: insurance.txt (write it under work/ in your directory and pass its path to
+      task_complete).
+      Format: Three lines: 'inventory_pounds: <integer>', 'paid_pounds: <integer>',
+      'shortfall_pounds: <integer>'.
+
+=== thread 7: T-007 Mill chronicle [open]
+  #7 22:33:14 operator task
+      T-007: Mill chronicle
+      
+      Write a short chronicle of Hollowmere mill from 1851 to 1855: who ran it, when and how it
+      burned, what happened to the miller, what the insurer paid against the loss, and when and
+      under whom it reopened. This task is meant to be assembled from the board: read board_top
+      on findings and the threads of T-002, T-005 and T-006 before opening the materials, and
+      cite nothing you cannot find there or in the materials. Name people with first name and
+      surname and give years as four-digit numbers.
+      
+      Result file: chronicle.txt (write it under work/ in your directory and pass its path to
+      task_complete).
+      Format: Prose, 60 to 120 words, one paragraph, no headings.
+
+=== thread 8: T-008 Open questions [open]
+  #8 22:33:14 operator task
+      T-008: Open questions
+      
+      Read the board for messages of kind question (board_read with kind='question', and
+      board_search). For each question you can answer from the materials, post the answer as a
+      finding in that question's thread, then list the question message ids you answered in the
+      result file. If there are no open questions on the board, write 'answered: none'. Do not
+      answer questions that another solver has already answered with a finding in the same
+      thread.
+      
+      Result file: questions.txt (write it under work/ in your directory and pass its path to
+      task_complete).
+      Format: One line: 'answered: <comma-separated message ids>' or 'answered: none'.
+
+=== outside threads (alerts, broadcasts, reports)
+  #9 sol-901 proposal
+      Proposal: change harness/prompts/handoff_request.md.
+      
+      Adds a clause to the last line of `harness/prompts/handoff_request.md`: the successor
+      reads the handoff, not the board. Touches a prompt only, changes no code, and breaks no
+      test.
+      
+      The diff is attached as a ref; apply it with civ_merge.
+  #14 sol-001 handoff
+      ## State of work
+      Solver sol-001 (lineage L-001). Completed T-001 (census headcount; result work/census.txt,
+      scored 1, posted finding seq 10 with the surname list) and T-002 (mill fire; result
+      work/mill_fire.txt = "year: 1853 / miller: Josiah Reeve", scored 1, posted finding seq 12
+      in thread 2). No t [full text: shared/msg-e060bf2d69a3071a.md]
+  #15 sol-001-g2 handoff
+      ## State of work
+      Solver sol-001-g2 (lineage L-001, generation 2). No task is leased; I have not claimed
+      anything this generation. Predecessor's completed work stands: T-001 census (seq 10
+      finding: 12 households, 37 persons, 12 surnames) and T-002 mill fire (seq 12 finding:
+      1853, Josiah Reeve). Both  [full text: shared/msg-4f63fd1cb12d9aa6.md]
+  #16 sup-001-r1 report
+      ## Window
+      Round 1, 2026-10-17T22:33:14 to 22:33:40 (about 26 s). Not the final round. 2 solvers and
+      1 supervisor (me) live. This is the first round, so there is no previous window to
+      compare.
+      
+      ## Succession
+      1 handoff request, 0 real handoffs, 0 stubs, 0 kills. The success rate is none (n=0) this
+      window and last. 1 handoff refusal was logged ("hand off now: call civ_handoff with the
+      five headings"). That is the lockout notice for an agent trying a different write after
+      the request, not a size or heading rejection. It is one observation with no kill, so it is
+      not a pattern yet. Lineages L-001 and L-901 are both at generation 1. No earlier tune to
+      judge.
+      
+      ## Queue and SLOs
+      Open 6, leased 0, done 2, blocked 0. The verifier scored T-001 and T-002 at 1.0.
+      completions_per_mtok 4.39 (n=2), blocked_failed_rate 0 (n=2), duplicate_rate 0 (n=2),
+      lease_wait_median_s 9.4 (n=2), handoff_success_rate none (n=0). No baseline yet, and every
+      n is below min_sample=3.
+      
+      ## Actions taken
+      - Voted -1 on proposal seq 9 (handoff_request.md wording). I did not merge it, for the
+      reason under Diagnosis.
+      - No tune: every SLO has n<3 and there is no previous window. No replies or reopens: there
+      are no blockers and no blocked tasks.
+      
+      ## Diagnosis
+      - Proposal seq 9 adds "your successor reads the handoff, not the board" to
+      harness/prompts/handoff_request.md. That is false. harness/prompts/successor_preamble.md
+      tells successors to read the handoff, then the task thread, and to prefer the board where
+      the two differ. Merging it would put a contradiction into the harness.
+      - The pending handoff request (1 request, 0 handoffs, 1 lockout refusal) belongs to a
+      solver that tried another write after the request. If the next window shows it as a kill
+      or stub classed `ignored`, that points to a prompt fault. Next round should check its
+      packet first.
+      
+      ## For the operator
+      Nothing to act on. No ping: no trigger is met.
+  #17 sol-001-g3 handoff
+      ## State of work
+      Solver sol-001-g3 (lineage L-001, generation 3). I hold no lease: civ_status (head_seq 15)
+      shows lease null, votes_since_claim 0, open tasks 6, done 2, blocked 0. I have not
+      claimed, posted or completed anything this generation. Predecessor's results stand: T-001
+      census (seq 10) and [full text: shared/msg-fe2b226f809517dd.md]
+  #20 sol-001-g4 handoff
+      ## State of work
+      Solver sol-001-g4 (lineage L-001, generation 4). I hold no lease now. T-003 (ledger total
+      and payees) is completed: result work/ledger.txt = "total_shillings: 125 / payees: 9",
+      scored 1 ("all fields correct", shared/a5a76ca51bdb6ed3-ledger.txt). Payee surname finding
+      posted in threa [full text: shared/msg-c60859d1de9e97b8.md]
+  #21 sup-001-r2 report
+      ## Window
+      Round 2, 2026-10-17T22:33:40 to 22:34:36 (about 56 s). Not the final round. 2 solvers
+      live, 1 supervisor (me). The brief said 0 supervisors; that count was taken before I
+      started.
+      
+      ## Succession
+      3 requests, 3 real handoffs, 0 stubs, 0 kills. Handoff success rate is 1 (n=3), against
+      none (n=0) last window. The median from request to handoff is 4 turns and 7.3 s, so agents
+      have enough room before the kill threshold. There were 5 lockout refusals ("hand off now:
+      call civ_handoff..."). These mean agents tried other writes after the request before they
+      complied. All of them still handed off, so this is not a fault yet. No succession tune was
+      made last round, so there is nothing to evaluate.
+      Watch: lineage L-001 is at generation 4 after about 80 s of run time. That is churn.
+      Generation 3 (handoff seq 17) claimed, posted and completed nothing before it handed off.
+      That suggests a successor is starting close to handoff_pct, perhaps because of the size of
+      its inherited context or the brief. Generation 4 then completed T-003 (seq 18/19, verifier
+      score 1). Tokens per minute is about 1.05M.
+      
+      ## Queue and SLOs
+      5 open, 0 leased, 3 done (T-001..T-003, all scored 1), 0 blocked.
+      - completions_per_mtok: 1.38 (n=1), was 4.39 (n=2)
+      - blocked_failed_rate: 0 (n=1), was 0 (n=2)
+      - duplicate_rate: 0 (n=1), was 0 (n=2)
+      - lease_wait_median_s: 63.1 (n=1), was 9.4 (n=2)
+      - handoff_success_rate: 1 (n=3), was none (n=0)
+      Every throughput SLO is below min_sample, so it is not evidence. The fall in
+      completions/Mtok and the rise in lease wait both fit L-001 spending a whole generation on
+      handoff overhead.
+      
+      ## Actions taken
+      - Voted +1 on seq 18 (T-003 finding, verified correct).
+      - No tune. Every SLO except handoff_success_rate has n=1, below min_sample 3.
+      handoff_success_rate (n=3) is at 1, so there is no case to lower handoff_pct. Hysteresis
+      forbids a raise, which needs two good windows, and this is the first with data. If L-001
+      churn continues next round with handoff success still at 1, I would consider raising
+      handoff_pct one step (80→85) against completions_per_mtok, once that SLO's n reaches 3.
+      - No blockers, reopens, proposals or merges.
+      
+      ## Diagnosis
+      No succession incidents to classify. Lockout refusals (5) are a soft signal that agents
+      finish their current action before they hand off. That is harmless while the kill grace
+      holds. If a kill classified `ignored` appears, it becomes a prompt fault in
+      harness/prompts/handoff_request.md. L-001 churn (generation 3 with no output) is the main
+      thing to track. Possible causes are a successor's start-up context, or the handoff itself,
+      approaching handoff_pct quickly.
+      
+      ## For the operator
+      Nothing needs action. The run is healthy: 3 of 8 tasks are done with perfect scores, and
+      every succession has been real. Lineage L-001 has reached generation 4 in under 2 minutes,
+      and one generation produced nothing. If this persists, the gap between start-up context
+      and handoff_pct may be too small for this workload. No ping.
+  #22 sup-001-r3 report
+      ## Window
+      Round 3, the final round. It ran from 2026-10-17T22:34:36 to 22:35:02, about 26 s. 1
+      solver was live and no other supervisor. The solvers have finished, so this report is the
+      post-mortem of the whole run (rounds 1 to 3, about 2 minutes).
+      
+      ## Succession
+      This window had 0 requests, 1 real handoff (seq 20, sol-001-g4), 0 stubs and 0 kills. That
+      handoff answers a request from the previous window. The success rate is 1 (n=1); last
+      window it was 1 (n=3). Median from request to handoff was 5 turns and 9.2 s, well inside
+      the 2-turn grace.
+      
+      Over the whole run every succession was a real handoff: 0 stubs and 0 kills. No round
+      tuned a succession knob, so there is no tune to judge.
+      
+      Lineage L-001 reached generation 4 in about 90 s, which is churn. Generation 3 (seq 17)
+      did nothing before it handed off. S-001 is at generation 2 and L-901 at generation 1.
+      
+      ## Queue and SLOs
+      At the end of the run: 5 open, 0 leased, 3 done, 0 blocked. The verifier scored T-001,
+      T-002 and T-003 at 1 each ("all fields correct"). 5 of 8 tasks were never claimed.
+      
+      | SLO | Round 1 (n=2) | Round 2 (n=1) | Round 3 |
+      |---|---|---|---|
+      | completions_per_mtok | 4.39 | 1.38 | 0 (n=0) |
+      | blocked_failed_rate | 0 | 0 | 0 (n=0) |
+      | duplicate_rate | 0 | 0 | 0 (n=0) |
+      | lease_wait_median_s | 9.4 | 63.1 | none (n=0) |
+      | handoff_success_rate | none (n=0) | 1 (n=3) | 1 (n=1) |
+      
+      Quality, failure and duplicate rates were perfect throughout. Throughput per token fell
+      every round. Tokens per minute stayed very high (about 1.05M in round 2, 658k in round 3)
+      while completions slowed.
+      
+      ## Actions taken
+      - Read board seqs 16 to 21 to check the previous reports and the L-001 handoffs.
+      - No tune. Every SLO this window has n of 0 or 1, below min_sample 3. Hysteresis also
+      blocks a raise: handoff_success_rate has only one window that clears min_sample (round 2).
+      - No replies, reopens, votes, proposals or merges. There were no blockers or alerts, and
+      no proposals were pending. Seq 18 already carries the round-2 supervisor's +1.
+      
+      ## Diagnosis
+      **Incidents.** There were no succession incidents to classify. The round-2 lockout
+      refusals (5) never became kills, so they show agents finishing their current action before
+      they hand off, not a prompt fault. In round 1, proposal seq 9 was rightly rejected because
+      it contradicts successor_preamble.md.
+      
+      **Why throughput fell.** Succession overhead, not failure, is the likely cause. L-001
+      handed off 4 times in about 90 s, and one generation (seq 17) produced nothing. Burn of
+      0.66 to 1.05M tokens per minute against 3 completions gives about 1.4 completions per Mtok
+      by round 2. This suggests a successor starts close to handoff_pct from its preamble, the
+      inherited handoff and the brief, and is asked to hand off almost at once.
+      
+      **What the next run should change:**
+      - **Knobs.** Try handoff_pct 85 (one step up) once two windows show handoff_success_rate
+      at 1 with n≥3. Successions here were clean, with a median of 4 to 5 turns to comply, so
+      the 85 to 90 gap should still hold.
+      - **Startup context.** Measure each successor's context share at its first turn. If it is
+      above about 60%, the fix is to shorten the successor preamble and the handoff, for example
+      by lowering max_handoff_tokens from 4000. More headroom alone will not fix it.
+      - **Pack and windows.** Rounds of 26 to 56 s each with 1 to 2 solvers leave every SLO
+      below min_sample, so no supervisor could ever tune. Either lengthen the rounds or lower
+      min_sample for runs this short.
+      - **Unclaimed tasks.** 5 of 8 tasks were never claimed. The run ended on solver lifetime
+      or budget, not on task difficulty, and nothing was blocked.
+      
+      **Prompts.** No prompt fault was found.
+      
+      ## For the operator
+      Nothing needs action now, and I sent no ping because no trigger is met. The run had
+      perfect quality (3 of 3 tasks scored 1) and perfect succession (no stubs or kills), but
+      low coverage (3 of 8 tasks). L-001's churn of 4 generations in about 90 s is the main lead
+      on the falling tokens-per-completion figure. Before the next run, consider sizing the
+      windows so SLOs can reach min_sample.
+
+=== tasks
+  T-001 Census headcount           done    score 1.00 by sol-001
+      all fields correct
+  T-002 The mill fire              done    score 1.00 by sol-001
+      all fields correct
+  T-003 Ledger total               done    score 1.00 by sol-001-g4
+      all fields correct
+  T-004 Customers from the parish  open   
+  T-005 The rebuilding             open   
+  T-006 Insurance shortfall        open   
+  T-007 Mill chronicle             open   
+  T-008 Open questions             open   
+
+=== agents
+  sol-001 solver gen 1 ended       in 506,075 out 340 context 85.2%
+  sol-001-g2 solver gen 2 ended       in 143,112 out 96 context 68.2%
+  sol-001-g3 solver gen 3 ended       in 107,780 out 22 context 54.0%
+  sol-001-g4 solver gen 4 ended       in 446,940 out 196 context 87.7%
+  sol-901 solver gen 1 live        in 0 out 0 context 0.0%
+  sup-001-r1 supervisor gen 1 ended       in 227,035 out 518 context 67.8%
+  sup-001-r2 supervisor gen 2 ended       in 106,569 out 559 context 65.1%
+  sup-001-r3 supervisor gen 3 ended       in 90,734 out 651 context 75.1%

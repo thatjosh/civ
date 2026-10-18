@@ -176,7 +176,7 @@ class LineageRunner:
         generation = int(handoff_row.get("generation") or generation_of(from_agent)) + 1
         next_id = f"{first}-g{generation}"
         cwd = self._spawner.agent_dir(first)
-        token = self._op.succeed(from_agent, next_id, str(cwd))
+        token = self._op.succeed(from_agent, next_id, str(cwd), harness_version=self._spawner.harness_version())
         stub = bool(handoff_row.get("stub", False))
         outcome = LineageResult(lineage_id=lineage_id, agent_id=first, resumed_from=from_agent)
         self._op.log_event(next_id, "lineage.resumed",
@@ -238,7 +238,7 @@ class LineageRunner:
                 return outcome
 
             next_id = f"{first_agent_id}-g{generation + 1}"
-            token = self._op.succeed(agent_id, next_id, str(cwd))
+            token = self._op.succeed(agent_id, next_id, str(cwd), harness_version=self._spawner.harness_version())
             handoff = row["body"]
             handoff_is_stub = bool(row.get("stub", False))
             agent_id = next_id

@@ -1,0 +1,18 @@
+2026-10-17 22:33:14,844 harness.orchestrator.shape WARNING /Users/joshuaang/Desktop/civ/control/civ.toml: unknown section [merge] ignored
+2026-10-17 22:33:15,381 harness.orchestrator.reload INFO board server up at http://127.0.0.1:8765/health (pid 89032)
+2026-10-17 22:33:15,388 civ.orchestrator INFO spawning 1 solver lineages against http://127.0.0.1:8765 with claude-haiku-5-5 (window 30000, max generations 4), 1 supervisors every 25s, merge gate on
+2026-10-17 22:33:15,390 harness.orchestrator.population INFO started lineage L-001 (slot 1 of 1)
+2026-10-17 22:33:15,415 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-17 22:33:40,450 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-17 22:33:46,306 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-17 22:33:59,241 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-17 22:34:11,243 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-17 22:34:36,433 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-17 22:35:02,812 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+agent     gens hoffs turns   cost $     tok in  tok out  ctx %  note
+sol-001      4     4    49   0.0266    1203907      654  87.68  stopped by runner: handoff written
+total cost                   0.0266
+tasks: counts={'open': 5, 'leased': 0, 'done': 3, 'blocked': 0}, mean_score=1.0, scored=3
+round 1: reports 1, pings 0, tuned none, reopened [], turns 8, cost $0.2287
+round 2: reports 1, pings 0, tuned none, reopened [], turns 4, cost $0.2094
+round 3 (final): reports 1, pings 0, tuned none, reopened [], turns 3, cost $0.1933
