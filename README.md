@@ -170,7 +170,21 @@ Two halves, no model in the first.
 
 2. **A supervisor merges on its own.** One Opus supervisor round over a brief that lists the wording proposal as pending, to see it open the ref, judge it, and call `civ_merge` itself. The record is its report and the merges row.
 
-<!-- integrator: m6 results -->
+### Results (17 October 2026)
+
+**The drill, no model.** Three prepared proposals from `docs/eval/proposals/` went through the gate on a throwaway branch (`scripts/merge_drill.sh`; record in `docs/demo/2026-10-17-merge-drill-*.txt`):
+
+| proposal | server | merger |
+|---|---|---|
+| one-line wording change to the handoff request | queued | tests green, merged, `0.1.0` to `0.1.1`, one commit |
+| a change to the stub builder that breaks one test | queued | tests red, failed with the pytest tail, tree untouched |
+| a comment in the spawner (protected path) | queued for the operator, alert in the inbox | after `civ merge --approve`: merged, `0.1.1` to `0.1.2` |
+
+The drill reverted its two commits and the version returned to `0.1.0`. It took four runs to pass, and each failure was a real gap: the round cap of two counted the still-queued second merge, so the protected case had to be queued after the merger's first pass; the merger's own protected-path re-check refused the operator-approved merge, so the approval marker is now defined once in `merge_rules` and honoured by the merger; and the drill, like the merger, refuses a dirty `harness/` tree, which caught uncommitted fixes twice.
+
+**Live, one Opus supervisor over a pending proposal.** One Haiku solver at a 30k window, the supervisor on a 25-second round with the wording proposal in its brief, the merger and version watcher running and the orchestrator owning the board server (`--serve-board`). The supervisor read the proposal, opened the diff under `shared/`, and declined to merge it: the new sentence said a successor reads the handoff and not the board, which contradicts `successor_preamble.md` (read the handoff, then the thread, and prefer the board where they differ). It voted the proposal down at weight 2 and explained the contradiction in its report. No merge happened, which is the right outcome: the "green" diff passes the tests and is still wrong, and that judgement is what the supervisor adds to the gate. Three rounds cost $0.63; records in `docs/demo/2026-10-17-merge-live-*.txt`.
+
+The live run found two more bugs, both fixed: every agent row showed version `dev` because the register call did not pass the version the identity block already carried (successors copied their predecessor's); and the orchestrator dropped the `[merge]` section of `civ.toml` when writing the shape, which is where the server's merge rules read it.
 
 ### Deviations from the design doc
 

@@ -25,7 +25,7 @@ async def test_spawn_registers_agent_prepares_directory_and_builds_options(tmp_p
     cwd = tmp_path / "agents" / "sol-001"
     assert (cwd / "work").is_dir() and (cwd / "notes").is_dir()
     assert json.loads((cwd / "identity.json").read_text())["lineage_id"] == "L-001"
-    assert op.registered == [{"id": "sol-001", "role": "solver", "lineage_id": "L-001", "cwd": str(cwd), "generation": 1}]
+    assert op.registered == [{"id": "sol-001", "role": "solver", "lineage_id": "L-001", "cwd": str(cwd), "generation": 1, "harness_version": "dev"}]
 
     call = q.calls[0]
     assert call["prompt"].startswith(KICKOFF_PROMPT) and "materials" in call["prompt"]
