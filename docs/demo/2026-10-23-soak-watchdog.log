@@ -17,3 +17,29 @@ watchdog: PAGE board health endpoint is not answering
 2026-10-23 19:28:10 check heartbeat_age=21s health=ok postgres=ok
 2026-10-23 19:28:30 check heartbeat_age=11s health=ok postgres=ok
 2026-10-23 19:28:50 check heartbeat_age=31s health=ok postgres=ok
+2026-10-23 19:31:23 check heartbeat_age=nones health=down postgres=ok
+2026-10-23 19:31:23 problem: board health endpoint is not answering
+2026-10-23 19:31:23 problem: no heartbeat has ever been written
+watchdog: PAGE board health endpoint is not answering
+2026-10-23 19:31:43 check heartbeat_age=20s health=ok postgres=ok
+2026-10-23 19:32:04 check heartbeat_age=10s health=ok postgres=ok
+2026-10-23 19:32:24 check heartbeat_age=30s health=ok postgres=ok
+2026-10-23 19:32:44 check heartbeat_age=20s health=ok postgres=ok
+2026-10-23 19:33:04 check heartbeat_age=10s health=ok postgres=ok
+2026-10-23 19:33:24 check heartbeat_age=0s health=ok postgres=ok
+2026-10-23 19:33:44 check heartbeat_age=20s health=ok postgres=ok
+2026-10-23 19:34:04 check heartbeat_age=11s health=board_down postgres=ok
+2026-10-23 19:34:24 check heartbeat_age=1s health=ok postgres=ok
+2026-10-23 19:34:44 check heartbeat_age=21s health=ok postgres=ok
+2026-10-23 19:35:04 check heartbeat_age=11s health=ok postgres=ok
+2026-10-23 19:35:24 check heartbeat_age=1s health=ok postgres=ok
+2026-10-23 19:35:45 check heartbeat_age=21s health=ok postgres=ok
+2026-10-23 19:36:05 check heartbeat_age=41s health=ok postgres=ok
+2026-10-23 19:36:05 problem: heartbeat is 41s old (limit 40s)
+watchdog: PAGE heartbeat is 41s old (limit 40s)
+2026-10-23 19:36:05 watchdog: restoring before restart
+2026-10-23 19:36:05 watchdog: restarted orchestrator (pid 26769)
+2026-10-23 19:36:25 check heartbeat_age=20s health=ok postgres=ok
+2026-10-23 19:36:45 check heartbeat_age=10s health=ok postgres=ok
+2026-10-23 19:37:05 check heartbeat_age=31s health=ok postgres=ok
+2026-10-23 19:37:25 check heartbeat_age=21s health=ok postgres=ok

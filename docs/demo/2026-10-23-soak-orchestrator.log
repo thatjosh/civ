@@ -27,3 +27,17 @@ total cost                   0.2106
 tasks: counts={'open': 10, 'leased': 2, 'done': 44, 'blocked': 0}, mean_score=1.0, scored=44
 round 1: reports 1, pings 0, tuned none, reopened [], turns 6, cost $0.2293
 round 2 (final): reports 1, pings 0, tuned none, reopened [], turns 6, cost $0.2075
+2026-10-23 19:31:24,320 harness.orchestrator.reload INFO board server up at http://127.0.0.1:8765/health (pid 24812)
+2026-10-23 19:31:24,322 civ.orchestrator INFO spawning 4 solver lineages against http://127.0.0.1:8765 with claude-haiku-5-5 (window 100000, max generations 12), 1 supervisors every 180s, merge gate on
+2026-10-23 19:31:24,323 harness.orchestrator.population INFO started lineage L-001 (slot 1 of 4)
+2026-10-23 19:31:24,340 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-23 19:31:26,325 harness.orchestrator.population INFO started lineage L-002 (slot 2 of 4)
+2026-10-23 19:31:26,339 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-23 19:31:28,328 harness.orchestrator.population INFO started lineage L-003 (slot 3 of 4)
+2026-10-23 19:31:28,340 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-23 19:31:30,331 harness.orchestrator.population INFO started lineage L-004 (slot 4 of 4)
+2026-10-23 19:31:30,337 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-23 19:32:57,202 harness.orchestrator.governor INFO governor holding a solver spawn: tokens_per_minute is 8344179 against 3000000
+2026-10-23 19:34:24,378 harness.orchestrator.governor INFO governor holding a supervisor spawn: tokens_per_minute is 7196615 against 3000000
+2026-10-23 19:34:49,425 harness.orchestrator.governor INFO governor holding a solver spawn: tokens_per_minute is 6602291 against 3000000
+2026-10-23 19:34:50,448 harness.orchestrator.governor INFO governor holding a solver spawn: tokens_per_minute is 6620833 against 3000000

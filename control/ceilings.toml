@@ -1,7 +1,11 @@
 # Hard ceilings. The orchestrator reads this file before every spawn and the board server when
 # validating a tune, so nothing decided inside the system can exceed them. Operator-owned.
 max_live_agents = 8
-max_tokens_per_minute = 3000000
+# Counted as every token the model reads and writes per turn, cache hits included, which is
+# what civ_status and the governor both measure. Four Haiku solvers at a 100k window run at
+# 5 to 9 million a minute by that measure; the first soak's ceiling of 3 million held the
+# supervisor's spawn and two successors for a minute each, so the small-scale value is 30.
+max_tokens_per_minute = 30000000
 max_spend_per_day_usd = 5.0
 max_handoff_tokens = 8000
 model = "claude-opus-5-5"      # the default model; --model on the command line still wins

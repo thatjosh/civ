@@ -346,7 +346,10 @@ class Operator:
                 "update config set value = %s, set_by = %s, reason = %s, set_at = now(), ttl_s = null, expires_at = null where knob = %s",
                 (value, OPERATOR_ID, reason, knob),
             )
-            self._event(conn, OPERATOR_ID, "knob.preset", {"knob": knob, "from": float(row["value"]), "to": value, "reason": reason})
+            # The event marks a change. civ.toml seeds every launch and mostly repeats the current
+            # values, and sixteen "80 to 80" rows per start were burying the real tunes on the dashboard.
+            if float(row["value"]) != value:
+                self._event(conn, OPERATOR_ID, "knob.preset", {"knob": knob, "from": float(row["value"]), "to": value, "reason": reason})
 
     def reports_for_round(self, round_id: int) -> list[dict[str, Any]]:
         with self.db.transaction() as conn:

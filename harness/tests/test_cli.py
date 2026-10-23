@@ -179,7 +179,7 @@ def test_status_shows_epoch_pause_agents_tasks_shape_and_knobs(run, db, make_age
     assert out.startswith("heartbeat: none\nepoch 1  paused yes (looking at T-004)\n")
     assert "agents: 1 solvers, 0 supervisors live (ceiling 8)" in out
     assert "tasks: open 1, leased 0, done 0, blocked 0" in out
-    assert "tokens/min: 0 (ceiling 3000000)" in out
+    assert "tokens/min: 0 (ceiling 30000000)" in out
     assert "spend 24h: $0.00 ended sessions (ceiling $5.00; live sessions not included)" in out
     assert "shape: solvers 3, supervisors 1, round 600s, max_generations 5 (from civ.toml)" in out
     assert re.search(r"^handoff_pct\s+80\s+80\s*$", out, re.M)

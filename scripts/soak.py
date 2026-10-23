@@ -294,6 +294,13 @@ class Soak:
                   "where e.type = 'agent.ended' and e.payload->>'cost_usd' is not null group by a.role) s")
         epochs = q("select string_agg(epoch::text || ': ' || n || ' events', ', ' order by epoch) from "
                    "(select epoch, count(*) as n from events group by epoch) e")
+        # The governor's waits are the soak's own evidence about the ceilings: the first soak's token
+        # ceiling held the supervisor's spawn for a minute and nobody saw it until the rounds table came up empty.
+        waits = q("select coalesce(string_agg(reason || ': ' || n || ' wait(s), longest ' || longest || ' s', '; '), 'none') from "
+                  "(select w.payload->>'reason' as reason, count(*) as n, "
+                  " coalesce(max((r.payload->>'waited_s')::float), 0)::int as longest "
+                  " from events w left join events r on r.type = 'governor.resumed' and r.payload->>'reason' = w.payload->>'reason' "
+                  " and r.seq > w.seq where w.type = 'governor.wait' group by 1) g")
         generations = q("select coalesce(string_agg(lineage_id || ' g' || g, ', ' order by lineage_id), 'none') from "
                         "(select lineage_id, max(generation) as g from agents where role = 'solver' group by lineage_id) l")
         lines = [
@@ -307,6 +314,7 @@ class Soak:
             f"rounds: {rounds}; tunes: {tunes}; pings: {pings}",
             f"spend by role: {spend}",
             f"epochs: {epochs}",
+            f"governor waits: {waits}",
             "chaos: " + ("; ".join(f"{c['kind']}@{c['at_s']}s -> {c['result']}" for c in self.chaos_done) or "none"),
             "heartbeat gaps: " + ("; ".join(
                 f"pid {g['killed_pid']} killed, back as pid {g['new_pid']} in epoch {g['epoch']} after {g['gap_s']} s"
