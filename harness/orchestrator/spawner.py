@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass
@@ -84,6 +85,17 @@ ROLES: dict[str, RoleProfile] = {
     "solver": RoleProfile("solver", tuple(SOLVER_TOOLS), "task/materials", KICKOFF_PROMPT),
     "supervisor": RoleProfile("supervisor", tuple(SUPERVISOR_TOOLS), "shared", SUPERVISOR_KICKOFF),
 }
+
+
+def pack_materials_dir(pack: Path) -> Path:
+    """Where a pack keeps its materials. task.pack.Pack knows (and may move it); without that
+    module the contract's layout, <pack>/materials, is the answer."""
+    try:
+        from task.pack import Pack  # the pack module is the task side's; import lazily
+
+        return Path(Pack(pack).materials_dir).resolve()
+    except Exception:  # noqa: BLE001 - missing module or an older Pack: the layout rule stands
+        return (pack / "materials").resolve()
 
 
 class McpNotConnected(RuntimeError):
@@ -291,7 +303,7 @@ class Spawner:
             setting_sources=[],
             model=self._model,
             max_turns=self._max_turns,
-            add_dirs=[str(self._root / profile.extra_dir)],
+            add_dirs=[str(self._extra_dir(profile))],
             env=dict(SESSION_ENV),
         )
 
@@ -300,6 +312,17 @@ class Spawner:
         if role not in ROLES:
             raise ValueError(f"unknown role {role!r}; expected one of {sorted(ROLES)}")
         return ROLES[role]
+
+    def _extra_dir(self, profile: RoleProfile) -> Path:
+        """The one extra directory a session may read. For a solver that is the task pack's
+        materials: the pack named by CIV_PACK when the operator set one (M7's soak runs a
+        generated pack), else the repo's own task/materials. The supervisor's shared/ is
+        unaffected."""
+        if profile.name == "solver":
+            pack = os.environ.get("CIV_PACK")
+            if pack:
+                return pack_materials_dir(Path(pack))
+        return (self._root / profile.extra_dir).resolve()
 
     def prepare(
         self,
@@ -451,7 +474,7 @@ class Spawner:
 
     def kickoff_prompt(self, cwd: Path, role: str = "solver") -> str:
         profile = self._profile(role)
-        return profile.kickoff_prompt(cwd, (self._root / profile.extra_dir).resolve(), self._root)
+        return profile.kickoff_prompt(cwd, self._extra_dir(profile), self._root)
 
     def harness_version(self) -> str:
         """The version new spawns are tagged with: the pinned string, else harness/VERSION as it

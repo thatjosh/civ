@@ -106,6 +106,9 @@ class _SessionState:
     # The monitor's turn count when the request went out, so the grace rule can count from it.
     turns_at_request: int | None = None
     watcher: asyncio.Task[None] | None = None
+    # Polls the operator's chaos controls for this agent's id while the session runs, so an agent
+    # inside a long tool call (no messages for the hook) can still be killed on demand.
+    chaos_watcher: asyncio.Task[None] | None = None
     stop_reason: str | None = None
     # The session's monitor, kept here so the watcher task can read the turn count too.
     monitor: Any = None
@@ -140,6 +143,7 @@ class LineageRunner:
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
         clock: Callable[[], float] = time.monotonic,
         slot_open: Callable[[str], bool] | None = None,
+        chaos: Any | None = None,
     ) -> None:
         self._spawner = spawner
         self._op = operator
@@ -152,9 +156,15 @@ class LineageRunner:
         # Asked before every succession with the lineage id; False means a reshape has closed
         # this slot and the lineage ends here instead of spawning a successor.
         self._slot_open = slot_open
+        # A ChaosReader when the operator's chaos controls are on: should_kill(agent_id) turns
+        # into the ordinary kill path, so a chaos kill is exercised with the same code as a real one.
+        self._chaos = chaos
 
     def set_slot_open(self, slot_open: Callable[[str], bool] | None) -> None:
         self._slot_open = slot_open
+
+    def set_chaos(self, chaos: Any | None) -> None:
+        self._chaos = chaos
 
     async def run(self, lineage_id: str, agent_id: str) -> LineageResult:
         """Run the lineage `lineage_id` starting from the agent `agent_id` (for example L-001 and sol-001).
@@ -272,12 +282,22 @@ class LineageRunner:
         finally:
             if state.watcher is not None:
                 state.watcher.cancel()
+            if state.chaos_watcher is not None:
+                state.chaos_watcher.cancel()
 
     async def _on_message(self, state: _SessionState, lineage_id: str, message: Any, control: SessionControl, monitor: Any) -> None:
         if isinstance(message, AssistantMessage) and not state.compaction_checked:
             state.compaction_checked = True
             if monitor.note_compaction_state(await control.context_usage()):
                 log.warning("auto-compaction is still on for %s; the handoff may be pre-empted", state.agent_id)
+
+        if self._chaos is not None:
+            if state.chaos_watcher is None:
+                # The first message is the first moment a SessionControl exists to kill through.
+                state.chaos_watcher = asyncio.create_task(self._watch_chaos(state, control))
+            if state.phase in (PHASE_RUNNING, PHASE_HANDING_OFF) and self._chaos.should_kill(state.agent_id):
+                self._chaos_kill(state, control)
+                return
 
         if (state.handoff_due or state.kill_due) and state.phase == PHASE_RUNNING:
             # A context that jumps past both thresholds in one turn (one large file read
@@ -356,6 +376,25 @@ class LineageRunner:
                 self._kill(state, control, "handoff timed out")
                 await control.interrupt()
                 return
+
+    async def _watch_chaos(self, state: _SessionState, control: SessionControl) -> None:
+        """Poll the chaos controls for this agent while its session is alive."""
+        while state.phase in (PHASE_RUNNING, PHASE_HANDING_OFF):
+            await self._sleep(self._poll_s)
+            if state.phase not in (PHASE_RUNNING, PHASE_HANDING_OFF):
+                return
+            if self._chaos is not None and self._chaos.should_kill(state.agent_id):
+                self._chaos_kill(state, control)
+                await control.interrupt()
+                return
+
+    def _chaos_kill(self, state: _SessionState, control: SessionControl) -> None:
+        """The operator asked for this agent to die: the ordinary kill path, so a stub and a
+        successor follow, plus the chaos event and the acknowledgement that removes the id."""
+        self._kill(state, control, "chaos kill")
+        self._op.log_event(state.agent_id, "chaos.killed", {"agent_id": state.agent_id, "generation": state.generation})
+        if self._chaos is not None:
+            self._chaos.acknowledge(state.agent_id)
 
     def _since_request(self, state: _SessionState) -> dict[str, Any]:
         """How long the agent had since the handoff request, in turns and seconds. The supervisors'

@@ -23,7 +23,7 @@ log = logging.getLogger(__name__)
 # Which section of civ.toml each field lives in; the file is nested, the dataclass is flat.
 SECTIONS: dict[str, tuple[str, ...]] = {
     "population": ("solvers", "supervisors"),
-    "cadence": ("supervisor_round_s",),
+    "cadence": ("supervisor_round_s", "heartbeat_s"),
     "lifecycle": ("max_generations", "handoff_pct", "kill_pct", "kill_grace_turns"),
     "voting": ("decay_offset_h", "decay_power", "operator_pin_s"),
     "governance": ("vote_quota", "min_sample", "big_move_steps", "ttl_default_s"),
@@ -41,6 +41,8 @@ class Shape:
     solvers: int = 3
     supervisors: int = 1
     supervisor_round_s: float = 600.0
+    # How often the orchestrator writes its heartbeat row; the watchdog alarms at twice this.
+    heartbeat_s: int = 30
     max_generations: int = 5
     handoff_pct: float = 80.0
     kill_pct: float = 90.0

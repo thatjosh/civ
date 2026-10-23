@@ -255,3 +255,24 @@ async def test_harness_version_is_read_from_the_version_file_at_every_spawn(tmp_
     assert "harness_version: 0.1.3" in q2.calls[0]["options"].system_prompt
     (tmp_path / "harness" / "VERSION").write_text("0.1.4\n")
     assert spawner2.harness_version() == "0.1.4"
+
+
+def test_solver_materials_follow_the_pack_when_one_is_set(tmp_path, monkeypatch):
+    # CIV_PACK names a generated pack; its materials/ replaces the repo's task/materials for
+    # add_dirs and the kickoff, and the supervisor's shared/ is untouched.
+    from harness.orchestrator.monitor import StaticKnobs
+    from harness.orchestrator.prompts import PromptAssembler
+    from harness.orchestrator.spawner import Spawner
+    from harness.tests.orchestrator_fakes import FakeOperator
+
+    pack = tmp_path / "packs" / "soak"
+    (pack / "materials").mkdir(parents=True)
+    monkeypatch.setenv("CIV_PACK", str(pack))
+    spawner = Spawner(FakeOperator(), "http://127.0.0.1:8765", tmp_path, PromptAssembler(PROMPTS_DIR), knobs=StaticKnobs())
+    prepared = spawner.prepare("sol-001", "L-001")
+    assert prepared.options.add_dirs == [str((pack / "materials").resolve())]
+    assert str((pack / "materials").resolve()) in prepared.kickoff
+    sup = spawner.prepare("sup-001-r1", "S-001", role="supervisor", brief="# This round's brief\nnothing")
+    assert sup.options.add_dirs == [str((tmp_path / "shared").resolve())]
+    monkeypatch.delenv("CIV_PACK")
+    assert spawner.prepare("sol-002", "L-002").options.add_dirs == [str((tmp_path / "task" / "materials").resolve())]

@@ -8,6 +8,7 @@
     civ pause [--reason ...] / resume    stop or restart new spawns (the orchestrator's governor reads it)
     civ reshape                          re-read control/civ.toml, bump the epoch
     civ restore --yes                    the one-shot recovery step: new epoch, stubs, leases, knobs, broadcast
+    civ chaos kill|board-down|lag|clear|show   inject a fault mid-run (M7)
     civ merge --list | --approve ID | --reject ID --reason ...   the merges waiting on the operator (M6)
 
 This module imports nothing from harness/: it talks to Postgres directly and reads the two toml
@@ -136,6 +137,46 @@ class Board:
     def event(self, type: str, payload: dict[str, Any]) -> None:
         self.conn.execute("insert into events (agent_id, type, payload) values (%s, %s, %s)",
                           (OPERATOR_ID, type, json.dumps(payload, default=str)))
+
+    # heartbeat and chaos (M7)
+
+    def heartbeat(self) -> dict[str, Any] | None:
+        """The orchestrator's last beat as written, plus its age in seconds, or None when there has
+        never been one. The age is computed by the database clock, the same clock that stamped it."""
+        row = self.one(
+            "select value, extract(epoch from (now() - updated_at)) as age_s from control_state where key = 'heartbeat'"
+        )
+        if row is None or not isinstance(row["value"], dict):
+            return None
+        beat = dict(row["value"])
+        # The beat carries its own timestamp; the row's updated_at is the fallback for a beat
+        # written by an older orchestrator without one.
+        at = beat.get("at")
+        if at:
+            parsed = self.one("select extract(epoch from (now() - %s::timestamptz)) as age_s", (at,))
+            beat["age_s"] = float(parsed["age_s"])
+        else:
+            beat["age_s"] = float(row["age_s"])
+        return beat
+
+    def chaos(self) -> dict[str, Any]:
+        value = self.state_get("chaos")
+        base = {"kill": [], "board_down_until": None, "lag_ms": 0}
+        if isinstance(value, dict):
+            base.update(value)
+        base["kill"] = list(base.get("kill") or [])
+        return base
+
+    def chaos_set(self, patch: dict[str, Any]) -> dict[str, Any]:
+        """Merge a patch into control_state.chaos and return the result. A merge rather than a
+        replace, so a lag set earlier survives a kill added now."""
+        merged = {**self.chaos(), **patch}
+        self.state_set("chaos", merged)
+        return merged
+
+    def random_live_solver(self) -> str | None:
+        row = self.one("select id from agents where role = 'solver' and status = 'live' order by random() limit 1")
+        return row["id"] if row else None
 
     # messages and votes
 
@@ -429,7 +470,14 @@ class Cli:
         # Stored nested (plus written_at); flattening also accepts an older flat record.
         shape = flatten({k: v for k, v in stored.items() if k != "written_at"}) if isinstance(stored, dict) else self.control.shape()
         source = "control_state" if isinstance(stored, dict) else "civ.toml"
+        beat = board.heartbeat()
+        if beat is None:
+            heartbeat_line = "heartbeat: none"
+        else:
+            heartbeat_line = (f"heartbeat: {int(round(beat['age_s']))} s ago (pid {beat.get('pid', '?')}, "
+                              f"epoch {beat.get('epoch', '?')})" + (" stopping" if beat.get("stopping") else ""))
         self._print(
+            heartbeat_line,
             f"epoch {board.epoch()}  paused {'yes (' + reason + ')' if on and reason else 'yes' if on else 'no'}",
             f"agents: {live['solver']} solvers, {live['supervisor']} supervisors live (ceiling {ceilings['max_live_agents']})",
             f"tasks: open {counts['open']}, leased {counts['leased']}, done {counts['done']}, blocked {counts['blocked']}"
@@ -523,6 +571,62 @@ class Cli:
             self._print(f"#{row['id']} proposal #{row['proposal_id']} {row['status']} {','.join(row['paths'] or [])}")
 
 
+    def cmd_chaos(self, board: Board, args: argparse.Namespace) -> None:
+        """Three faults the operator can inject mid-run, all through control_state.chaos: a kill
+        the orchestrator carries out, a board outage the server honours, and a lag on every tool
+        result. They are rows, not signals, so they survive a restart of either process and show
+        up in `civ chaos show`."""
+        action = args.action
+        if action == "kill":
+            target = args.value
+            if target == "random-solver":
+                target = board.random_live_solver()
+                if target is None:
+                    raise Refused("no live solver to kill")
+            else:
+                row = board.one("select status from agents where id = %s", (target,))
+                if row is None:
+                    raise Refused(f"no agent {target}")
+                if row["status"] not in ("live", "handing_off"):
+                    raise Refused(f"{target} is {row['status']}, not live")
+            state = board.chaos()
+            if target not in state["kill"]:
+                state["kill"].append(target)
+            board.chaos_set({"kill": state["kill"]})
+            board.event("operator.chaos", {"action": "kill", "agent_id": target})
+            self._print(f"chaos: kill queued for {target}")
+        elif action == "board-down":
+            seconds = int(args.value)
+            if seconds <= 0:
+                raise Refused("board-down needs a positive number of seconds")
+            row = board.one("select (now() + make_interval(secs => %s)) as until", (seconds,))
+            until = row["until"]
+            board.chaos_set({"board_down_until": until.isoformat()})
+            board.event("operator.chaos", {"action": "board-down", "seconds": seconds, "until": until.isoformat()})
+            self._print(f"chaos: board down until {_local(until)} ({seconds} s)")
+        elif action == "lag":
+            lag_ms = int(args.value)
+            if lag_ms < 0:
+                raise Refused("lag cannot be negative")
+            board.chaos_set({"lag_ms": lag_ms})
+            board.event("operator.chaos", {"action": "lag", "lag_ms": lag_ms})
+            self._print("chaos: lag cleared" if lag_ms == 0 else f"chaos: lag {lag_ms} ms on every tool result")
+        elif action == "clear":
+            board.state_set("chaos", {"kill": [], "board_down_until": None, "lag_ms": 0})
+            board.event("operator.chaos", {"action": "clear"})
+            self._print("chaos: cleared")
+        elif action == "show":
+            state = board.chaos()
+            down = state.get("board_down_until")
+            self._print(
+                f"kill: {', '.join(state['kill']) if state['kill'] else 'none'}",
+                f"board_down_until: {down or 'none'}",
+                f"lag_ms: {int(state.get('lag_ms') or 0)}",
+            )
+        else:
+            raise Refused(f"unknown chaos action {action}")
+
+
 # --- argument parsing --------------------------------------------------------------------------
 
 
@@ -553,6 +657,10 @@ def build_parser() -> argparse.ArgumentParser:
     restore = sub.add_parser("restore", help="the one-shot recovery step")
     restore.add_argument("--yes", action="store_true")
 
+    chaos = sub.add_parser("chaos", help="inject a fault: kill <agent|random-solver>, board-down <s>, lag <ms>, clear, show")
+    chaos.add_argument("action", choices=["kill", "board-down", "lag", "clear", "show"])
+    chaos.add_argument("value", nargs="?")
+
     merge = sub.add_parser("merge", help="merges waiting on the operator: list, approve or reject")
     merge.add_argument("--list", action="store_true")
     merge.add_argument("--approve", type=int, metavar="MERGE_ID")
@@ -569,6 +677,12 @@ def main(argv: list[str] | None = None) -> int:
             parser.error("vote needs <message_id> <+1|-1> --reason ..., or --report <message_id>")
         if args.report is None and not args.reason.strip():
             parser.error("an operator vote needs --reason")
+    if args.command == "chaos":
+        needs_value = args.action in ("kill", "board-down", "lag")
+        if needs_value and args.value is None:
+            parser.error(f"chaos {args.action} needs a value")
+        if args.action in ("board-down", "lag") and not str(args.value).lstrip("-").isdigit():
+            parser.error(f"chaos {args.action} needs an integer")
     if args.command == "merge":
         chosen = [x for x in (args.list, args.approve is not None, args.reject is not None) if x]
         if len(chosen) != 1:

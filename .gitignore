@@ -1,6 +1,10 @@
 # runtime state, never committed (see design doc, section 3)
 agents/
 shared/
+# M7: database dumps and generated soak packs are rebuilt, never committed
+backups/
+task/packs/*
+!task/packs/.gitkeep
 # local
 .DS_Store
 .env
@@ -10,3 +14,6 @@ shared/
 __pycache__/
 *.pyc
 .pytest_cache/
+# written by the orchestrator at start for the watchdog to relaunch it
+control/orchestrator.args
+control/watchdog.log

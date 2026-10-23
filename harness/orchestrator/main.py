@@ -31,6 +31,8 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
+from harness.orchestrator.chaos import ChaosReader
+from harness.orchestrator.heartbeat import Heartbeat
 from harness.orchestrator.governor import Governor
 from harness.orchestrator.merger import Merger, merge_settings
 from harness.orchestrator.population import Population
@@ -72,6 +74,10 @@ class RunConfig:
     # the merge gate alongside the population. The merger needs a git checkout at the root.
     serve_board: bool = False
     merger: bool = True
+    # A crowd, over time (M7): the task pack to run (CIV_PACK for this process and the board
+    # server it owns), and the heartbeat interval (civ.toml [cadence] heartbeat_s unless given).
+    pack: Path | None = None
+    heartbeat_s: float | None = None
     # Fields the command line (or its environment) set explicitly. Anything else that civ.toml
     # also describes is taken from the file, so a flag always wins over the shape.
     overrides: set[str] = field(default_factory=set)
@@ -140,6 +146,10 @@ class RunConfig:
                        help="start and own the board server, so a harness version bump restarts it")
         p.add_argument("--no-merger", dest="merger", action="store_false",
                        help="do not run the merge gate alongside the population")
+        p.add_argument("--pack", type=Path, default=Path(env["CIV_PACK"]) if env.get("CIV_PACK") else None,
+                       help="a generated task pack directory (materials/, tasks.json, answers.json); default the repo's task/")
+        p.add_argument("--heartbeat-s", type=float, default=_env_float(env, "CIV_HEARTBEAT_S"),
+                       help="seconds between heartbeat rows; default civ.toml [cadence] heartbeat_s, else 30")
         a = p.parse_args(argv)
         given = {"solvers": a.solvers, "supervisors": a.supervisors, "supervisor_interval_s": a.supervisor_interval,
                  "max_generations": a.max_generations, "model": a.model}
@@ -157,6 +167,7 @@ class RunConfig:
             presets=[parse_preset(text) for text in a.preset],
             control_dir=a.control_dir, resume=a.resume, overrides=overrides,
             serve_board=a.serve_board, merger=a.merger,
+            pack=a.pack, heartbeat_s=a.heartbeat_s,
         )
 
 
@@ -366,6 +377,9 @@ def build_board_server(cfg: RunConfig) -> BoardServer:
         "CIV_ROOT": str(cfg.root),
         "CIV_CONTROL_DIR": str(cfg.control_path()),
     }
+    if cfg.pack is not None:
+        # The verifier inside the server scores against the pack's answers, so it must see the same pack.
+        env["CIV_PACK"] = str(cfg.pack.resolve())
     cmd = [sys.executable, "-m", "harness.board_mcp.server"]
     return BoardServer(cmd, env, f"{cfg.board_url.rstrip('/')}/health", log_path=cfg.root / "shared" / "board-server.log")
 
@@ -395,7 +409,32 @@ def build_version_watcher(cfg: RunConfig, operator: Any, board: BoardServer | No
     return run_until
 
 
+def apply_pack(cfg: RunConfig) -> None:
+    """Point this process at the pack: the spawner reads CIV_PACK for the materials directory and
+    the owned board server inherits it for the verifier."""
+    if cfg.pack is not None:
+        os.environ["CIV_PACK"] = str(cfg.pack.resolve())
+
+
+def build_heartbeat(cfg: RunConfig, operator: Any, shape: Shape, spawner: Spawner | None = None) -> Heartbeat:
+    interval = cfg.heartbeat_s if cfg.heartbeat_s is not None else float(getattr(shape, "heartbeat_s", 30))
+    version = spawner.harness_version if spawner is not None else "dev"
+    return Heartbeat(operator, interval, pid=os.getpid(), harness_version=version)
+
+
+def record_argv(control_dir: Path, argv: list[str]) -> Path:
+    """Write this run's command line to control/orchestrator.args, one argument per line, so the
+    watchdog can relaunch the orchestrator exactly as the operator started it (with --resume
+    appended). A deviation worth naming: control/ is the operator's directory, and this is the
+    one file in it the orchestrator writes."""
+    path = control_dir / "orchestrator.args"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("".join(f"{arg}\n" for arg in argv), encoding="utf-8")
+    return path
+
+
 async def amain(cfg: RunConfig) -> tuple[list[RunResult], list[RoundResult]]:
+    apply_pack(cfg)
     operator, knobs = build_operator(cfg)
     governor = build_governor(cfg, operator)
     file_shape = load_shape_for(cfg)
@@ -417,16 +456,20 @@ async def amain(cfg: RunConfig) -> tuple[list[RunResult], list[RoundResult]]:
         cron = build_supervisor_cron(cfg, operator, knobs, governor, reader) if cfg.supervisors > 0 else None
         merger = build_merger(cfg, operator)
         watcher = build_version_watcher(cfg, operator, board)
+        heartbeat = build_heartbeat(cfg, operator, shape, spawner)
+        # The chaos reader is polled by the runner's own watchers, so it needs no loop of its own.
+        runner.set_chaos(ChaosReader(operator))
         log.info("spawning %d solver lineages against %s with %s (window %d, max generations %d), %d supervisors every %.0fs%s%s",
                  cfg.solvers, cfg.board_url, cfg.model, cfg.context_window, cfg.max_generations,
                  cfg.supervisors, cfg.supervisor_interval_s,
                  f", resuming {len(resume_rows)} lineage(s)" if resume_rows else "",
                  ", merge gate on" if merger is not None else "")
-        results, (rounds, merges, _bumps) = await run_everything(
+        results, (rounds, merges, _bumps, _beats) = await run_everything(
             population.run(),
             cron.run_until if cron is not None else None,
             merger.run_until if merger is not None else None,
             watcher,
+            heartbeat.run_until,
         )
         rounds = list(rounds or [])
         for outcome in merges or []:
@@ -465,6 +508,10 @@ def exit_code(results: list[RunResult], rounds: list[RoundResult]) -> int:
 def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=os.environ.get("CIV_LOG_LEVEL", "INFO"), format="%(asctime)s %(name)s %(levelname)s %(message)s")
     cfg = RunConfig.from_args(argv)
+    try:
+        record_argv(cfg.control_path(), list(argv) if argv is not None else sys.argv[1:])
+    except OSError as exc:
+        log.warning("could not write control/orchestrator.args: %s", exc)
     results, rounds = asyncio.run(amain(cfg))
     halted = [r for r in results if _halted(r)]
     if halted:

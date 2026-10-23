@@ -190,13 +190,43 @@ The live run found two more bugs, both fixed: every agent row showed version `de
 
 The server queues and the orchestrator merges, where the design has the tool do it synchronously. The merge gate refuses when the working tree under `harness/` is dirty. The board server is hot-reloaded only when the orchestrator owns it (`--serve-board`); the orchestrator's own code is not reloaded until restart. Protected paths live in `control/civ.toml` rather than being hard-coded. There is one OS user, so "under the service user" is the same user.
 
+## Phase 6: M7, a crowd, over time (23 October 2026)
+
+### The soak pack
+
+Eight tasks finish in two minutes, which proves the machinery and nothing else. `task/generate_pack.py` writes a deterministic synthetic parish archive in the Hollowmere style, twenty years of ledgers, parish logs, letters and a census every five years, with the facts generated first and the prose written from them, so every answer is exact and the verifier scores the generator's own reference results at 1.0. A pack lives at `task/packs/<name>/` with its own materials, tasks and answers, and `CIV_PACK` points the server, the orchestrator and `seed_tasks.py --pack` at it. At a 100k-token window a solver hands off several times before the pack is done.
+
+### Chaos, heartbeat, watchdog
+
+Three faults the operator can inject mid-run, all rows in `control_state.chaos` so they survive a restart of either process: `civ chaos kill <agent | random-solver>` (the orchestrator carries it out through the M3 kill path, so the successor starts from a stub), `civ chaos board-down <seconds>` (the server answers every tool with "board unavailable" and writes nothing, while `/health` keeps answering and says why), and `civ chaos lag <ms>`. The orchestrator writes a heartbeat row every thirty seconds and `civ status` prints its age first, because a stale heartbeat is the alarm. `scripts/watchdog.sh` is not part of the stack: every interval it checks the heartbeat, the health endpoint and `pg_isready`, logs one line, pages the operator through a desktop notification, and with `--restart` brings a dead orchestrator back the only way SDK sessions allow: `civ restore --yes`, then the orchestrator relaunched from the argument list it wrote at start, with `--resume`.
+
+### Backups and restore
+
+`scripts/backup.sh` takes a base backup: a `pg_dump` of the database, an `rsync` of `shared/`, the control files and a manifest. `scripts/verify_shared.py` checks every shared file against the hash in its name and every reference the database makes to one. `scripts/restore_from_backup.sh <dir>` recreates the database from the dump, puts `shared/` back, verifies it, and runs `civ restore --yes`; the next step is the orchestrator with `--resume`.
+
+### The soak
+
+```sh
+python task/generate_pack.py --years 20 --start 1850 --seed 7 --out task/packs/soak-20y
+python scripts/soak.py --pack task/packs/soak-20y --minutes 15 --solvers 6 --model claude-haiku-5-5 \
+    --supervisors 1 --supervisor-model claude-opus-5-5 --supervisor-interval 180 --context-window 100000 \
+    --chaos "kill-solver@120,board-down@300:20,kill-orchestrator@540" --out docs/demo/2026-10-23-soak
+```
+
+The soak bootstraps, seeds the pack, starts the watchdog with `--restart` and the orchestrator with `--serve-board`, runs the chaos schedule by the clock (the orchestrator is killed with SIGKILL at nine minutes and the soak waits for a heartbeat from a new pid, recording the gap), stops at the deadline or when the pack is done, and writes a summary, the events, and a dashboard rendered from the database by `scripts/dashboard.py` (one static page, inline SVG, the mockup's warm palette: heartbeat and epoch boundaries, live agents and tasks done over time, handoff success per round with stubs and kills marked, tokens per minute, the knob timeline, chaos markers, the inbox, spend by role), with a copy on the Desktop.
+
+<!-- integrator: m7 results -->
+
+### Deviations from the design doc
+
+The watchdog pages through a desktop notification or stderr, not email. Restart goes through `civ restore` and `--resume` because SDK sessions cannot be reattached: the design's "resumes the sessions it finds" becomes "resumes the lineages it finds". Write-ahead log archiving is not configured, so backups are base backups only and the restore drill shows the loss window. Chaos is three controls (kill, outage, lag), not a general fault menu. The dashboard is a generated static page, not the live app of the follow-up document.
+
 ## Next steps
 
 1. The race fix. A solver that claims a task checks the board before claiming but not before deriving, so when a sibling task posts the fact a second later the work is done twice (seen in both demo runs). `task_claim` should report which dependency tasks are currently leased, and the solver prompt should re-check the board before deriving. Pair it with a search-before-posting rule for the end-of-loop finding, which produced duplicate posts at the end of run 2.
-2. M7: the chaos controls, soak test, watchdog and backups.
-3. A task pack large enough that no solver can finish inside one context window, which is the case the design exists for.
-4. Supervisor follow-ups from the first live rounds: a wall-clock floor on the kill grace alongside the turn count; a growth-aware handoff trigger that asks early when the last turn's context growth exceeds the remaining gap to `kill_pct`; a way for a supervisor to carry a proposal without a diff file, or a writable directory of its own for M6.
-5. The closed-loop A/B for supervisors, once that pack exists: the same `kill_grace_turns=0` fault, runs of at least six rounds, `handoff_success_rate` per round compared between the arm without supervisors and the arm with them, three seeds each. The claim to test is that the arm with supervisors recovers within two rounds of the first kill and the other arm never does.
+2. A real verifier for a real task, which the design leaves to the builder: the soak pack's verifier is exact by construction, and the techniques in the design's verification section (delayed scoring, re-verification, rubric rotation) are untouched.
+3. Supervisor follow-ups from the first live rounds: a wall-clock floor on the kill grace alongside the turn count; a growth-aware handoff trigger that asks early when the last turn's context growth exceeds the remaining gap to `kill_pct`; a way for a supervisor to carry a proposal without a diff file, or a writable directory of its own for M6.
+4. The closed-loop A/B for supervisors, now that a pack exists: the same `kill_grace_turns=0` fault, runs of at least six rounds, `handoff_success_rate` per round compared between the arm without supervisors and the arm with them, three seeds each. The claim to test is that the arm with supervisors recovers within two rounds of the first kill and the other arm never does.
 
 The layout is the one the design doc describes: `harness/` (agent-editable), `control/` (operator-owned), `task/`, `docs/`, `scripts/`, with `agents/` and `shared/` as gitignored runtime state.
 

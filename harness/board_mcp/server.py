@@ -13,6 +13,7 @@ import functools
 import importlib
 import logging
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
@@ -25,7 +26,7 @@ from . import notices
 from .auth import AgentIdentity, resolve_token
 from .ceilings import Ceilings
 from .tools.common import log_event
-from .db import Db, head_seq
+from .db import Db, fetch_one, head_seq
 from .limits import Knobs
 from .tools.board import BoardTools
 from .tools.civ import CivTools
@@ -56,11 +57,58 @@ def load_verifier(spec: str | None):
         return None
 
 
+BOARD_DOWN = "board unavailable (chaos)"
+
+
 class Gateway:
-    """Resolves identity, runs a service method off the event loop, and wraps the result."""
+    """Resolves identity, runs a service method off the event loop, and wraps the result.
+
+    It also honours the operator's chaos controls (M7): while control_state.chaos says the
+    board is down every tool is refused without writing anything, and a lag delays every
+    answer, because an outage and a slow board are the two failures the design claims the
+    civilisation degrades through rather than breaks on."""
 
     def __init__(self, db: Db):
         self.db = db
+        # What has been logged so far, so an outage and a lag change are each one event.
+        self._outage_logged: str | None = None
+        self._lag_logged: int = 0
+
+    def chaos_state(self) -> dict[str, Any]:
+        """control_state.chaos with defaults; an empty dict before migration 0004."""
+        with self.db.transaction() as conn:
+            present = fetch_one(conn, "select to_regclass('control_state') is not null as present")
+            if not present or not present["present"]:
+                return {"kill": [], "board_down_until": None, "lag_ms": 0}
+            row = fetch_one(conn, "select value from control_state where key = 'chaos'")
+        value = row["value"] if row and isinstance(row["value"], dict) else {}
+        return {"kill": list(value.get("kill") or []), "board_down_until": value.get("board_down_until"),
+                "lag_ms": int(value.get("lag_ms") or 0)}
+
+    @staticmethod
+    def board_down(chaos: dict[str, Any]) -> bool:
+        until = chaos.get("board_down_until")
+        if not until:
+            return False
+        try:
+            deadline = datetime.fromisoformat(str(until))
+        except ValueError:
+            return False
+        if deadline.tzinfo is None:
+            deadline = deadline.replace(tzinfo=timezone.utc)
+        return deadline > datetime.now(timezone.utc)
+
+    def note_chaos(self, chaos: dict[str, Any], down: bool) -> None:
+        """Log chaos.board_down once per outage and chaos.lag on each change of the lag."""
+        until = str(chaos.get("board_down_until")) if down else None
+        lag = int(chaos.get("lag_ms") or 0)
+        with self.db.transaction() as conn:
+            if down and until != self._outage_logged:
+                log_event(conn, None, "chaos.board_down", {"until": until})
+                self._outage_logged = until
+            if lag != self._lag_logged:
+                log_event(conn, None, "chaos.lag", {"lag_ms": lag})
+                self._lag_logged = lag
 
     def identity(self, ctx: Context) -> AgentIdentity | None:
         headers = ctx.headers or {}
@@ -78,6 +126,13 @@ class Gateway:
             return payload
 
     async def call(self, ctx: Context, tool: str, method: Callable[..., dict[str, Any]], **kwargs) -> dict[str, Any]:
+        chaos = await anyio.to_thread.run_sync(self.chaos_state)
+        down = self.board_down(chaos)
+        await anyio.to_thread.run_sync(self.note_chaos, chaos, down)
+        if down:
+            # Nothing is written and nothing is read on the agent's behalf: to the agent the board
+            # is simply gone, which is what the outage is meant to look like.
+            return {"ok": False, "error": BOARD_DOWN}
         identity = await anyio.to_thread.run_sync(self.identity, ctx)
         if identity is None:
             return {"ok": False, "error": "unknown agent token"}
@@ -86,7 +141,11 @@ class Gateway:
             # Every refusal is an event, because a supervisor diagnosing a failed handoff needs to
             # know whether the agent tried and was turned away, and the brief counts them by reason.
             await anyio.to_thread.run_sync(self.log_refusal, identity, tool, result)
-        return await anyio.to_thread.run_sync(self.envelope, identity, result)
+        wrapped = await anyio.to_thread.run_sync(self.envelope, identity, result)
+        lag_ms = int(chaos.get("lag_ms") or 0)
+        if lag_ms > 0:
+            await anyio.sleep(lag_ms / 1000.0)
+        return wrapped
 
     def log_refusal(self, identity: AgentIdentity, tool: str, result: dict[str, Any]) -> None:
         with self.db.transaction() as conn:
@@ -184,7 +243,13 @@ def build_server(db: Db, shared_dir: Path, verifier=None) -> MCPServer:
             with db.transaction() as conn:
                 return head_seq(conn)
         head = await anyio.to_thread.run_sync(probe)
-        return JSONResponse({"ok": True, "head_seq": head})
+        body: dict[str, Any] = {"ok": True, "head_seq": head}
+        # The watchdog must tell an injected outage from a dead server, so health keeps answering
+        # during one and says why the tools are refusing.
+        chaos = await anyio.to_thread.run_sync(gw.chaos_state)
+        if gw.board_down(chaos):
+            body["chaos"] = "board_down"
+        return JSONResponse(body)
 
     return server
 

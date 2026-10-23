@@ -619,6 +619,43 @@ class Operator:
                 (key, json.dumps(value, default=str)),
             )
 
+    # Heartbeat and chaos (M7)
+
+    def heartbeat_age_s(self) -> float | None:
+        """Seconds since the orchestrator's last heartbeat, None when there has never been one.
+        The watchdog's alarm; a clean shutdown leaves a row with "stopping" that still ages."""
+        row = self.control_get("heartbeat")
+        if not isinstance(row, dict) or not row.get("at"):
+            return None
+        from datetime import datetime, timezone
+
+        at = datetime.fromisoformat(str(row["at"]))
+        if at.tzinfo is None:
+            at = at.replace(tzinfo=timezone.utc)
+        return max(0.0, (datetime.now(timezone.utc) - at).total_seconds())
+
+    def chaos_get(self) -> dict[str, Any]:
+        """The chaos row with every key present: {"kill": [...], "board_down_until": iso or None, "lag_ms": n}."""
+        from harness.orchestrator.chaos import normalise
+
+        return normalise(self.control_get("chaos"))
+
+    def chaos_set(self, patch: dict[str, Any]) -> dict[str, Any]:
+        """Merge a patch into the chaos row and return the result. A merge, not a replace, so the
+        operator can add a kill without clearing an outage they also set."""
+        from harness.orchestrator.chaos import normalise
+
+        merged = normalise({**self.chaos_get(), **patch})
+        self.control_set("chaos", merged)
+        return merged
+
+    def chaos_ack_kill(self, agent_id: str) -> None:
+        """Drop one agent from the kill list once the runner has killed it."""
+        current = self.chaos_get()
+        remaining = [x for x in current["kill"] if x != agent_id]
+        if remaining != current["kill"]:
+            self.control_set("chaos", {**current, "kill": remaining})
+
     def lineages_to_resume(self) -> list[dict[str, Any]]:
         """Every lineage whose latest handoff has no successor yet: what --resume spawns after a
         restore. A lineage whose last session ended on its own has a successor on its last handoff

@@ -6,7 +6,7 @@ result file name and the format line, because the body is the only thing a
 solver sees when it claims, so everything it needs to produce a gradeable
 result has to be in there.
 
-Usage: python scripts/seed_tasks.py [--tasks task/tasks.json] [--database-url URL]
+Usage: python scripts/seed_tasks.py [--tasks task/tasks.json | --pack task/packs/<name>] [--database-url URL]
 """
 
 from __future__ import annotations
@@ -56,14 +56,20 @@ def existing_task_ids(db_url: str) -> set[str]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--tasks", default=str(ROOT / "task" / "tasks.json"))
+    parser.add_argument("--tasks", default=None, help="a tasks.json; the default is the pack's")
+    parser.add_argument("--pack", default=os.environ.get("CIV_PACK"),
+                        help="a pack directory (task/packs/<name>); defaults to CIV_PACK, else the repo pack")
     parser.add_argument("--database-url", default=os.environ.get("CIV_DATABASE_URL", DEFAULT_DB_URL))
     args = parser.parse_args(argv)
 
     from harness.board_mcp.db import Db
     from harness.board_mcp.operator import Operator
+    from task.pack import Pack
 
-    tasks = load_tasks(Path(args.tasks))
+    # --tasks still wins for the odd one-off file; otherwise the pack decides, so the seeder and
+    # the server (which reads CIV_PACK for the answers) cannot seed one pack and score another.
+    tasks_path = Path(args.tasks) if args.tasks else (Pack(Path(args.pack)) if args.pack else Pack.default()).tasks_path
+    tasks = load_tasks(tasks_path)
     existing = existing_task_ids(args.database_url)
     created = seed(Operator(Db(args.database_url)), tasks, existing)
     skipped = len(tasks) - len(created)

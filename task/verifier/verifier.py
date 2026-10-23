@@ -29,8 +29,11 @@ DEFAULT_DB_URL = "postgresql://127.0.0.1:5432/civ"
 
 
 def _load_answers() -> dict:
-    with ANSWERS_PATH.open() as fh:
-        return json.load(fh)
+    # The pack in play is named by CIV_PACK (task/pack.py), so a generated soak pack and the
+    # repo's own pack are scored by the same code; without it the repo pack's answers are used.
+    from task.pack import Pack
+
+    return Pack.from_env().answers()
 
 
 # Normalisation helpers. Solvers write "Josiah Reeve", "josiah  reeve" or

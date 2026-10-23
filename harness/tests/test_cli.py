@@ -175,7 +175,8 @@ def test_status_shows_epoch_pause_agents_tasks_shape_and_knobs(run, db, make_age
     run("pause", "--reason", "looking at T-004")
     code, out = run("status")
     assert code == 0
-    assert out.startswith("epoch 1  paused yes (looking at T-004)\n")
+    # The heartbeat comes first (M7): a stale one is the alarm, so it is the line the eye lands on.
+    assert out.startswith("heartbeat: none\nepoch 1  paused yes (looking at T-004)\n")
     assert "agents: 1 solvers, 0 supervisors live (ceiling 8)" in out
     assert "tasks: open 1, leased 0, done 0, blocked 0" in out
     assert "tokens/min: 0 (ceiling 3000000)" in out

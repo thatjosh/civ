@@ -281,3 +281,38 @@ def test_build_board_server_takes_host_port_and_control_dir_from_the_config(tmp_
     assert server.env["CIV_BOARD_PORT"] == "8799" and server.env["CIV_DATABASE_URL"] == "postgresql://x/y"
     assert server.env["CIV_CONTROL_DIR"] == str((tmp_path / "ctl").resolve())
     assert server.cmd[-2:] == ["-m", "harness.board_mcp.server"]
+
+
+def test_pack_and_heartbeat_flags_and_the_args_file(tmp_path, monkeypatch):
+    import os
+
+    from harness.orchestrator import main as m
+
+    for name in ("CIV_PACK", "CIV_HEARTBEAT_S"):
+        monkeypatch.delenv(name, raising=False)
+    cfg = m.RunConfig.from_args(["--pack", str(tmp_path / "packs" / "soak"), "--heartbeat-s", "5"])
+    assert cfg.pack == tmp_path / "packs" / "soak" and cfg.heartbeat_s == 5.0
+    assert m.RunConfig.from_args([]).pack is None and m.RunConfig.from_args([]).heartbeat_s is None
+    # apply_pack writes os.environ itself; the placeholder set through monkeypatch guarantees the
+    # variable is restored at teardown whether or not an assertion below fails, so a failure here
+    # cannot leak a nonexistent pack into the verifier tests.
+    monkeypatch.setenv("CIV_PACK", "placeholder")
+    m.apply_pack(cfg)
+    assert os.environ["CIV_PACK"] == str((tmp_path / "packs" / "soak").resolve())
+    # The owned board server inherits the pack so its verifier scores against the same answers.
+    env = m.build_board_server(m.RunConfig(root=tmp_path, pack=tmp_path / "p", control_dir=tmp_path / "c")).env
+    assert env["CIV_PACK"] == str((tmp_path / "p").resolve())
+    path = m.record_argv(tmp_path / "control", ["--solvers", "6", "--pack", "x"])
+    assert path.read_text().splitlines() == ["--solvers", "6", "--pack", "x"]
+
+
+def test_build_heartbeat_takes_the_interval_from_the_flag_then_the_shape():
+    from harness.orchestrator import main as m
+    from harness.orchestrator.shape import Shape
+    from harness.tests.orchestrator_fakes import FakeOperator
+
+    op = FakeOperator()
+    hb = m.build_heartbeat(m.RunConfig(heartbeat_s=4), op, Shape(heartbeat_s=12))
+    assert hb._interval_s == 4.0
+    hb = m.build_heartbeat(m.RunConfig(), op, Shape(heartbeat_s=12))
+    assert hb._interval_s == 12.0

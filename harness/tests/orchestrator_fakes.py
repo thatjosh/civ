@@ -178,6 +178,33 @@ class FakeOperator:
     def tokens_per_minute(self) -> int:
         return int(self.tpm)
 
+    # --- M7 surface ---------------------------------------------------------
+
+    def heartbeat_age_s(self) -> float | None:
+        row = self.control.get("heartbeat")
+        if not isinstance(row, dict) or not row.get("at"):
+            return None
+        from datetime import datetime, timezone
+        at = datetime.fromisoformat(str(row["at"]))
+        if at.tzinfo is None:
+            at = at.replace(tzinfo=timezone.utc)
+        return max(0.0, (datetime.now(timezone.utc) - at).total_seconds())
+
+    def chaos_get(self) -> dict[str, Any]:
+        from harness.orchestrator.chaos import normalise
+        return normalise(self.control.get("chaos"))
+
+    def chaos_set(self, patch: dict[str, Any]) -> dict[str, Any]:
+        from harness.orchestrator.chaos import normalise
+        merged = normalise({**self.chaos_get(), **patch})
+        self.control_set("chaos", merged)
+        return merged
+
+    def chaos_ack_kill(self, agent_id: str) -> None:
+        current = self.chaos_get()
+        self.control["chaos"] = {**current, "kill": [x for x in current["kill"] if x != agent_id]}
+        self.events.append((agent_id, "chaos.acked", {"agent_id": agent_id}))
+
     def spend_usd(self, hours: float) -> float:
         return float(self.spend)
 

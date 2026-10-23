@@ -30,7 +30,7 @@ def test_to_json_round_trips_through_from_mapping():
     shape = Shape(solvers=7, supervisor_round_s=15.0, min_sample=10)
     data = shape.to_json()
     assert data["population"] == {"solvers": 7, "supervisors": 1}
-    assert data["cadence"] == {"supervisor_round_s": 15.0}
+    assert data["cadence"] == {"supervisor_round_s": 15.0, "heartbeat_s": 30}
     # control_state.shape carries written_at next to the sections; it must not upset the parse.
     assert Shape.from_mapping({**data, "written_at": "2026-10-17T00:00:00Z"}) == shape
 
