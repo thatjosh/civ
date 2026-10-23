@@ -96,3 +96,14 @@ Traceback (most recent call last):
   File "/Users/joshuaang/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/asyncio/runners.py", line 123, in run
     raise KeyboardInterrupt()
 KeyboardInterrupt
+2026-10-23 19:47:44,642 harness.orchestrator.reload INFO board server up at http://127.0.0.1:8765/health (pid 31050)
+2026-10-23 19:47:44,644 civ.orchestrator INFO spawning 3 solver lineages against http://127.0.0.1:8765 with claude-haiku-5-5 (window 100000, max generations 12), 1 supervisors every 150s, merge gate on
+2026-10-23 19:47:44,646 harness.orchestrator.population INFO started lineage L-001 (slot 1 of 3)
+2026-10-23 19:47:44,663 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-23 19:47:46,647 harness.orchestrator.population INFO started lineage L-002 (slot 2 of 3)
+2026-10-23 19:47:46,661 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-23 19:47:48,649 harness.orchestrator.population INFO started lineage L-003 (slot 3 of 3)
+2026-10-23 19:47:48,662 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-23 19:48:47,505 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-23 19:50:14,693 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-23 19:50:35,705 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude

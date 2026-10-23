@@ -315,6 +315,15 @@ class Board:
         )
         return [r["id"] for r in rows]
 
+    def close_open_rounds(self) -> int:
+        """A round open at the loss never got its close; left open it would be current_round() for
+        the resumed orchestrator's tune and report rules. It is closed as lost, not summarised."""
+        rows = self.all(
+            "update rounds set ended_at = now(), summary = coalesce(summary, '{}'::jsonb) || '{\"lost_in_restore\": true}'::jsonb "
+            "where ended_at is null returning id"
+        )
+        return len(rows)
+
     def recent_post_seqs(self, agent_id: str, n: int = 10) -> list[int]:
         rows = self.all("select id from messages where author_id = %s order by id desc limit %s", (agent_id, n))
         return sorted(int(r["id"]) for r in rows)
@@ -537,10 +546,12 @@ class Cli:
         for head in heads:
             board.write_restore_stub(head, now)
         retired = board.retire_active_supervisors()
+        rounds_closed = board.close_open_rounds()
         released = board.release_leases()
         board.reset_knobs({k: v for k, v in shape.items() if k in KNOB_KEYS})
         record = {"at": now.isoformat(timespec="seconds"), "epoch": epoch, "lineages_stubbed": len(heads),
-                  "leases_released": released, "minutes_lost": minutes_lost, "supervisors_retired": retired}
+                  "leases_released": released, "minutes_lost": minutes_lost, "supervisors_retired": retired,
+                  "rounds_closed": rounds_closed}
         board.state_set("last_restore", record)
         line = (f"Restored at {_local(now)} into epoch {epoch}: {len(heads)} lineages queued for stubs, "
                 f"{released} leases released, about {minutes_lost:g} minutes of activity after "

@@ -305,6 +305,15 @@ def test_restore_retires_a_mid_round_supervisor_without_a_stub(run, db, make_age
     assert state(db, "last_restore")["supervisors_retired"] == ["sup-001-r1"]
 
 
+def test_restore_closes_the_round_that_was_open_at_the_loss(run, db, op, mid_flight):
+    rid = op.open_round(1)
+    code, out = run("restore", "--yes")
+    assert code == 0
+    row = db.fetch_one("select ended_at, summary from rounds where id = %s", (rid,))
+    assert row["ended_at"] is not None and row["summary"]["lost_in_restore"] is True
+    assert op.current_round() is None and state(db, "last_restore")["rounds_closed"] == 1
+
+
 # --- merge (M6) -----------------------------------------------------------------------------------
 
 

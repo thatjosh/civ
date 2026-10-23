@@ -73,6 +73,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     # The demo's 40-turn cap ended every lineage of the first soak before any handoff; a soak
     # wants sessions ended by context fill, so the budget is large by default.
     p.add_argument("--max-turns", type=int, default=400)
+    p.add_argument("--drain-s", type=float, default=120.0,
+                   help="seconds to let the orchestrator finish on its own once every task is done")
     p.add_argument("--max-generations", type=int, default=12)
     p.add_argument("--chaos", type=parse_chaos, default=parse_chaos("kill-solver@120,board-down@300:20,kill-orchestrator@540"))
     p.add_argument("--out", default=f"docs/demo/{dt.date.today():%Y-%m-%d}-soak")
@@ -246,7 +248,18 @@ class Soak:
                 break
             left = self.tasks_left()
             if left == 0:
-                self.log("every task is done; stopping early")
+                # Give the orchestrator time to end on its own: the lineages find the queue empty
+                # and the cron writes its final post-mortem round, which the record wants. The
+                # fourth soak interrupted it here and lost that round.
+                self.log(f"every task is done; waiting up to {self.args.drain_s:g}s for the orchestrator to finish")
+                drain_until = time.monotonic() + self.args.drain_s
+                while time.monotonic() < drain_until and self.orchestrator is not None and self.orchestrator.poll() is None:
+                    time.sleep(2)
+                if self.orchestrator is not None and self.orchestrator.poll() is not None:
+                    self.log(f"orchestrator finished on its own with code {self.orchestrator.returncode}")
+                    self.orchestrator = None
+                else:
+                    self.log("orchestrator still running after the drain; stopping it")
                 break
             time.sleep(5)
 
