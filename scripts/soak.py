@@ -233,6 +233,15 @@ class Soak:
         total = self.sql("select count(*) from tasks")
         self.log(f"seeded {total} tasks from the pack")
 
+    def orchestrator_alive(self) -> bool:
+        """Whether an orchestrator is running: the one this script started, or the one the watchdog
+        relaunched after a chaos kill, which this script never held a handle to (the fifth soak's
+        drain ended at once for that reason)."""
+        if self.orchestrator is not None and self.orchestrator.poll() is None:
+            return True
+        found = subprocess.run(["pgrep", "-f", "harness.orchestrator.main"], capture_output=True, text=True)
+        return bool(found.stdout.strip())
+
     def main_loop(self) -> None:
         deadline = self.started + self.args.minutes * 60
         pending = list(self.args.chaos)
@@ -253,10 +262,10 @@ class Soak:
                 # fourth soak interrupted it here and lost that round.
                 self.log(f"every task is done; waiting up to {self.args.drain_s:g}s for the orchestrator to finish")
                 drain_until = time.monotonic() + self.args.drain_s
-                while time.monotonic() < drain_until and self.orchestrator is not None and self.orchestrator.poll() is None:
+                while time.monotonic() < drain_until and self.orchestrator_alive():
                     time.sleep(2)
-                if self.orchestrator is not None and self.orchestrator.poll() is not None:
-                    self.log(f"orchestrator finished on its own with code {self.orchestrator.returncode}")
+                if not self.orchestrator_alive():
+                    self.log("orchestrator finished on its own")
                     self.orchestrator = None
                 else:
                     self.log("orchestrator still running after the drain; stopping it")

@@ -107,3 +107,13 @@ KeyboardInterrupt
 2026-10-23 19:48:47,505 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
 2026-10-23 19:50:14,693 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
 2026-10-23 19:50:35,705 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-23 19:55:39,498 harness.orchestrator.reload INFO board server up at http://127.0.0.1:8765/health (pid 34097)
+2026-10-23 19:55:39,500 civ.orchestrator INFO spawning 3 solver lineages against http://127.0.0.1:8765 with claude-haiku-5-5 (window 100000, max generations 12), 1 supervisors every 150s, merge gate on
+2026-10-23 19:55:39,501 harness.orchestrator.population INFO started lineage L-001 (slot 1 of 3)
+2026-10-23 19:55:39,517 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-23 19:55:41,503 harness.orchestrator.population INFO started lineage L-002 (slot 2 of 3)
+2026-10-23 19:55:41,512 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-23 19:55:43,504 harness.orchestrator.population INFO started lineage L-003 (slot 3 of 3)
+2026-10-23 19:55:43,512 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-23 19:56:41,131 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-23 19:58:09,559 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
