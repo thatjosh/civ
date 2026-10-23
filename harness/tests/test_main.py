@@ -316,3 +316,29 @@ def test_build_heartbeat_takes_the_interval_from_the_flag_then_the_shape():
     assert hb._interval_s == 4.0
     hb = m.build_heartbeat(m.RunConfig(), op, Shape(heartbeat_s=12))
     assert hb._interval_s == 12.0
+
+
+async def test_run_everything_finishes_the_after_loop_only_once_the_others_have_settled():
+    # The merger runs as the `after` loop: it must still be running when the final supervisor
+    # round queues a merge, so it is released only after the cron has finished.
+    from harness.orchestrator.main import run_everything
+
+    order: list[str] = []
+
+    async def population():
+        return ["pop"]
+
+    async def cron(done: asyncio.Event):
+        await done.wait()
+        await asyncio.sleep(0.01)  # the final round
+        order.append("cron finished")
+        return "rounds"
+
+    async def merger(later: asyncio.Event):
+        await later.wait()
+        order.append("merger released")
+        return "merges"
+
+    results, (rounds, merges) = await run_everything(population(), cron, after=merger)
+    assert results == ["pop"] and rounds == "rounds" and merges == "merges"
+    assert order == ["cron finished", "merger released"]

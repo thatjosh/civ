@@ -109,3 +109,31 @@ watchdog: PAGE heartbeat is 41s old (limit 40s)
 2026-10-23 20:01:00 check heartbeat_age=11s health=ok postgres=ok
 2026-10-23 20:01:20 check heartbeat_age=1s health=ok postgres=ok
 2026-10-23 20:01:40 check heartbeat_age=21s health=ok postgres=ok
+2026-10-23 20:03:13 check heartbeat_age=nones health=down postgres=ok
+2026-10-23 20:03:13 problem: board health endpoint is not answering
+2026-10-23 20:03:13 problem: no heartbeat has ever been written
+watchdog: PAGE board health endpoint is not answering
+2026-10-23 20:03:34 check heartbeat_age=20s health=ok postgres=ok
+2026-10-23 20:03:54 check heartbeat_age=10s health=ok postgres=ok
+2026-10-23 20:04:14 check heartbeat_age=30s health=ok postgres=ok
+2026-10-23 20:04:34 check heartbeat_age=20s health=ok postgres=ok
+2026-10-23 20:04:54 check heartbeat_age=10s health=ok postgres=ok
+2026-10-23 20:05:14 check heartbeat_age=0s health=ok postgres=ok
+2026-10-23 20:05:34 check heartbeat_age=21s health=board_down postgres=ok
+2026-10-23 20:05:54 check heartbeat_age=11s health=ok postgres=ok
+2026-10-23 20:06:14 check heartbeat_age=1s health=ok postgres=ok
+2026-10-23 20:06:34 check heartbeat_age=21s health=ok postgres=ok
+2026-10-23 20:06:54 check heartbeat_age=41s health=ok postgres=ok
+2026-10-23 20:06:54 problem: heartbeat is 41s old (limit 40s)
+watchdog: PAGE heartbeat is 41s old (limit 40s)
+2026-10-23 20:06:55 watchdog: restoring before restart
+2026-10-23 20:06:55 watchdog: restarted orchestrator (pid 38298)
+2026-10-23 20:07:15 check heartbeat_age=20s health=ok postgres=ok
+2026-10-23 20:07:35 check heartbeat_age=10s health=ok postgres=ok
+2026-10-23 20:07:55 check heartbeat_age=30s health=ok postgres=ok
+2026-10-23 20:08:15 check heartbeat_age=20s health=ok postgres=ok
+2026-10-23 20:08:35 check heartbeat_age=11s health=ok postgres=ok
+2026-10-23 20:08:55 check heartbeat_age=1s health=ok postgres=ok
+2026-10-23 20:09:15 check heartbeat_age=21s health=ok postgres=ok
+2026-10-23 20:09:35 check heartbeat_age=11s health=ok postgres=ok
+2026-10-23 20:09:55 check heartbeat_age=31s health=ok postgres=ok

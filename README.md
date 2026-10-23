@@ -215,7 +215,24 @@ python scripts/soak.py --pack task/packs/soak-20y --minutes 15 --solvers 6 --mod
 
 The soak bootstraps, seeds the pack, starts the watchdog with `--restart` and the orchestrator with `--serve-board`, runs the chaos schedule by the clock (the orchestrator is killed with SIGKILL at nine minutes and the soak waits for a heartbeat from a new pid, recording the gap), stops at the deadline or when the pack is done, and writes a summary, the events, and a dashboard rendered from the database by `scripts/dashboard.py` (one static page, inline SVG, the mockup's warm palette: heartbeat and epoch boundaries, live agents and tasks done over time, handoff success per round with stubs and kills marked, tokens per minute, the knob timeline, chaos markers, the inbox, spend by role), with a copy on the Desktop.
 
-<!-- integrator: m7 results -->
+### Results (23 October 2026)
+
+Six soak runs, each on the twenty-year pack (56 tasks, 159k characters of materials) with Haiku solvers at a 100k window and one Opus supervisor, for about half a dollar each. The first four found something and were fixed; the last two are the record (`docs/demo/2026-10-23-soak-*`, dashboard copy at `~/Desktop/civ-soak-dashboard.html`).
+
+| run | what it found |
+|---|---|
+| 1 | every lineage ended at the demo's 40-turn cap before a handoff, and one solver stopped dead between two server rules: at its hourly vote limit it could not vote, and without a vote it could not claim. The soak now passes a 400-turn budget; the claim quota is waived while the rate limit holds, with an event. |
+| 2 | the orchestrator kill and the watchdog restore worked (back in 39 s, epoch 2, every lineage resumed from a restore stub), but the supervisor never ran: the governor's token ceiling (3M a minute, counting every token the model reads per turn, cache hits included) held its spawn for a minute until the kill. The small-scale ceiling is now 30M and the soak summary names every governor wait. |
+| 3 | the supervisor ran and tuned `handoff_pct` down a step; the pack finished before the orchestrator kill was due; two sessions asked to hand off as the queue emptied finished on their own and their successors spawned to claim nothing. No successor is spawned into an empty queue now. |
+| 4 | all three faults in one run, restore in 41 s; the round open at the loss was never closed and the soak's early stop cut the final round. Restore closes open rounds as lost; the soak drains before stopping. |
+| 5 | the drain ended at once because the soak held no handle to the relaunched orchestrator. Fixed. |
+| 6 | clean: chaos kill at 61 s, board down 20 s at 122 s, orchestrator killed at 182 s and back in 41 s in epoch 2, 56 of 56 done at mean score 1.000, two supervisor rounds including the post-mortem, no governor waits. |
+
+**What the final run's supervisors did.** The round-1 supervisor read its brief and found a bug in the brief itself: the succession section counted every refused tool call as a handoff refusal, so a claim-quota refusal and a self-vote refusal appeared under that heading. It wrote a one-line SQL diff for `slo.py` into its own directory and posted it as a proposal with the evidence. The final-round supervisor, in epoch 2 after the restore, read the diff, checked the hunk against the file, and queued it with `civ_merge`, voted on a solver's self-correction, declined to tune (no SLO over `min_sample` in a drained window) and declined to ping. The merge gate then refused the diff: a test pinned the old counting. The test was the thing that was wrong, but so was the diff by a little: it dropped the lockout refusals that are the real signal of an agent ignoring its request. The operator landed the combined rule (refused `civ_handoff` attempts plus writes refused under the lockout) with the proposal credited in the commit. That exchange is the design working end to end: an agent found a fault in its own instruments, another reviewed it, code refused it until the tests agreed, and a human resolved the disagreement.
+
+The merger also left that merge queued until the operator ran it, because it drained when the population ended, before the final round that queued it; the merger now runs as the loop released last.
+
+**Deviations to note from the run.** The pack is small for a soak: three Haiku solvers finish it in six minutes, so the chaos schedule is compressed into the first three. A fifteen-minute run with the design's hundred agents needs a pack an order of magnitude larger, which the generator can produce (`--years 200`). The token ceiling counts cache reads, which makes its number large and its meaning "load", not "spend"; the spend ceiling is the cost bound.
 
 ### Deviations from the design doc
 

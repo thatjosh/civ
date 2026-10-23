@@ -323,7 +323,7 @@ def apply_presets(cfg: RunConfig, operator: Any) -> None:
 Loop = Callable[[asyncio.Event], Awaitable[Any]]
 
 
-async def run_everything(population: Awaitable[list[Any]], *loops: Loop | None) -> tuple[list[Any], list[Any]]:
+async def run_everything(population: Awaitable[list[Any]], *loops: Loop | None, after: Loop | None = None) -> tuple[list[Any], list[Any]]:
     """Run the solver population with any number of background loops (the supervisor cron, the
     merger, the version watcher), each an `async run_until(done)`.
 
@@ -335,6 +335,11 @@ async def run_everything(population: Awaitable[list[Any]], *loops: Loop | None) 
     """
     done = asyncio.Event()
     tasks = [asyncio.create_task(loop(done)) if loop is not None else None for loop in loops]
+    # `after` is told to finish only once every other loop has settled. The merger runs there,
+    # because the final supervisor round can queue a merge and a merger that drained on the
+    # population's end leaves it queued (the sixth soak did exactly that).
+    later = asyncio.Event()
+    after_task = asyncio.create_task(after(later)) if after is not None else None
 
     async def settle() -> list[Any]:
         out: list[Any] = []
@@ -349,14 +354,29 @@ async def run_everything(population: Awaitable[list[Any]], *loops: Loop | None) 
                 out.append(None)
         return out
 
+    async def settle_after() -> Any:
+        later.set()
+        if after_task is None:
+            return None
+        try:
+            return await after_task
+        except Exception as exc:  # noqa: BLE001 - as above
+            log.warning("background loop failed: %s", exc)
+            return None
+
     try:
         results = await population
     except BaseException:
         done.set()
         await settle()
+        await settle_after()
         raise
     done.set()
-    return results, await settle()
+    first = await settle()
+    after_result = await settle_after()
+    # The trailing slot exists only when an `after` loop was given, so callers that pass none
+    # still unpack exactly one result per loop.
+    return results, first + ([after_result] if after is not None else [])
 
 
 async def run_with_supervisors(population: Awaitable[list[Any]], cron: SupervisorCron | None) -> tuple[list[Any], list[RoundResult]]:
@@ -464,12 +484,12 @@ async def amain(cfg: RunConfig) -> tuple[list[RunResult], list[RoundResult]]:
                  cfg.supervisors, cfg.supervisor_interval_s,
                  f", resuming {len(resume_rows)} lineage(s)" if resume_rows else "",
                  ", merge gate on" if merger is not None else "")
-        results, (rounds, merges, _bumps, _beats) = await run_everything(
+        results, (rounds, _bumps, _beats, merges) = await run_everything(
             population.run(),
             cron.run_until if cron is not None else None,
-            merger.run_until if merger is not None else None,
             watcher,
             heartbeat.run_until,
+            after=merger.run_until if merger is not None else None,
         )
         rounds = list(rounds or [])
         for outcome in merges or []:

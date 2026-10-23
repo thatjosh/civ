@@ -104,7 +104,8 @@ def _succession(su: dict[str, Any]) -> str:
                  f"median seconds: {_v(su.get('median_seconds_to_handoff'))}")
     refusals = su.get("refusals") or {}
     if refusals:
-        lines.append("- Handoff refusals: " + ", ".join(f"{k} ({v})" for k, v in sorted(refusals.items())))
+        lines.append("- Succession refusals (refused handoff attempts, and writes refused under the lockout): "
+                     + ", ".join(f"{k} ({v})" for k, v in sorted(refusals.items())))
     generations = su.get("generations") or {}
     if generations:
         lines.append("- Lineage generations: " + ", ".join(f"{k} at {v}" for k, v in sorted(generations.items())))

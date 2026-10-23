@@ -1,25 +1,25 @@
-soak, 2026-10-23: pack task/packs/soak-20y, planned 12 min, wall 373 s
+soak, 2026-10-23: pack task/packs/soak-20y, planned 12 min, wall 417 s
 solvers 3 on claude-haiku-5-5 at a 100000 window; supervisors 1 on claude-opus-5-5 every 150 s
 tasks: 56 of 56 done, mean score 1.000
-successions: 1 real handoffs, 1 stubs; kills by reason: chaos kill: 1
-lineage generations: L-001 g3, L-002 g3, L-003 g2
+successions: 0 real handoffs, 1 stubs; kills by reason: chaos kill: 1
+lineage generations: L-001 g2, L-002 g2, L-003 g3
 rounds: 2; tunes: none; pings: 0
-spend by role: solver $0.1616, supervisor $0.1893
-epochs: 1: 753 events, 2: 683 events
+spend by role: solver $0.1538, supervisor $0.3578
+epochs: 1: 751 events, 2: 625 events
 governor waits: none
-chaos: kill-solver@60s -> chaos: kill queued for sol-001; board-down@120s -> chaos: board down until 19:58:00 (20 s); kill-orchestrator@180s -> see heartbeat gaps
-heartbeat gaps: pid 34066 killed, back as pid 35464 in epoch 2 after 41.0 s
+chaos: kill-solver@60s -> chaos: kill queued for sol-003; board-down@120s -> chaos: board down until 20:05:35 (20 s); kill-orchestrator@180s -> see heartbeat gaps
+heartbeat gaps: pid 37068 killed, back as pid 38298 in epoch 2 after 41.0 s
 
 timeline:
-  19:55:38 +   0s soak: pack task/packs/soak-20y, 12 minutes, 3 solvers on claude-haiku-5-5, 1 supervisor(s) on claude-opus-5-5 every 150s
-  19:55:38 +   0s seeded 56 tasks from the pack
-  19:55:38 +   0s watchdog started (pid 34065, every 20s, --restart)
-  19:55:38 +   0s orchestrator started (pid 34066)
-  19:56:40 +  61s civ chaos kill random-solver: chaos: kill queued for sol-001
-  19:57:40 + 122s civ chaos board-down 20: chaos: board down until 19:58:00 (20 s)
-  19:58:41 + 182s kill-orchestrator: SIGKILL sent to pid 34066; waiting for the watchdog
-  19:59:22 + 223s kill-orchestrator: back after 41.0s as pid 35464 in epoch 2
-  20:01:48 + 370s every task is done; waiting up to 120s for the orchestrator to finish
-  20:01:48 + 370s orchestrator still running after the drain; stopping it
-  20:01:48 + 370s watchdog stopped
-  20:01:51 + 373s orchestrator and board server stopped
+  20:03:13 +   0s soak: pack task/packs/soak-20y, 12 minutes, 3 solvers on claude-haiku-5-5, 1 supervisor(s) on claude-opus-5-5 every 150s
+  20:03:13 +   0s seeded 56 tasks from the pack
+  20:03:13 +   0s watchdog started (pid 37067, every 20s, --restart)
+  20:03:13 +   0s orchestrator started (pid 37068)
+  20:04:14 +  61s civ chaos kill random-solver: chaos: kill queued for sol-003
+  20:05:15 + 122s civ chaos board-down 20: chaos: board down until 20:05:35 (20 s)
+  20:06:16 + 182s kill-orchestrator: SIGKILL sent to pid 37068; waiting for the watchdog
+  20:06:57 + 223s kill-orchestrator: back after 41.0s as pid 38298 in epoch 2
+  20:09:08 + 355s every task is done; waiting up to 120s for the orchestrator to finish
+  20:10:07 + 414s orchestrator finished on its own
+  20:10:07 + 414s watchdog stopped
+  20:10:11 + 417s orchestrator and board server stopped

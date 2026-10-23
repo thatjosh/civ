@@ -18,6 +18,7 @@ import psycopg
 
 from .db import fetch_all, fetch_one
 from .limits import live_counts
+from .tools.common import HANDOFF_LOCKOUT
 from .seed import CONFIG_SEEDS
 
 SLO_NAMES = ("completions_per_mtok", "blocked_failed_rate", "duplicate_rate", "lease_wait_median_s",
@@ -199,9 +200,15 @@ def compute_succession(conn: psycopg.Connection, window_start: datetime, window_
             seconds.append(detail["seconds_since_request"])
     refusals = fetch_all(
         conn,
-        f"select payload->>'error' as error, count(*) as n from events where type = 'tool.refused' and {WINDOW} "
+        # Only refusals that are about succession: a refused civ_handoff attempt (a rejected
+        # handoff) and a write refused under the lockout (an agent still doing other things after
+        # the request). The first soak's round-1 supervisor caught this counting every refusal,
+        # down to claim-quota and self-vote ones, and proposed the civ_handoff filter (proposal
+        # 122); the lockout refusals are kept because they are the ignored-request signal.
+        f"select payload->>'error' as error, count(*) as n from events where type = 'tool.refused' "
+        f"and (payload->>'tool' = 'civ_handoff' or payload->>'error' = %(lockout)s) and {WINDOW} "
         "group by 1 order by 2 desc, 1",
-        _params(window_start, window_end),
+        _params(window_start, window_end, lockout=HANDOFF_LOCKOUT),
     )
     generations = fetch_all(conn, "select lineage_id, max(generation) as g from agents group by lineage_id order by lineage_id")
     kills = fetch_all(conn, f"select agent_id, ts, payload from events where type = 'agent.killed' and {WINDOW} order by seq",

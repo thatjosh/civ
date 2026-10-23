@@ -157,7 +157,8 @@ def test_succession_counts_medians_refusals_and_generations(db, op):
     assert out["requests"] == 2 and out["handoffs"] == 2 and out["stubs"] == 0 and out["kills"] == 0
     assert out["success_rate"] == 1.0
     assert out["median_turns_to_handoff"] == 3.0 and out["median_seconds_to_handoff"] == 25.0
-    assert out["refusals"] == {"hand off now: call civ_handoff with the five headings": 2, "cast 1 more vote": 1}
+    # Lockout refusals count (they are the ignored-request signal); a claim-quota refusal does not.
+    assert out["refusals"] == {"hand off now: call civ_handoff with the five headings": 2}
     assert out["generations"] == {"L-001": 2, "L-002": 1}
     assert out["incidents"] == []
 
