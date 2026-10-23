@@ -43,3 +43,18 @@ watchdog: PAGE heartbeat is 41s old (limit 40s)
 2026-10-23 19:36:45 check heartbeat_age=10s health=ok postgres=ok
 2026-10-23 19:37:05 check heartbeat_age=31s health=ok postgres=ok
 2026-10-23 19:37:25 check heartbeat_age=21s health=ok postgres=ok
+2026-10-23 19:41:47 check heartbeat_age=nones health=down postgres=ok
+2026-10-23 19:41:47 problem: board health endpoint is not answering
+2026-10-23 19:41:47 problem: no heartbeat has ever been written
+watchdog: PAGE board health endpoint is not answering
+2026-10-23 19:42:07 check heartbeat_age=20s health=ok postgres=ok
+2026-10-23 19:42:27 check heartbeat_age=10s health=ok postgres=ok
+2026-10-23 19:42:48 check heartbeat_age=30s health=ok postgres=ok
+2026-10-23 19:43:08 check heartbeat_age=20s health=ok postgres=ok
+2026-10-23 19:43:28 check heartbeat_age=10s health=ok postgres=ok
+2026-10-23 19:43:48 check heartbeat_age=30s health=ok postgres=ok
+2026-10-23 19:44:08 check heartbeat_age=20s health=ok postgres=ok
+2026-10-23 19:44:28 check heartbeat_age=10s health=board_down postgres=ok
+2026-10-23 19:44:48 check heartbeat_age=0s health=ok postgres=ok
+2026-10-23 19:45:08 check heartbeat_age=21s health=ok postgres=ok
+2026-10-23 19:45:28 check heartbeat_age=11s health=ok postgres=ok

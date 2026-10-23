@@ -240,6 +240,13 @@ class LineageRunner:
                 outcome.ended_by = "max_generations"
                 self._op.log_event(agent_id, "lineage.ended", {"lineage_id": lineage_id, "by": "max_generations", "generation": generation})
                 return outcome
+            if self._queue_drained():
+                # A successor spawned into an empty queue claims nothing and ends; the third soak
+                # paid for two of them when the last sessions were asked to hand off as the pack
+                # ran out. The handoff or stub is still on the board for a restore to pick up.
+                outcome.ended_by = "queue_drained"
+                self._op.log_event(agent_id, "lineage.ended", {"lineage_id": lineage_id, "by": "queue_drained", "generation": generation})
+                return outcome
             if self._slot_open is not None and not self._slot_open(lineage_id):
                 # A reshape has closed this slot. The handoff row stays unclaimed, so a later
                 # reshape back up (or a restore) can resume the lineage from it.
@@ -436,6 +443,19 @@ class LineageRunner:
         self._op.write_stub_handoff(state.agent_id, self._listing(state.cwd))
         outcome.stubs += 1
         return self._latest_handoff_from(lineage_id, state.agent_id)
+
+    def _queue_drained(self) -> bool:
+        """Whether no task is open or leased, read through tasks_summary (the Operator returns
+        {"counts": {...}}; the test fake returns the counts flat). Unknown means not drained."""
+        try:
+            summary = self._op.tasks_summary()
+        except Exception:  # noqa: BLE001 - a summary failure must not stop a succession
+            return False
+        counts = summary.get("counts", summary) if isinstance(summary, dict) else {}
+        try:
+            return int(counts.get("open", 1)) == 0 and int(counts.get("leased", 1)) == 0
+        except (TypeError, ValueError):
+            return False
 
     def _latest_handoff_from(self, lineage_id: str, agent_id: str) -> dict[str, Any] | None:
         row = self._op.latest_handoff(lineage_id)

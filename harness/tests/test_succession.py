@@ -322,3 +322,14 @@ async def test_spawn_and_successor_rows_carry_the_harness_version(tmp_path):
     await runner.run("L-040", "sol-040")
     assert [a["harness_version"] for a in op.registered] == ["0.9.3", "0.9.3"]
     assert op.succeeded_versions == ["0.9.3"]
+
+
+async def test_no_successor_is_spawned_into_an_empty_queue(tmp_path):
+    first = FakeClient([init_message(), assistant(850), assistant(860)])
+    runner, op, _ = make(tmp_path, [first])
+    first.on_query = handoff_on_request(op, "sol-050")
+    op.summary = {"open": 0, "leased": 0, "done": 8, "blocked": 0}
+    outcome = await runner.run("L-050", "sol-050")
+    assert outcome.handoffs == 1 and outcome.generations == 1 and op.succeeded == []
+    assert outcome.ended_by == "queue_drained"
+    assert [e for e in op.events if e[1] == "lineage.ended"][-1][2]["by"] == "queue_drained"
