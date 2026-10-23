@@ -1,0 +1,29 @@
+2026-10-23 19:23:49,314 harness.orchestrator.reload INFO board server up at http://127.0.0.1:8765/health (pid 22681)
+2026-10-23 19:23:49,316 civ.orchestrator INFO spawning 6 solver lineages against http://127.0.0.1:8765 with claude-haiku-5-5 (window 100000, max generations 12), 1 supervisors every 180s, merge gate on
+2026-10-23 19:23:49,317 harness.orchestrator.population INFO started lineage L-001 (slot 1 of 6)
+2026-10-23 19:23:49,328 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-23 19:23:51,318 harness.orchestrator.population INFO started lineage L-002 (slot 2 of 6)
+2026-10-23 19:23:51,325 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-23 19:23:53,321 harness.orchestrator.population INFO started lineage L-003 (slot 3 of 6)
+2026-10-23 19:23:53,333 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-23 19:23:55,325 harness.orchestrator.population INFO started lineage L-004 (slot 4 of 6)
+2026-10-23 19:23:55,331 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-23 19:23:57,327 harness.orchestrator.population INFO started lineage L-005 (slot 5 of 6)
+2026-10-23 19:23:57,340 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-23 19:23:59,328 harness.orchestrator.population INFO started lineage L-006 (slot 6 of 6)
+2026-10-23 19:23:59,341 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-23 19:25:52,206 harness.orchestrator.governor INFO governor holding a solver spawn: tokens_per_minute is 10070985 against 3000000
+2026-10-23 19:26:28,292 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-23 19:26:49,347 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+2026-10-23 19:28:16,892 claude_agent_sdk._internal.transport.subprocess_cli INFO Using bundled Claude Code CLI: /Users/joshuaang/Desktop/civ/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude
+agent     gens hoffs turns   cost $     tok in  tok out  ctx %  note
+sol-001      1     0    41   0.0334    3034282     1043  55.29  stopped at the 40-turn cap
+sol-002      1     0    41   0.0297    2671651     1020  51.62  stopped at the 40-turn cap
+sol-003      2     0   104   0.0666    6737637     1714  56.57  stopped at the 40-turn cap
+sol-004      1     0    13   0.0073     335520      244  27.54  Task T-004 is complete and the verifier scored it 1 ("all fi
+sol-005      1     0    41   0.0337    3838903     1147  59.28  stopped at the 40-turn cap
+sol-006      1     0    91   0.0400    5035455     1576  74.34  I've stopped because the server's hourly vote limit (20) is 
+total cost                   0.2106
+tasks: counts={'open': 10, 'leased': 2, 'done': 44, 'blocked': 0}, mean_score=1.0, scored=44
+round 1: reports 1, pings 0, tuned none, reopened [], turns 6, cost $0.2293
+round 2 (final): reports 1, pings 0, tuned none, reopened [], turns 6, cost $0.2075

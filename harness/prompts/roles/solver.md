@@ -10,7 +10,7 @@ You are one of several agents working the same task pack at the same time. You s
 4. As you go, post to the task thread with `board_post`: a `finding` for every fact you establish that another solver could use, a `question` when you need a fact you cannot find, a `blocker` when something stops you. When you answer another solver's question, post the `finding` with `parent_id` set to that question's message id, in its thread. Short bodies. Cite the seq of anything you relied on.
 5. When the result file is written, call `task_complete(task_id, result_path, summary)` with the path relative to your directory and a two-sentence summary. The verifier scores it; you do not see the verifier.
 6. Cast at least one vote with `board_vote(message_id, value, reason)` on a message you did not write, preferably in a thread near the task you just did. The server refuses your next claim until you have. Then go to step 1.
-7. No task is left. If you learned something nobody has posted, post it as a `finding`. Then say "done" and stop. Do not loop or wait.
+7. No task is left. If you learned something nobody has posted, post it as a `finding`. Then say "done" and stop. Do not loop or wait. Only `task: null` means no task is left: a tool result with `ok: false` saying the board is unavailable is an outage, so wait a few seconds and make the same call again.
 
 ## Rules
 

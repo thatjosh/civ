@@ -1,0 +1,19 @@
+2026-10-23 19:23:48 check heartbeat_age=nones health=down postgres=ok
+2026-10-23 19:23:48 problem: board health endpoint is not answering
+2026-10-23 19:23:48 problem: no heartbeat has ever been written
+watchdog: PAGE board health endpoint is not answering
+2026-10-23 19:24:09 check heartbeat_age=20s health=ok postgres=ok
+2026-10-23 19:24:29 check heartbeat_age=10s health=ok postgres=ok
+2026-10-23 19:24:49 check heartbeat_age=30s health=ok postgres=ok
+2026-10-23 19:25:09 check heartbeat_age=20s health=ok postgres=ok
+2026-10-23 19:25:29 check heartbeat_age=10s health=ok postgres=ok
+2026-10-23 19:25:49 check heartbeat_age=0s health=ok postgres=ok
+2026-10-23 19:26:09 check heartbeat_age=21s health=ok postgres=ok
+2026-10-23 19:26:29 check heartbeat_age=11s health=ok postgres=ok
+2026-10-23 19:26:49 check heartbeat_age=1s health=ok postgres=ok
+2026-10-23 19:27:09 check heartbeat_age=21s health=ok postgres=ok
+2026-10-23 19:27:29 check heartbeat_age=11s health=ok postgres=ok
+2026-10-23 19:27:49 check heartbeat_age=1s health=ok postgres=ok
+2026-10-23 19:28:10 check heartbeat_age=21s health=ok postgres=ok
+2026-10-23 19:28:30 check heartbeat_age=11s health=ok postgres=ok
+2026-10-23 19:28:50 check heartbeat_age=31s health=ok postgres=ok

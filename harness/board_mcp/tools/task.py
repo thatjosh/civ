@@ -11,7 +11,7 @@ from typing import Any, Callable
 
 from ..auth import AgentIdentity
 from ..db import Db, fetch_one
-from ..limits import Knobs
+from ..limits import Knobs, votes_in_last_hour
 from ..ranking import THREAD_SCORE_SQL
 from .common import copy_into_shared, decay_params, insert_message, log_event, pin_block, refuse, resolve_under_cwd
 
@@ -91,6 +91,14 @@ class TaskTools:
             (identity.id, last["ts"]),
         )
         if int(cast["n"]) < quota:
+            # Two server rules meet here. A fast solver that has spent its hourly vote allowance
+            # cannot vote, and without a vote it cannot claim; the first soak stopped a solver
+            # on exactly that. The rate limit is the server's own doing, so while it holds the
+            # quota is waived rather than turned into a deadlock, and the waiver is logged.
+            limit = int(self.knobs.get("vote_rate_per_h", conn))
+            if votes_in_last_hour(conn, identity.id) >= limit:
+                log_event(conn, identity.id, "vote_quota.waived", {"votes_last_hour": limit, "quota": quota})
+                return None
             return (f"cast {quota - int(cast['n'])} more vote(s) with reasons before claiming again "
                     f"(the server requires {quota} between claims)")
         return None

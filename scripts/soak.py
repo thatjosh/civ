@@ -70,6 +70,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--supervisor-interval", type=int, default=180)
     p.add_argument("--supervisor-max-turns", type=int, default=12)
     p.add_argument("--context-window", type=int, default=100_000)
+    # The demo's 40-turn cap ended every lineage of the first soak before any handoff; a soak
+    # wants sessions ended by context fill, so the budget is large by default.
+    p.add_argument("--max-turns", type=int, default=400)
     p.add_argument("--max-generations", type=int, default=12)
     p.add_argument("--chaos", type=parse_chaos, default=parse_chaos("kill-solver@120,board-down@300:20,kill-orchestrator@540"))
     p.add_argument("--out", default=f"docs/demo/{dt.date.today():%Y-%m-%d}-soak")
@@ -130,6 +133,7 @@ class Soak:
         a = self.args
         cmd = [PYTHON, "-m", "harness.orchestrator.main", "--serve-board", "--pack", str(Path(a.pack).resolve()),
                "--solvers", str(a.solvers), "--model", a.model, "--context-window", str(a.context_window),
+               "--max-turns", str(a.max_turns),
                "--max-generations", str(a.max_generations), "--supervisors", str(a.supervisors),
                "--supervisor-model", a.supervisor_model, "--supervisor-interval", str(a.supervisor_interval),
                "--supervisor-max-turns", str(a.supervisor_max_turns), "--board-url", a.board_url, "--db-url", a.db_url]

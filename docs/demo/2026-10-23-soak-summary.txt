@@ -1,0 +1,21 @@
+soak, 2026-10-23: pack task/packs/soak-20y, planned 15 min, wall 307 s
+solvers 6 on claude-haiku-5-5 at a 100000 window; supervisors 1 on claude-opus-5-5 every 180 s
+tasks: 44 of 56 done, mean score 1.000
+successions: 0 real handoffs, 1 stubs; kills by reason: chaos kill: 1
+lineage generations: L-001 g1, L-002 g1, L-003 g2, L-004 g1, L-005 g1, L-006 g1
+rounds: 2; tunes: none; pings: 0
+spend by role: solver $0.2106, supervisor $0.4368
+epochs: 1: 1093 events
+chaos: kill-solver@120s -> chaos: kill queued for sol-003; board-down@300s -> chaos: board down until 19:29:12 (20 s)
+heartbeat gaps: none
+
+timeline:
+  19:23:48 +   0s soak: pack task/packs/soak-20y, 15 minutes, 6 solvers on claude-haiku-5-5, 1 supervisor(s) on claude-opus-5-5 every 180s
+  19:23:48 +   0s seeded 56 tasks from the pack
+  19:23:48 +   0s watchdog started (pid 22654, every 20s, --restart)
+  19:23:48 +   0s orchestrator started (pid 22655)
+  19:25:50 + 122s civ chaos kill random-solver: chaos: kill queued for sol-003
+  19:28:52 + 304s civ chaos board-down 20: chaos: board down until 19:29:12 (20 s)
+  19:28:52 + 304s orchestrator exited on its own with code 0
+  19:28:52 + 304s watchdog stopped
+  19:28:55 + 307s orchestrator and board server stopped

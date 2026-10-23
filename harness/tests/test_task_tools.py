@@ -126,3 +126,23 @@ def test_backoff_doubles(tasks, solver, other, task, db):
     tasks.release(other, "T-001", "r2")
     secs = db.fetch_one("select extract(epoch from next_attempt_at - now()) as s from tasks")["s"]
     assert 190 < secs <= 200
+
+
+def test_claim_quota_is_waived_while_the_vote_rate_limit_holds(tasks, board, solver, other, op, db):
+    # A solver at its hourly vote limit cannot vote; the claim rule must not then lock it out.
+    db.execute("update config set value = 2 where knob = 'vote_rate_per_h'")
+    for i in range(3):
+        op.create_task(f"T-10{i}", f"t{i}", "d")
+    posts = [board.post(other, "finding", f"f{i}")["id"] for i in range(3)]
+    assert tasks.claim(solver)["task"]["id"] == "T-100"
+    assert board.vote(solver, posts[0], 1, "ok")["ok"] and board.vote(solver, posts[1], 1, "ok")["ok"]
+    assert "rate limit" in board.vote(solver, posts[2], 1, "ok")["error"]
+    tasks.release(solver, "T-100", "moving on")
+    # One vote since the last claim satisfies the quota of one; claim again, then the solver is
+    # out of votes for the hour and the next claim is waived rather than refused.
+    assert tasks.claim(solver)["task"]["id"] == "T-101"
+    tasks.release(solver, "T-101", "moving on")
+    out = tasks.claim(solver)
+    assert out["ok"] and out["task"]["id"] == "T-102", out
+    waived = db.fetch_all("select payload from events where type = 'vote_quota.waived' and agent_id = %s", (solver.id,))
+    assert len(waived) == 1 and waived[0]["payload"]["quota"] == 1
